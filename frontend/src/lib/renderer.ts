@@ -1,13 +1,15 @@
 // src/lib/renderer.ts - Canvas 2D renderer con zoom/pan
 
 import * as d3Zoom from 'd3-zoom'
+import { select } from 'd3-selection'
 import { GraphEngine, PositionedNode } from './graphEngine'
+import style from './style.json'
 
 export class Renderer {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private engine: GraphEngine
-  private zoom: any
+  private zoom!: d3Zoom.ZoomBehavior<HTMLCanvasElement, unknown>
   private transform: { x: number; y: number; k: number } = { x: 0, y: 0, k: 1 }
   private tooltip: HTMLElement
   private onNodeDoubleClick?: (node: PositionedNode) => void
@@ -34,8 +36,8 @@ export class Renderer {
         this.transform = event.transform
         this.draw()
       })
-    
-    d3Zoom.select(this.canvas).call(this.zoom as any)
+
+    select(this.canvas).call(this.zoom)
   }
   
   private resize() {
@@ -79,13 +81,7 @@ export class Renderer {
       ctx.moveTo(source.position.x, source.position.y)
       ctx.lineTo(target.position.x, target.position.y)
       
-      const colors: Record<string, string> = {
-        contains: '#444',
-        references: '#4A90E2',
-        derives_from: '#999'
-      }
-      
-      ctx.strokeStyle = colors[edge.type] || '#666'
+      ctx.strokeStyle = (style.edgeColor as Record<string, string>)[edge.type] || style.edgeColor.default
       ctx.lineWidth = 1
       ctx.stroke()
     })

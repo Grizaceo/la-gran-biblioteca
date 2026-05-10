@@ -63,12 +63,15 @@ class GraphEngine:
         return {"nodes": nodes, "edges": [e.to_dict() for e in self.edges]}
     
     def build_graph(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        self.nodes.clear()
+        self.edges.clear()
+
         for nd in raw["nodes"]:
             self.nodes[nd["id"]] = Node(id=nd["id"], type=nd["type"], label=nd["label"], path=nd["path"], metadata=dict(nd.get("metadata", {})), position=nd.get("position"))
-        
+
         for ed in raw["edges"]:
             self.edges.append(Edge(ed["source"], ed["target"], ed["type"]))
-        
+
         conn = sqlite3.connect(self.db_path)
         for n in self.nodes.values():
             conn.execute("INSERT OR REPLACE INTO nodes VALUES (?,?,?,?,?,?)", (n.id, n.type, n.label, n.path, json.dumps(n.metadata), json.dumps(n.position) if n.position else None))
@@ -76,8 +79,16 @@ class GraphEngine:
             conn.execute("INSERT OR IGNORE INTO edges VALUES (?,?,?)", (e.source, e.target, e.type))
         conn.commit()
         conn.close()
-        
+
         return {"nodes": [n.to_dict() for n in self.nodes.values()], "edges": [e.to_dict() for e in self.edges]}
+
+    def update_node_metadata(self, node_id: str, metadata: Dict[str, Any]) -> None:
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("UPDATE nodes SET metadata = ? WHERE id = ?", (json.dumps(metadata), node_id))
+        conn.commit()
+        conn.close()
+        if node_id in self.nodes:
+            self.nodes[node_id].metadata = metadata
 
 
 if __name__ == "__main__":

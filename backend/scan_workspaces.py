@@ -5,11 +5,14 @@ scan_workspaces.py - Versión rápida sin hashes
 
 import os
 import json
+import logging
 from pathlib import Path
 from collections import deque
 from typing import Dict, Any
 
 WORKSPACE_ROOT = Path.home() / ".hermes" / "workspaces"
+
+logger = logging.getLogger(__name__)
 
 # Directorios a excluir
 EXCLUDE_DIRS = {".hermes", "__pycache__", "node_modules", ".git", "archive", "backups", "snapshots"}
@@ -81,8 +84,8 @@ def scan_workspaces(root: Path = WORKSPACE_ROOT) -> Dict[str, Any]:
                 children = [p for p in current_path.iterdir() if should_scan(p)]
                 for idx, child in enumerate(sorted(children, key=lambda p: p.name)[:30]):
                     queue.append((child, depth + 1, x, y, idx))
-            except:
-                pass
+            except (PermissionError, OSError) as e:
+                logger.warning("No se pudo escanear %s: %s", current_path, e)
         else:
             file_count += 1
             rel = current_path.relative_to(root)
@@ -91,8 +94,8 @@ def scan_workspaces(root: Path = WORKSPACE_ROOT) -> Dict[str, Any]:
             size = 0
             try:
                 size = current_path.stat().st_size
-            except:
-                pass
+            except (PermissionError, OSError) as e:
+                logger.warning("No se pudo leer tamaño de %s: %s", current_path, e)
             
             graph["nodes"].append({
                 "id": node_id, "type": get_node_type(current_path),

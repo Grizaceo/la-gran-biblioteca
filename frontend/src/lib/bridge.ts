@@ -24,11 +24,13 @@ export interface Graph {
 
 export async function fetchGraph(): Promise<Graph> {
   const res = await fetch(`${API_BASE}/graph`)
+  if (!res.ok) throw new Error(`Failed to fetch graph: ${res.status} ${res.statusText}`)
   return res.json()
 }
 
 export async function fetchNode(id: string): Promise<Node> {
   const res = await fetch(`${API_BASE}/node/${id}`)
+  if (!res.ok) throw new Error(`Failed to fetch node ${id}: ${res.status} ${res.statusText}`)
   return res.json()
 }
 
@@ -38,6 +40,7 @@ export async function studyNode(id: string): Promise<any> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ node_id: id })
   })
+  if (!res.ok) throw new Error(`Failed to study node ${id}: ${res.status} ${res.statusText}`)
   return res.json()
 }
 
@@ -46,18 +49,18 @@ export function subscribeToUpdates(
   onError?: (err: Error) => void
 ): () => void {
   const evtSource = new EventSource(`${API_BASE}/stream`)
-  
-  evtSource.addEventListener('init', (e: any) => {
+
+  evtSource.addEventListener('init', (e: MessageEvent) => {
     onUpdate(JSON.parse(e.data))
   })
-  
-  evtSource.addEventListener('update', (e: any) => {
+
+  evtSource.addEventListener('update', (e: MessageEvent) => {
     onUpdate(JSON.parse(e.data))
   })
-  
-  evtSource.onerror = (err) => {
-    onError?.(err)
+
+  evtSource.onerror = () => {
+    onError?.(new Error('SSE connection error'))
   }
-  
+
   return () => evtSource.close()
 }

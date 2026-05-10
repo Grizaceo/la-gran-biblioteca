@@ -7,6 +7,7 @@ Endpoints: /api/graph, /api/node/{id}, /api/study, /api/stream (SSE)
 import os
 import json
 import asyncio
+import hashlib
 from pathlib import Path
 from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
@@ -19,9 +20,11 @@ from graph_engine import GraphEngine
 
 app = FastAPI(title="La Gran Biblioteca API")
 
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,11 +75,13 @@ async def study_node(node_id: str):
     node = next((n for n in graph["nodes"] if n["id"] == node_id), None)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
-    
+
     if "study_count" not in node.get("metadata", {}):
         node["metadata"]["study_count"] = 0
     node["metadata"]["study_count"] += 1
-    
+
+    engine.update_node_metadata(node_id, node["metadata"])
+
     return {"status": "ok", "node": node_id, "study_count": node["metadata"]["study_count"]}
 
 
@@ -87,23 +92,28 @@ async def stream_graph():
     async def event_generator():
         graph = get_current_graph()
         yield {"event": "init", "data": json.dumps(graph)}
-        
-        last_hash = hash(json.dumps(graph, sort_keys=True))
-        
-        while True:
-            await asyncio.sleep(5)
-            
-            raw = scan_workspaces()
-            new_engine = GraphEngine()
-            new_graph = new_engine.build_graph(raw)
-            
-            new_hash = hash(json.dumps(new_graph, sort_keys=True))
-            
-            if new_hash != last_hash:
-                set_current_graph(new_graph)
-                last_hash = new_hash
-                yield {"event": "update", "data": json.dumps(new_graph)}
-    
+
+        def _graph_hash(g):
+            return hashlib.md5(json.dumps(g, sort_keys=True).encode()).hexdigest()
+
+        last_hash = _graph_hash(graph)
+
+        try:
+            while True:
+                await asyncio.sleep(5)
+
+                raw = scan_workspaces()
+                new_graph = engine.build_graph(raw)
+
+                new_hash = _graph_hash(new_graph)
+
+                if new_hash != last_hash:
+                    set_current_graph(new_graph)
+                    last_hash = new_hash
+                    yield {"event": "update", "data": json.dumps(new_graph)}
+        except asyncio.CancelledError:
+            return
+
     return EventSourceResponse(event_generator())
 
 

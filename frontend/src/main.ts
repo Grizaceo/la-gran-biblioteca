@@ -1,8 +1,9 @@
 // src/main.ts - Entry point
 
-import { fetchGraph, studyNode, Graph } from './lib/bridge'
+import { fetchGraph, studyNode, subscribeToUpdates } from './lib/bridge'
 import { GraphEngine } from './lib/graphEngine'
 import { Renderer } from './lib/renderer'
+import type { Graph } from './lib/bridge'
 
 const canvas = document.getElementById('graph') as HTMLCanvasElement
 
@@ -31,3 +32,12 @@ async function init() {
 }
 
 init()
+
+// SSE cleanup on page unload
+const closeSSE = subscribeToUpdates((graph: Graph) => {
+  graphEngine.loadGraph(graph)
+  graphEngine.refineLayout(30)
+  renderer.render()
+})
+
+window.addEventListener('beforeunload', () => closeSSE())

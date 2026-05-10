@@ -2,10 +2,13 @@
 
 import * as d3Force from 'd3-force'
 import { Graph, Node, Edge } from './bridge'
+import style from './style.json'
 
 export interface PositionedNode extends Node {
   fx?: number | null
   fy?: number | null
+  x?: number
+  y?: number
 }
 
 export class GraphEngine {
@@ -43,7 +46,7 @@ export class GraphEngine {
       .force('center', d3Force.forceCenter(this.width / 2, this.height / 2))
       .force('collision', d3Force.forceCollide().radius(this.getNodeRadius.bind(this)))
       .force('link', d3Force.forceLink(this.edges)
-        .id((d: any) => d.id)
+        .id((d: d3Force.SimulationNodeDatum) => (d as PositionedNode).id)
         .distance(100)
         .strength(0.5))
       .stop()
@@ -62,28 +65,13 @@ export class GraphEngine {
     })
   }
   
-  getNodeRadius(node: PositionedNode): number {
-    const typeSizes: Record<string, number> = {
-      folder: 20,
-      document: 15,
-      paper: 18,
-      script: 12,
-      config: 10,
-      index: 22
-    }
-    return typeSizes[node.type] || 12
+  getNodeRadius(node: d3Force.SimulationNodeDatum): number {
+    const n = node as PositionedNode
+    return (style.nodeRadius as Record<string, number>)[n.type] || style.nodeRadius.default
   }
-  
-  getNodeColor(node: PositionedNode): string {
-    const typeColors: Record<string, string> = {
-      folder: '#4A90E2',
-      document: '#7ED321',
-      paper: '#D0021B',
-      script: '#F5A623',
-      config: '#9013FE',
-      index: '#50E3C2',
-      default: '#BDC3C7'
-    }
-    return typeColors[node.type] || typeColors.default
+
+  getNodeColor(node: d3Force.SimulationNodeDatum): string {
+    const n = node as PositionedNode
+    return (style.nodeColor as Record<string, string>)[n.type] || style.nodeColor.default
   }
 }

@@ -10,9 +10,20 @@ from graph_engine import GraphEngine
 OUTPUT_FILE = Path(__file__).parent.parent / "export" / "library.html"
 
 
+STYLE_PATH = Path(__file__).parent.parent / "frontend" / "src" / "lib" / "style.json"
+
+
+def _load_style() -> dict:
+    if STYLE_PATH.exists():
+        return json.loads(STYLE_PATH.read_text())
+    return {}
+
+
 def generate_html(graph: dict) -> str:
     graph_json = json.dumps(graph, indent=2)
-    
+    style = _load_style()
+    style_json = json.dumps(style)
+
     return f'''<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -34,11 +45,12 @@ def generate_html(graph: dict) -> str:
   <div id="tooltip" class="hidden"></div>
   <script>
     const graph = {graph_json};
+    const STYLE = {style_json};
     const canvas = document.getElementById('graph');
     const ctx = canvas.getContext('2d');
     const tooltip = document.getElementById('tooltip');
     let transform = {{ x: 0, y: 0, k: 1 }};
-    
+
     function resize() {{
       const r = canvas.getBoundingClientRect();
       canvas.width = r.width; canvas.height = r.height;
@@ -46,13 +58,13 @@ def generate_html(graph: dict) -> str:
     }}
     window.addEventListener('resize', resize);
     resize();
-    
+
     canvas.addEventListener('wheel', e => {{
       e.preventDefault();
       transform.k = Math.min(10, Math.max(0.1, transform.k - e.deltaY * 0.001));
       draw();
     }});
-    
+
     let pan = false;
     canvas.addEventListener('mousedown', e => {{ if (e.button === 0) pan = true; }});
     canvas.addEventListener('mousemove', e => {{
@@ -60,31 +72,29 @@ def generate_html(graph: dict) -> str:
       handleTooltip(e);
     }});
     canvas.addEventListener('mouseup', () => pan = false);
-    
+
     function getNodeRadius(n) {{
-      const s = {{ folder: 20, document: 15, paper: 18, script: 12, config: 10, index: 22 }};
-      return s[n.type] || 12;
+      return (STYLE.nodeRadius || {{}})[n.type] || (STYLE.nodeRadius || {{}}).default || 12;
     }}
-    
+
     function getNodeColor(n) {{
-      const c = {{ folder: '#4A90E2', document: '#7ED321', paper: '#D0021B', script: '#F5A623', config: '#9013FE', index: '#50E3C2' }};
-      return c[n.type] || '#BDC3C7';
+      return (STYLE.nodeColor || {{}})[n.type] || (STYLE.nodeColor || {{}}).default || '#BDC3C7';
     }}
-    
+
     function draw() {{
       const k = transform.k;
       ctx.save(); ctx.setTransform(k, 0, 0, k, transform.x, transform.y);
       ctx.clearRect(-transform.x/k, -transform.y/k, canvas.width/k, canvas.height/k);
-      
+
       graph.edges.forEach(e => {{
         const s = graph.nodes.find(n => n.id === e.source);
         const t = graph.nodes.find(n => n.id === e.target);
         if (!s?.position || !t?.position) return;
         ctx.beginPath(); ctx.moveTo(s.position.x, s.position.y); ctx.lineTo(t.position.x, t.position.y);
-        ctx.strokeStyle = {{ contains: '#444', references: '#4A90E2', derives_from: '#999' }}[e.type] || '#666';
+        ctx.strokeStyle = (STYLE.edgeColor || {{}})[e.type] || (STYLE.edgeColor || {{}}).default || '#666';
         ctx.lineWidth = 1; ctx.stroke();
       }});
-      
+
       graph.nodes.forEach(n => {{
         if (!n.position) return;
         const r = getNodeRadius(n);
@@ -94,10 +104,10 @@ def generate_html(graph: dict) -> str:
         ctx.fillStyle = '#fff'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
         ctx.fillText(n.label.substring(0,12), n.position.x, n.position.y + r + 12);
       }});
-      
+
       ctx.restore();
     }}
-    
+
     function handleTooltip(e) {{
       const r = canvas.getBoundingClientRect();
       const mx = (e.clientX - r.left - transform.x) / transform.k;
