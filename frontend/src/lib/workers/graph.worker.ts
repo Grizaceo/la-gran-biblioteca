@@ -32,13 +32,15 @@ self.onmessage = (event: MessageEvent) => {
       simulation.stop()
     }
 
+    // Si todos los nodos tienen posiciones válidas, solo hacer refinamiento suave
+    const allHavePositions = nodes.every((n: PositionedNode) => n.x != null && n.y != null)
+    
     simulation = d3Force.forceSimulation(nodes)
       .force('charge', d3Force.forceManyBody().strength(-300))
       .force('center', d3Force.forceCenter(width / 2, height / 2))
       .force('collision', d3Force.forceCollide().radius(getNodeRadius))
       .force('link', d3Force.forceLink(edges).id((d: any) => d.id).distance(100).strength(0.5))
       .on('tick', () => {
-        // Enviar posiciones de vuelta
         const positions = nodes.map((n: PositionedNode) => ({ id: n.id, x: n.x, y: n.y }))
         self.postMessage({ type: 'TICK', payload: positions })
       })
@@ -46,8 +48,20 @@ self.onmessage = (event: MessageEvent) => {
         self.postMessage({ type: 'END' })
       })
 
-    // Decaimiento para evitar simulación infinita
-    simulation.alphaDecay(0.05) 
+    // Si ya tienen posiciones, solo 5 iteraciones de refinamiento
+    if (allHavePositions) {
+      simulation.alphaDecay(0.9)  // Termina rápido
+      simulation.alpha(0.1)       // Empezar con poca energía
+    } else {
+      // Calcular desde cero
+      simulation.alphaDecay(0.05)
+    }
+    
+    // Enviar primera posición inmediata si ya vienen calculadas
+    if (allHavePositions) {
+      const positions = nodes.map((n: PositionedNode) => ({ id: n.id, x: n.x, y: n.y }))
+      self.postMessage({ type: 'TICK', payload: positions })
+    }
   } else if (type === 'STOP') {
     if (simulation) simulation.stop()
   }

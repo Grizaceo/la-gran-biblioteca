@@ -109,8 +109,12 @@ app.add_middleware(
 
 @app.get("/api/graph")
 async def get_graph():
-    """Retorna el grafo completo con posiciones."""
-    return get_current_graph()
+    """Retorna el grafo completo con posiciones (limitado a 1000 nodos para frontend)."""
+    graph = get_current_graph()
+    # Limit frontend to 1000 nodes for performance
+    if len(graph["nodes"]) > 1000:
+        return {"nodes": graph["nodes"][:1000], "edges": graph["edges"][:1000]}
+    return graph
 
 
 @app.get("/api/node/{node_id}")
