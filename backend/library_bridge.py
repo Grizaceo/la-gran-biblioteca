@@ -71,10 +71,11 @@ async def process_fs_events():
             new_graph = await asyncio.to_thread(engine.build_graph, raw)
             set_current_graph(new_graph)
             
-            # Notify clients y ceder el control del loop para que puedan despertar
-            graph_update_event.set()
-            await asyncio.sleep(0)
-            graph_update_event.clear()
+            # Notify clients creando un nuevo evento para evitar condiciones de carrera
+            global graph_update_event
+            old_event = graph_update_event
+            graph_update_event = asyncio.Event()
+            old_event.set()
         except Exception as e:
             logger.error(f"Error processing fs events: {e}")
 
@@ -148,12 +149,14 @@ async def stream_graph():
 
         try:
             while True:
-                # Esperamos pasivamente hasta que haya un evento (no bloquea el loop)
-                await graph_update_event.wait()
-                graph = get_current_graph()
-                yield {"event": "update", "data": json.dumps(graph)}
-                # Prevenir bucles ajustados si el evento dispara multiple veces rapido
-                await asyncio.sleep(0.1)
+                current_event = graph_update_event
+                try:
+                    # Usamos timeout para emitir pings y mantener la conexión (Vite/Proxy)
+                    await asyncio.wait_for(current_event.wait(), timeout=15.0)
+                    graph = get_current_graph()
+                    yield {"event": "update", "data": json.dumps(graph)}
+                except asyncio.TimeoutError:
+                    yield {"event": "ping", "data": "{}"}
         except asyncio.CancelledError:
             return
 

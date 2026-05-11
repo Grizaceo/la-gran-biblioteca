@@ -39,7 +39,7 @@ export class Renderer {
         this.draw()
       })
 
-    select(this.canvas).call(this.zoom)
+    select(this.canvas).call(this.zoom).on('dblclick.zoom', null)
   }
   
   private resize() {
@@ -58,8 +58,12 @@ export class Renderer {
     const { x, y, k } = this.transform
     
     ctx.save()
+    ctx.resetTransform()
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    ctx.restore()
+
+    ctx.save()
     ctx.setTransform(k, 0, 0, k, x, y)
-    ctx.clearRect(-x/k, -y/k, this.canvas.width/k, this.canvas.height/k)
     
     // Dibujar edges primero
     this.drawEdges(ctx)

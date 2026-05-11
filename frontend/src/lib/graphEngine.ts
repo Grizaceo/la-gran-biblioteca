@@ -43,7 +43,18 @@ export class GraphEngine {
   }
   
   loadGraph(graph: Graph) {
-    this.nodes = graph.nodes.map(n => ({ ...n, x: n.position?.x, y: n.position?.y }))
+    const oldNodeMap = new Map(this.nodes.map(n => [n.id, n]))
+    this.nodes = graph.nodes.map(n => {
+      const old = oldNodeMap.get(n.id)
+      return { 
+        ...n, 
+        x: old?.x ?? n.position?.x, 
+        y: old?.y ?? n.position?.y,
+        vx: old?.vx,
+        vy: old?.vy,
+        position: old?.position ?? n.position
+      }
+    })
     this.edges = graph.edges
     
     this.worker.postMessage({
