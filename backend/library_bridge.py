@@ -64,11 +64,16 @@ async def process_fs_events():
                 break
         
         try:
-            raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
-            new_graph = engine.build_graph(raw)
+            # Ejecutar operaciones pesadas de I/O de disco y SQLite en un hilo separado
+            raw = await asyncio.to_thread(
+                scan_workspaces, max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN
+            )
+            new_graph = await asyncio.to_thread(engine.build_graph, raw)
             set_current_graph(new_graph)
-            # Notify clients
+            
+            # Notify clients y ceder el control del loop para que puedan despertar
             graph_update_event.set()
+            await asyncio.sleep(0)
             graph_update_event.clear()
         except Exception as e:
             logger.error(f"Error processing fs events: {e}")
