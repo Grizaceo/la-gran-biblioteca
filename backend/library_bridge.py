@@ -15,9 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
+import logging
 
 from scan_workspaces import scan_workspaces, WORKSPACE_ROOT
 from graph_engine import GraphEngine
+from workspace_watcher import start_watcher
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="La Gran Biblioteca API")
 
@@ -37,24 +41,60 @@ _graph_state = {"graph": {"nodes": [], "edges": []}}
 SCAN_MAX_FILES = int(os.environ.get("SCAN_MAX_FILES", "5000"))
 SCAN_MAX_CHILDREN = int(os.environ.get("SCAN_MAX_CHILDREN", "50"))
 
+event_queue = None
+graph_update_event = asyncio.Event()
+observer = None
 
 def get_current_graph():
     return _graph_state["graph"]
 
-
 def set_current_graph(g):
     _graph_state["graph"] = g
+
+async def process_fs_events():
+    while True:
+        event = await event_queue.get()
+        # Coalesce events in a 500ms window
+        await asyncio.sleep(0.5)
+        while not event_queue.empty():
+            try:
+                event_queue.get_nowait()
+                event_queue.task_done()
+            except asyncio.QueueEmpty:
+                break
+        
+        try:
+            raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
+            new_graph = engine.build_graph(raw)
+            set_current_graph(new_graph)
+            # Notify clients
+            graph_update_event.set()
+            graph_update_event.clear()
+        except Exception as e:
+            logger.error(f"Error processing fs events: {e}")
 
 
 @app.on_event("startup")
 async def startup_event():
     """Carga grafo existente o crea uno nuevo."""
+    global event_queue, observer
+    event_queue = asyncio.Queue()
+    
     db_path = Path(__file__).parent / "library.db"
     if db_path.exists():
         set_current_graph(engine.load_from_db())
     else:
         raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
         set_current_graph(engine.build_graph(raw))
+        
+    observer = start_watcher(str(WORKSPACE_ROOT), asyncio.get_running_loop(), event_queue)
+    asyncio.create_task(process_fs_events())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if observer:
+        observer.stop()
+        observer.join()
 
 
 @app.get("/api/graph")
@@ -101,24 +141,14 @@ async def stream_graph():
         graph = get_current_graph()
         yield {"event": "init", "data": json.dumps(graph)}
 
-        def _graph_hash(g):
-            return hashlib.md5(json.dumps(g, sort_keys=True).encode()).hexdigest()
-
-        last_hash = _graph_hash(graph)
-
         try:
             while True:
-                await asyncio.sleep(5)
-
-                raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
-                new_graph = engine.build_graph(raw)
-
-                new_hash = _graph_hash(new_graph)
-
-                if new_hash != last_hash:
-                    set_current_graph(new_graph)
-                    last_hash = new_hash
-                    yield {"event": "update", "data": json.dumps(new_graph)}
+                # Esperamos pasivamente hasta que haya un evento (no bloquea el loop)
+                await graph_update_event.wait()
+                graph = get_current_graph()
+                yield {"event": "update", "data": json.dumps(graph)}
+                # Prevenir bucles ajustados si el evento dispara multiple veces rapido
+                await asyncio.sleep(0.1)
         except asyncio.CancelledError:
             return
 
