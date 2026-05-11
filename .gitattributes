@@ -1,0 +1,4 @@
+# Ensure Dockerfiles are tracked as text
+backend/Dockerfile text
+frontend/Dockerfile text
+docker-compose.yml text

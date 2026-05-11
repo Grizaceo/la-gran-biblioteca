@@ -1,14 +1,11 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci
+COPY frontend/ .
+RUN npm run build
 
-COPY . .
-
-ENV VITE_API_TARGET=http://backend:3001
-
-EXPOSE 3000
-
-CMD ["npm", "run", "dev"]
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
