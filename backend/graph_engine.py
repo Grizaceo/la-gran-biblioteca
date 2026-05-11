@@ -10,8 +10,11 @@ from pathlib import Path
 from typing import Dict, List, Any
 from dataclasses import dataclass, asdict
 
+import os
+
 WORKSPACE_ROOT = Path.home() / ".hermes" / "workspaces"
-DB_PATH = Path(__file__).parent / "library.db"
+_DB_DEFAULT = str(Path(__file__).parent / "library.db")
+DB_PATH = Path(os.environ.get("DB_PATH", _DB_DEFAULT))
 
 
 @dataclass

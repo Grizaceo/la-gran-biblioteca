@@ -10,7 +10,10 @@ from pathlib import Path
 from collections import deque
 from typing import Dict, Any
 
-WORKSPACE_ROOT = Path.home() / ".hermes" / "workspaces"
+import os
+
+_DEFAULT_WORKSPACE = str(Path.home() / ".hermes" / "workspaces")
+WORKSPACE_ROOT = Path(os.environ.get("WORKSPACE_ROOT", _DEFAULT_WORKSPACE))
 
 logger = logging.getLogger(__name__)
 

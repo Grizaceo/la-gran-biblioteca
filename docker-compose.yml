@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: ./backend
+    container_name: lgb-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_PATH=/app/data/library.db
+      - WORKSPACE_ROOT=/root/.hermes/workspaces
+      - CORS_ORIGINS=http://localhost:3000
+    volumes:
+      - ./data:/app/data
+      - ${HOME}/.hermes/workspaces:/root/.hermes/workspaces:ro
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: lgb-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_TARGET=http://backend:3001
+    depends_on:
+      - backend
+    restart: unless-stopped
