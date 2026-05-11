@@ -14,6 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application
 COPY backend/ .
 
-EXPOSE 8000
+EXPOSE 3001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "library_bridge:app", "--host", "0.0.0.0", "--port", "3001"]
