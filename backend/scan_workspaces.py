@@ -38,18 +38,22 @@ def should_scan(filepath: Path) -> bool:
     return filepath.suffix.lower() in SCAN_EXTENSIONS or filepath.is_dir()
 
 
-def scan_workspaces(root: Path = WORKSPACE_ROOT) -> Dict[str, Any]:
+def scan_workspaces(
+    root: Path = WORKSPACE_ROOT,
+    max_files: int = 5000,
+    max_children: int = 50,
+) -> Dict[str, Any]:
     graph = {"nodes": [], "edges": []}
     node_map = {}
-    
+
     queue = deque()
     queue.append((root, 0, 0, 0, 0))
-    
+
     sibling_x_spacing = 150
     y_spacing = 150
     file_count = 0
-    
-    while queue and file_count < 2000:
+
+    while queue and file_count < max_files:
         current_path, depth, parent_x, parent_y, sibling_idx = queue.popleft()
         
         if not current_path.exists():
@@ -82,7 +86,12 @@ def scan_workspaces(root: Path = WORKSPACE_ROOT) -> Dict[str, Any]:
             # Children limitados
             try:
                 children = [p for p in current_path.iterdir() if should_scan(p)]
-                for idx, child in enumerate(sorted(children, key=lambda p: p.name)[:30]):
+                if len(children) > max_children:
+                    logger.warning(
+                        "Truncado: %s tiene %d hijos escaneables (max %d)",
+                        current_path, len(children), max_children
+                    )
+                for idx, child in enumerate(sorted(children, key=lambda p: p.name)[:max_children]):
                     queue.append((child, depth + 1, x, y, idx))
             except (PermissionError, OSError) as e:
                 logger.warning("No se pudo escanear %s: %s", current_path, e)
@@ -110,7 +119,10 @@ def scan_workspaces(root: Path = WORKSPACE_ROOT) -> Dict[str, Any]:
                 graph["edges"].append({
                     "source": parent_id, "target": node_id, "type": "contains"
                 })
-    
+
+    if file_count >= max_files:
+        logger.warning("Escaneo truncado: se alcanzó el límite de %d archivos", max_files)
+
     return graph
 
 

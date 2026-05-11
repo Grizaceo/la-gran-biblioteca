@@ -16,7 +16,9 @@ export class Renderer {
   
   constructor(canvas: HTMLCanvasElement, engine: GraphEngine) {
     this.canvas = canvas
-    this.ctx = canvas.getContext('2d')!
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas 2D context not available')
+    this.ctx = ctx
     this.engine = engine
     this.tooltip = document.getElementById('tooltip')!
     

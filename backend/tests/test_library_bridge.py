@@ -48,7 +48,7 @@ def test_study_node_persists():
         })
         bridge.set_current_graph(bridge.engine.load_from_db())
         client = TestClient(bridge.app)
-        response = client.post("/api/study?node_id=n1")
+        response = client.post("/api/study", json={"node_id": "n1"})
         assert response.status_code == 200
         assert response.json()["study_count"] == 1
 

@@ -3,8 +3,7 @@
 graph_engine.py - Versión minimalista para testing
 """
 
-import os
-import re
+import shutil
 import json
 import sqlite3
 from pathlib import Path
@@ -81,6 +80,63 @@ class GraphEngine:
         conn.close()
 
         return {"nodes": [n.to_dict() for n in self.nodes.values()], "edges": [e.to_dict() for e in self.edges]}
+
+    def rebuild_graph(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        """Rebuild the graph atomically with backup + transaction."""
+        backup_path = self.db_path.with_suffix(".db.bak")
+        if self.db_path.exists():
+            shutil.copy2(self.db_path, backup_path)
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("BEGIN EXCLUSIVE")
+            conn.execute("DELETE FROM nodes")
+            conn.execute("DELETE FROM edges")
+
+            self.nodes.clear()
+            self.edges.clear()
+
+            for nd in raw["nodes"]:
+                node = Node(
+                    id=nd["id"], type=nd["type"], label=nd["label"],
+                    path=nd["path"], metadata=dict(nd.get("metadata", {})),
+                    position=nd.get("position")
+                )
+                self.nodes[node.id] = node
+                conn.execute(
+                    "INSERT INTO nodes VALUES (?,?,?,?,?,?)",
+                    (node.id, node.type, node.label, node.path,
+                     json.dumps(node.metadata), json.dumps(node.position) if node.position else None)
+                )
+
+            for ed in raw["edges"]:
+                edge = Edge(ed["source"], ed["target"], ed["type"])
+                self.edges.append(edge)
+                conn.execute(
+                    "INSERT INTO edges VALUES (?,?,?)",
+                    (edge.source, edge.target, edge.type)
+                )
+
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            conn.close()
+            if backup_path.exists():
+                shutil.copy2(backup_path, self.db_path)
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+        return {"nodes": [n.to_dict() for n in self.nodes.values()], "edges": [e.to_dict() for e in self.edges]}
+
+    def restore_backup(self) -> bool:
+        """Restore database from .db.bak if it exists."""
+        backup_path = self.db_path.with_suffix(".db.bak")
+        if backup_path.exists():
+            shutil.copy2(backup_path, self.db_path)
+            return True
+        return False
 
     def update_node_metadata(self, node_id: str, metadata: Dict[str, Any]) -> None:
         conn = sqlite3.connect(self.db_path)

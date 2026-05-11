@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
 
@@ -20,7 +21,7 @@ from graph_engine import GraphEngine
 
 app = FastAPI(title="La Gran Biblioteca API")
 
-CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")]
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +33,9 @@ app.add_middleware(
 
 engine = GraphEngine()
 _graph_state = {"graph": {"nodes": [], "edges": []}}
+
+SCAN_MAX_FILES = int(os.environ.get("SCAN_MAX_FILES", "5000"))
+SCAN_MAX_CHILDREN = int(os.environ.get("SCAN_MAX_CHILDREN", "50"))
 
 
 def get_current_graph():
@@ -49,7 +53,7 @@ async def startup_event():
     if db_path.exists():
         set_current_graph(engine.load_from_db())
     else:
-        raw = scan_workspaces()
+        raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
         set_current_graph(engine.build_graph(raw))
 
 
@@ -68,11 +72,15 @@ async def get_node(node_id: str):
     raise HTTPException(status_code=404, detail="Node not found")
 
 
+class StudyRequest(BaseModel):
+    node_id: str
+
+
 @app.post("/api/study")
-async def study_node(node_id: str):
+async def study_node(req: StudyRequest):
     """Endpoint para registrar estudio de un nodo."""
     graph = get_current_graph()
-    node = next((n for n in graph["nodes"] if n["id"] == node_id), None)
+    node = next((n for n in graph["nodes"] if n["id"] == req.node_id), None)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
 
@@ -80,9 +88,9 @@ async def study_node(node_id: str):
         node["metadata"]["study_count"] = 0
     node["metadata"]["study_count"] += 1
 
-    engine.update_node_metadata(node_id, node["metadata"])
+    engine.update_node_metadata(req.node_id, node["metadata"])
 
-    return {"status": "ok", "node": node_id, "study_count": node["metadata"]["study_count"]}
+    return {"status": "ok", "node": req.node_id, "study_count": node["metadata"]["study_count"]}
 
 
 @app.get("/api/stream")
@@ -102,7 +110,7 @@ async def stream_graph():
             while True:
                 await asyncio.sleep(5)
 
-                raw = scan_workspaces()
+                raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
                 new_graph = engine.build_graph(raw)
 
                 new_hash = _graph_hash(new_graph)
@@ -119,16 +127,26 @@ async def stream_graph():
 
 @app.post("/api/rescan")
 async def trigger_rescan():
-    """Fuerza un re-escaneo del workspace."""
-    db_path = Path(__file__).parent / "library.db"
-    if db_path.exists():
-        db_path.unlink()
-    
-    raw = scan_workspaces()
-    new_graph = engine.build_graph(raw)
+    """Fuerza un re-escaneo atómico del workspace con backup."""
+    raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
+    try:
+        new_graph = engine.rebuild_graph(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rebuild failed: {e}")
     set_current_graph(new_graph)
-    
+
     return {"status": "ok", "nodes": len(new_graph["nodes"]), "edges": len(new_graph["edges"])}
+
+
+@app.post("/api/rollback")
+async def trigger_rollback():
+    """Restaura la base de datos desde el último backup."""
+    restored = engine.restore_backup()
+    if not restored:
+        raise HTTPException(status_code=404, detail="No backup found")
+    graph = engine.load_from_db()
+    set_current_graph(graph)
+    return {"status": "restored", "nodes": len(graph["nodes"]), "edges": len(graph["edges"])}
 
 
 @app.get("/api/health")
