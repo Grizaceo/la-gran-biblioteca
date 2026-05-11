@@ -7,9 +7,9 @@ Endpoints: /api/graph, /api/node/{id}, /api/study, /api/stream (SSE)
 import os
 import json
 import asyncio
-import hashlib
 from pathlib import Path
 from typing import Dict, Any
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -23,21 +23,9 @@ from workspace_watcher import start_watcher
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="La Gran Biblioteca API")
-
-CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# Global state
 engine = GraphEngine()
 _graph_state = {"graph": {"nodes": [], "edges": []}}
-
 SCAN_MAX_FILES = int(os.environ.get("SCAN_MAX_FILES", "5000"))
 SCAN_MAX_CHILDREN = int(os.environ.get("SCAN_MAX_CHILDREN", "50"))
 
@@ -45,11 +33,14 @@ event_queue = None
 graph_update_event = asyncio.Event()
 observer = None
 
+
 def get_current_graph():
     return _graph_state["graph"]
 
+
 def set_current_graph(g):
     _graph_state["graph"] = g
+
 
 async def process_fs_events():
     while True:
@@ -80,9 +71,9 @@ async def process_fs_events():
             logger.error(f"Error processing fs events: {e}")
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Carga grafo existente o crea uno nuevo."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events using modern lifespan pattern."""
     global event_queue, observer
     event_queue = asyncio.Queue()
     
@@ -95,12 +86,25 @@ async def startup_event():
         
     observer = start_watcher(str(WORKSPACE_ROOT), asyncio.get_running_loop(), event_queue)
     asyncio.create_task(process_fs_events())
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    
+    yield
+    
     if observer:
         observer.stop()
         observer.join()
+
+
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")]
+
+app = FastAPI(title="La Gran Biblioteca API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/api/graph")
