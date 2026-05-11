@@ -1,6 +1,5 @@
 // src/lib/graphEngine.ts - Layout con d3-force
 
-import * as d3Force from 'd3-force'
 import { Graph, Node, Edge } from './bridge'
 import style from './style.json'
 
@@ -16,15 +15,41 @@ export class GraphEngine {
   private edges: Edge[] = []
   private width: number
   private height: number
+  private worker: Worker
+  public onUpdate?: () => void
   
   constructor(width: number, height: number) {
     this.width = width
     this.height = height
+    // Instanciar el worker usando la URL de Vite
+    this.worker = new Worker(new URL('./workers/graph.worker.ts', import.meta.url), { type: 'module' })
+    
+    this.worker.onmessage = (event) => {
+      const { type, payload } = event.data
+      if (type === 'TICK') {
+        const positions = payload as {id: string, x: number, y: number}[]
+        const nodeMap = new Map(this.nodes.map(n => [n.id, n]))
+        for (const p of positions) {
+          const n = nodeMap.get(p.id)
+          if (n) {
+            n.x = p.x
+            n.y = p.y
+            n.position = { x: p.x, y: p.y }
+          }
+        }
+        if (this.onUpdate) this.onUpdate()
+      }
+    }
   }
   
   loadGraph(graph: Graph) {
-    this.nodes = graph.nodes.map(n => ({ ...n }))
+    this.nodes = graph.nodes.map(n => ({ ...n, x: n.position?.x, y: n.position?.y }))
     this.edges = graph.edges
+    
+    this.worker.postMessage({
+      type: 'START',
+      payload: { nodes: this.nodes, edges: this.edges, width: this.width, height: this.height }
+    })
   }
   
   getNode(id: string): PositionedNode | undefined {
@@ -39,38 +64,17 @@ export class GraphEngine {
     return this.edges
   }
   
+  // refineLayout ya no es necesario sincronamente, el worker hace ticks
   refineLayout(iterations: number = 300) {
-    // Crear simulación d3-force
-    const simulation = d3Force.forceSimulation(this.nodes)
-      .force('charge', d3Force.forceManyBody().strength(-300))
-      .force('center', d3Force.forceCenter(this.width / 2, this.height / 2))
-      .force('collision', d3Force.forceCollide().radius(this.getNodeRadius.bind(this)))
-      .force('link', d3Force.forceLink(this.edges)
-        .id((d: d3Force.SimulationNodeDatum) => (d as PositionedNode).id)
-        .distance(100)
-        .strength(0.5))
-      .stop()
-    
-    // Ejecutar iteraciones
-    for (let i = 0; i < iterations; i++) {
-      simulation.tick()
-    }
-    
-    // Actualizar posiciones
-    this.nodes.forEach(n => {
-      if (n.position) {
-        n.position.x = n.x ?? n.position.x
-        n.position.y = n.y ?? n.position.y
-      }
-    })
+     // Obsoleto: ahora es manejado por el worker automáticamente al hacer loadGraph
   }
   
-  getNodeRadius(node: d3Force.SimulationNodeDatum): number {
+  getNodeRadius(node: PositionedNode | {type: string}): number {
     const n = node as PositionedNode
     return (style.nodeRadius as Record<string, number>)[n.type] || style.nodeRadius.default
   }
 
-  getNodeColor(node: d3Force.SimulationNodeDatum): string {
+  getNodeColor(node: PositionedNode | {type: string}): string {
     const n = node as PositionedNode
     return (style.nodeColor as Record<string, string>)[n.type] || style.nodeColor.default
   }

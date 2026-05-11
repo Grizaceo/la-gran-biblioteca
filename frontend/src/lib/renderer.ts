@@ -72,6 +72,12 @@ export class Renderer {
   
   private drawEdges(ctx: CanvasRenderingContext2D) {
     const edges = this.engine.getEdges()
+    const { x, y, k } = this.transform
+    
+    const viewLeft = -x / k
+    const viewRight = (this.canvas.width - x) / k
+    const viewTop = -y / k
+    const viewBottom = (this.canvas.height - y) / k
     
     edges.forEach(edge => {
       const source = this.engine.getNode(edge.source)
@@ -79,9 +85,22 @@ export class Renderer {
       
       if (!source?.position || !target?.position) return
       
+      // CULLING Básico
+      const sx = source.position.x
+      const sy = source.position.y
+      const tx = target.position.x
+      const ty = target.position.y
+      
+      if ((sx < viewLeft && tx < viewLeft) || 
+          (sx > viewRight && tx > viewRight) || 
+          (sy < viewTop && ty < viewTop) || 
+          (sy > viewBottom && ty > viewBottom)) {
+        return
+      }
+      
       ctx.beginPath()
-      ctx.moveTo(source.position.x, source.position.y)
-      ctx.lineTo(target.position.x, target.position.y)
+      ctx.moveTo(sx, sy)
+      ctx.lineTo(tx, ty)
       
       ctx.strokeStyle = (style.edgeColor as Record<string, string>)[edge.type] || style.edgeColor.default
       ctx.lineWidth = 1
@@ -91,22 +110,41 @@ export class Renderer {
   
   private drawNodes(ctx: CanvasRenderingContext2D) {
     const nodes = this.engine.getNodes()
+    const { x, y, k } = this.transform
+    
+    const viewLeft = -x / k
+    const viewRight = (this.canvas.width - x) / k
+    const viewTop = -y / k
+    const viewBottom = (this.canvas.height - y) / k
+
+    const isLargeGraph = nodes.length > 1000
+    const isMassiveGraph = nodes.length > 3000
     
     nodes.forEach(node => {
       if (!node.position) return
       
-      const x = node.position.x
-      const y = node.position.y
+      const nx = node.position.x
+      const ny = node.position.y
       const r = this.engine.getNodeRadius(node)
+      
+      // CULLING
+      if (nx + r < viewLeft || nx - r > viewRight || ny + r < viewTop || ny - r > viewBottom) {
+        return
+      }
+      
       const color = this.engine.getNodeColor(node)
       
-      // Sombra
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
-      ctx.shadowBlur = 4
+      // Sombra (LOD)
+      if (!isMassiveGraph) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+        ctx.shadowBlur = 4
+      } else {
+        ctx.shadowBlur = 0
+      }
       
       // Nodo
       ctx.beginPath()
-      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.arc(nx, ny, isMassiveGraph ? r * 0.7 : r, 0, Math.PI * 2)
       ctx.fillStyle = color
       ctx.fill()
       
@@ -115,12 +153,14 @@ export class Renderer {
       ctx.lineWidth = 1
       ctx.stroke()
       
-      // Label pequeño
-      ctx.shadowBlur = 0
-      ctx.fillStyle = '#fff'
-      ctx.font = '10px monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText(node.label.substring(0, 12), x, y + r + 12)
+      // Label pequeño (LOD)
+      if (!isLargeGraph || k > 1.5) {
+        ctx.shadowBlur = 0
+        ctx.fillStyle = '#fff'
+        ctx.font = '10px monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText(node.label.substring(0, 12), nx, ny + r + 12)
+      }
     })
   }
   

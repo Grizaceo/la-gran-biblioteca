@@ -19,13 +19,16 @@ renderer.setOnNodeDoubleClick(async (node) => {
 canvas.addEventListener('pointermove', (e) => renderer.handlePointerMove(e))
 canvas.addEventListener('dblclick', (e) => renderer.handleDoubleClick(e))
 
+// Hook engine to renderer
+graphEngine.onUpdate = () => {
+  renderer.render()
+}
+
 // Load and render
 async function init() {
   try {
     const graph = await fetchGraph()
     graphEngine.loadGraph(graph)
-    graphEngine.refineLayout(100)
-    renderer.render()
   } catch (err) {
     console.error('Failed to load graph:', err)
   }
@@ -36,8 +39,6 @@ init()
 // SSE cleanup on page unload
 const closeSSE = subscribeToUpdates((graph: Graph) => {
   graphEngine.loadGraph(graph)
-  graphEngine.refineLayout(30)
-  renderer.render()
 })
 
 window.addEventListener('beforeunload', () => closeSSE())
