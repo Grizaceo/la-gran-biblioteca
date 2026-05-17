@@ -10,3 +10,7 @@ frontend/dist/
 export/
 .DS_Store
 *.log
+.codegraph/
+
+# Claude local config
+.claude/settings.local.json
