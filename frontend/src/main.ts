@@ -319,6 +319,50 @@ async function init(): Promise<void> {
       await selectNode(node.id as string)
     })
 
+    const ctxMenu = document.getElementById('ctx-menu')!
+
+    function hideCtxMenu(): void {
+      ctxMenu.style.display = 'none'
+    }
+
+    function showCtxMenu(x: number, y: number, nodeId: string, nodeType: string): void {
+      if (NON_FILE_TYPES.has(nodeType)) return
+
+      ctxMenu.style.left = `${x}px`
+      ctxMenu.style.top  = `${y}px`
+      ctxMenu.style.display = 'block'
+
+      const btnFolder = document.getElementById('ctx-open-folder')!
+      const btnFile   = document.getElementById('ctx-open-file')!
+      const newFolder = btnFolder.cloneNode(true) as HTMLElement
+      const newFile   = btnFile.cloneNode(true) as HTMLElement
+      btnFolder.replaceWith(newFolder)
+      btnFile.replaceWith(newFile)
+
+      newFolder.addEventListener('click', async () => {
+        hideCtxMenu()
+        try { await openNode(nodeId, true) }
+        catch { showToast('No se pudo abrir carpeta.', true) }
+      })
+      newFile.addEventListener('click', async () => {
+        hideCtxMenu()
+        try { await openNode(nodeId, false) }
+        catch { showToast('No se pudo abrir archivo.', true) }
+      })
+    }
+
+    engine.onNodeRightClick((node, event) => {
+      event.preventDefault()
+      showCtxMenu(event.clientX, event.clientY, node.id as string, node.type as string)
+    })
+
+    document.addEventListener('click', (e) => {
+      if (!ctxMenu.contains(e.target as globalThis.Node)) hideCtxMenu()
+    })
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideCtxMenu()
+    })
+
     document.getElementById('btn-reset')!.addEventListener('click', () => {
       engine.fg.cameraPosition({ x: 0, y: 0, z: 400 })
     })

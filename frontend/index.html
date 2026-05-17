@@ -47,6 +47,25 @@
       text-align: center; max-width: 80%;
     }
 
+    /* Context menu (right-click on node) */
+    #ctx-menu {
+      position: fixed; display: none; z-index: 200;
+      background: #1a1a2e;
+      border: 1px solid rgba(79,195,247,0.3);
+      border-radius: 6px; padding: 4px 0;
+      min-width: 180px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    #ctx-menu button {
+      display: block; width: 100%;
+      padding: 8px 16px;
+      background: none; border: none;
+      color: #cfd8dc; font-size: 13px;
+      text-align: left; cursor: pointer;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    #ctx-menu button:hover { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+
     /* Floating hover tooltip */
     #node-tooltip {
       position: fixed; display: none; pointer-events: none; z-index: 50;
@@ -611,6 +630,11 @@
 
   <div id="graph-container"></div>
   <div id="info-msg"></div>
+
+  <div id="ctx-menu">
+    <button id="ctx-open-folder">Abrir carpeta</button>
+    <button id="ctx-open-file">Abrir archivo</button>
+  </div>
 
   <aside id="node-detail">
     <div id="node-detail-header">

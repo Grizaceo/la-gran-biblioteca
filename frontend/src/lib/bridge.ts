@@ -59,10 +59,10 @@ export async function fetchNodeContent(id: string): Promise<NodeContent> {
 }
 
 export async function openNode(id: string, reveal: boolean): Promise<void> {
-  const res = await fetch(`${API_BASE}/node/${encodeURIComponent(id)}/open`, {
+  const res = await fetch(`${API_BASE}/open`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reveal }),
+    body: JSON.stringify({ node_id: id, reveal }),
   })
   if (!res.ok) throw new Error(`${res.status}`)
 }

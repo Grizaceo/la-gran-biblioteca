@@ -300,6 +300,10 @@ export class Graph3DEngine {
     this.fg.onNodeHover(handler)
   }
 
+  onNodeRightClick(handler: (node: Record<string, unknown>, event: MouseEvent) => void): void {
+    this.fg.onNodeRightClick(handler)
+  }
+
   private hydrate(n: Node, degree = 0): Record<string, unknown> {
     const studyCount = (n.metadata?.study_count as number | undefined) ?? 0
     const weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
