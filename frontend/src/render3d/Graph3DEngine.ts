@@ -4,21 +4,33 @@ import * as THREE from 'three'
 import type { Node, Edge, Graph } from '../lib/bridge'
 import { PALETTE } from './palette.js'
 
-// Shared unit sphere for all InstancedMesh instances (1 draw call per type)
-const baseInstanceGeo = new THREE.SphereGeometry(1, 8, 6)
+// Shared geometry buckets for raycasting/visual (keyed by rounded size)
+const geoCache = new Map<number, THREE.SphereGeometry>()
+// Shared materials per type — 1 draw call contribution per type
+const matCache = new Map<string, THREE.MeshLambertMaterial>()
 
-// Low-poly spheres for raycasting only (invisible, shared by size bucket)
-const raycastGeoCache = new Map<number, THREE.SphereGeometry>()
-const raycastMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })
+const PARTICLE_RADIUS = 280
 
-function getRaycastGeo(size: number): THREE.SphereGeometry {
+function getGeo(size: number): THREE.SphereGeometry {
   const bucket = Math.max(1, Math.round(size))
-  let geo = raycastGeoCache.get(bucket)
-  if (!geo) {
-    geo = new THREE.SphereGeometry(bucket, 6, 4)
-    raycastGeoCache.set(bucket, geo)
+  if (!geoCache.has(bucket)) {
+    geoCache.set(bucket, new THREE.SphereGeometry(bucket, 10, 7))
   }
-  return geo
+  return geoCache.get(bucket)!
+}
+
+function getMat(type: string): THREE.MeshLambertMaterial {
+  if (!matCache.has(type)) {
+    const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
+    matCache.set(type, new THREE.MeshLambertMaterial({
+      color: new THREE.Color(color),
+      emissive: new THREE.Color(color),
+      emissiveIntensity: 0.15,
+      transparent: true,
+      opacity: 0.88,
+    }))
+  }
+  return matCache.get(type)!
 }
 
 function nodeSize(weight: number): number {
@@ -60,16 +72,27 @@ function createStarfield(scene: THREE.Scene, count = 2000): THREE.Points {
   return starfield
 }
 
+function resolveType(endpoint: unknown): string {
+  if (typeof endpoint === 'object' && endpoint !== null) {
+    return ((endpoint as Record<string, unknown>).type as string) || 'default'
+  }
+  return 'default'
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class Graph3DEngine {
   fg: any
   onMinimapTick?: () => void
   onStop?: () => void
+  onTypesChanged?: () => void
 
   private nodeIndex = new Map<string, Record<string, unknown>>()
   private starfield: THREE.Points
-  private instancedMeshes: THREE.InstancedMesh[] = []
+  private hiddenTypes = new Set<string>()
   private _zoomOnStop = false
+  private _rafId = 0
+  private _rafFrame = 0
+  private _lastCamPos = new THREE.Vector3()
 
   constructor(container: HTMLElement) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +100,8 @@ export class Graph3DEngine {
     this.fg = FG3D({ controlType: 'orbit', rendererConfig: { antialias: true, alpha: false } })(container)
       .nodeThreeObject((node: Record<string, unknown>) => {
         const size = nodeSize(node.weight as number)
-        return new THREE.Mesh(getRaycastGeo(size), raycastMat)
+        const type = (node.type as string) || 'default'
+        return new THREE.Mesh(getGeo(size), getMat(type))
       })
       .nodeThreeObjectExtend(false)
       .linkDirectionalParticles(2)
@@ -96,67 +120,117 @@ export class Graph3DEngine {
     scene.add(new THREE.PointLight(0xffffff, 0.9, 1200))
 
     this.fg.onEngineStop(() => {
-      this.buildInstancedMeshes()
       if (this._zoomOnStop) {
         this.fg.zoomToFit(1000, 40)
         this._zoomOnStop = false
       }
-      this.onStop?.()
+      try { this.onStop?.() } catch (_) { /* */ }
+      setTimeout(() => {
+        try { this.onTypesChanged?.() } catch (_) { /* */ }
+      }, 0)
     })
 
     let minimapFrame = 0
     this.fg.onEngineTick(() => {
-      this.starfield.rotation.y += 0.0001
-      this.starfield.rotation.x += 0.00005
       if (++minimapFrame % 30 === 0) this.onMinimapTick?.()
     })
+
+    // rAF loop: starfield rotation + distance-based particle throttling.
+    // Must never throw — wraps all logic in try/catch.
+    const tick = () => {
+      this._rafId = requestAnimationFrame(tick)
+      try {
+        this.starfield.rotation.y += 0.0001
+        this.starfield.rotation.x += 0.00005
+        if (++this._rafFrame % 6 === 0) this.updateParticleVisibility()
+      } catch (_) { /* swallow — loop must survive */ }
+    }
+    this._rafId = requestAnimationFrame(tick)
   }
 
-  private buildInstancedMeshes(): void {
-    const scene = this.fg.scene()
-    for (const m of this.instancedMeshes) {
-      scene.remove(m)
-      m.dispose()
-    }
-    this.instancedMeshes = []
+  private updateParticleVisibility(): void {
+    const camera: THREE.Camera = this.fg.camera()
+    if (!camera) return
+    const camPos = camera.position
 
+    if (camPos.distanceToSquared(this._lastCamPos) < 1) return
+    this._lastCamPos.copy(camPos)
+
+    const radiusSq = PARTICLE_RADIUS * PARTICLE_RADIUS
+    const { links } = this.fg.graphData() as { links: Record<string, unknown>[] }
+    if (!links?.length) return
+
+    for (const link of links) {
+      const src = link.source as Record<string, unknown>
+      const tgt = link.target as Record<string, unknown>
+      if (!src || !tgt || typeof src !== 'object' || typeof tgt !== 'object') continue
+
+      const mx = (((src.x as number) || 0) + ((tgt.x as number) || 0)) / 2
+      const my = (((src.y as number) || 0) + ((tgt.y as number) || 0)) / 2
+      const mz = (((src.z as number) || 0) + ((tgt.z as number) || 0)) / 2
+      const dx = mx - camPos.x
+      const dy = my - camPos.y
+      const dz = mz - camPos.z
+      const distSq = dx * dx + dy * dy + dz * dz
+
+      const srcType = resolveType(link.source)
+      const tgtType = resolveType(link.target)
+      const typeVisible = !this.hiddenTypes.has(srcType) && !this.hiddenTypes.has(tgtType)
+
+      // photons are stored internally by 3d-force-graph; access via __photonsObj if present
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const photons = (link as any).__photonsObj as THREE.Object3D | undefined
+      if (photons) photons.visible = typeVisible && distSq < radiusSq
+    }
+  }
+
+  private applyNodeVisibility(type: string, visible: boolean): void {
     const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
-    if (!nodes.length) return
-
-    // Group by node type
-    const byType = new Map<string, Record<string, unknown>[]>()
     for (const n of nodes) {
-      const t = (n.type as string) || 'default'
-      if (!byType.has(t)) byType.set(t, [])
-      byType.get(t)!.push(n)
+      const nType = (n.type as string) || 'default'
+      if (nType !== type) continue
+      const obj = n.__threeObj as THREE.Object3D | undefined
+      if (obj) obj.visible = visible
     }
+  }
 
-    const dummy = new THREE.Object3D()
-
-    for (const [type, typeNodes] of byType) {
-      const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
-      const mat = new THREE.MeshLambertMaterial({
-        color: new THREE.Color(color),
-        emissive: new THREE.Color(color),
-        emissiveIntensity: 0.15,
-        transparent: true,
-        opacity: 0.88,
-      })
-      const mesh = new THREE.InstancedMesh(baseInstanceGeo, mat, typeNodes.length)
-      mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage)
-
-      for (let i = 0; i < typeNodes.length; i++) {
-        const n = typeNodes[i]
-        const size = nodeSize(n.weight as number)
-        dummy.position.set((n.x as number) || 0, (n.y as number) || 0, (n.z as number) || 0)
-        dummy.scale.setScalar(size)
-        dummy.updateMatrix()
-        mesh.setMatrixAt(i, dummy.matrix)
-      }
-      mesh.instanceMatrix.needsUpdate = true
-      scene.add(mesh)
-      this.instancedMeshes.push(mesh)
+  private applyEdgeVisibility(): void {
+    const { links } = this.fg.graphData() as { links: Record<string, unknown>[] }
+    for (const link of links) {
+      const srcType = resolveType(link.source)
+      const tgtType = resolveType(link.target)
+      const visible = !this.hiddenTypes.has(srcType) && !this.hiddenTypes.has(tgtType)
+      const lineObj  = link.__lineObj  as THREE.Object3D | undefined
+      const arrowObj = link.__arrowObj as THREE.Object3D | undefined
+      if (lineObj)  lineObj.visible  = visible
+      if (arrowObj) arrowObj.visible = visible
     }
+  }
+
+  setTypeVisible(type: string, visible: boolean): void {
+    if (visible) this.hiddenTypes.delete(type)
+    else         this.hiddenTypes.add(type)
+    this.applyNodeVisibility(type, visible)
+    this.applyEdgeVisibility()
+  }
+
+  isTypeVisible(type: string): boolean {
+    return !this.hiddenTypes.has(type)
+  }
+
+  getTypeStats(): Array<{ type: string; count: number; color: string }> {
+    const counts = new Map<string, number>()
+    for (const node of this.nodeIndex.values()) {
+      const t = (node.type as string) || 'default'
+      counts.set(t, (counts.get(t) || 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([type, count]) => ({
+        type,
+        count,
+        color: (PALETTE as Record<string, string>)[type] ?? PALETTE.default,
+      }))
   }
 
   setGraph(g: Graph): void {
@@ -213,14 +287,11 @@ export class Graph3DEngine {
   }
 
   destroy(): void {
-    const scene = this.fg.scene()
-    for (const m of this.instancedMeshes) {
-      scene.remove(m)
-      m.dispose()
-    }
-    this.instancedMeshes = []
-    raycastGeoCache.forEach(g => g.dispose())
-    raycastGeoCache.clear()
+    cancelAnimationFrame(this._rafId)
+    geoCache.forEach(g => g.dispose())
+    geoCache.clear()
+    matCache.forEach(m => m.dispose())
+    matCache.clear()
     ;(this.fg as unknown as { _destructor: () => void })._destructor()
   }
 }

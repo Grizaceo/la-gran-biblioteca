@@ -4,6 +4,7 @@ import { Graph3DEngine } from './render3d/Graph3DEngine'
 import { initSearch } from './render3d/ui/search.js'
 import { initMinimap } from './render3d/ui/minimap.js'
 import { initFocus } from './render3d/ui/focus.js'
+import { initVisibility } from './render3d/ui/visibility.js'
 import { PALETTE } from './render3d/palette.js'
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ async function init(): Promise<void> {
   step('3/6 Conectando UI…')
   try {
     const focus = initFocus(engine.fg)
+    initVisibility(engine)
 
     // ── Floating tooltip ──────────────────────────────────────────────────────
     const tooltip = document.createElement('div')

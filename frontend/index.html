@@ -347,6 +347,37 @@
       color: rgba(255,255,255,0.9);
     }
 
+    /* Visibility panel */
+    #visibility-panel {
+      display: none;
+      position: absolute; top: 140px; left: 20px;
+      width: 200px;
+      background: rgba(0,0,17,0.92);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 10px 0;
+      z-index: 25;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+    #visibility-panel.active { display: block; }
+    #visibility-list { display: flex; flex-direction: column; }
+    .vis-all, .vis-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      color: rgba(255,255,255,0.55);
+      transition: background 0.15s;
+    }
+    .vis-all { border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 4px; color: rgba(255,255,255,0.4); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    .vis-item:hover { background: rgba(255,255,255,0.04); }
+    .vis-item input, .vis-all input { width: 13px; height: 13px; accent-color: #4fc3f7; cursor: pointer; flex-shrink: 0; }
+    .vis-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .vis-name { flex: 1; }
+    .vis-count { color: rgba(255,255,255,0.25); font-size: 10px; }
+
     /* Node detail panel */
     #node-detail {
       position: absolute; top: 50px; right: 20px;
@@ -438,6 +469,10 @@
   <div id="controls">
     <button id="btn-reset" title="Reset cámara">Reset View</button>
     <button id="btn-focus" title="Focus en nodo seleccionado (F)">Focus+</button>
+    <button id="btn-visibility" title="Mostrar/ocultar tipos de nodo">Tipos</button>
+  </div>
+  <div id="visibility-panel">
+    <div id="visibility-list"></div>
   </div>
 
   <div id="focus-banner">
@@ -478,6 +513,7 @@
 
   <script>
     window.addEventListener('error', function(e) {
+      console.error('[LGB global error]', e.message, e.filename + ':' + e.lineno, e.error);
       var err = document.getElementById('loading-error');
       var txt = document.getElementById('loading-text');
       var spin = document.querySelector('#loading .spinner');
@@ -486,6 +522,7 @@
       if (spin) spin.style.display = 'none';
     });
     window.addEventListener('unhandledrejection', function(e) {
+      console.error('[LGB unhandled rejection]', e.reason);
       var err = document.getElementById('loading-error');
       var txt = document.getElementById('loading-text');
       var spin = document.querySelector('#loading .spinner');
