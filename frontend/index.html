@@ -1,34 +1,470 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>La Gran Biblioteca</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a12; color: #e0e0e0; font-family: monospace; overflow: hidden; }
-    #container { width: 100vw; height: 100vh; }
-    canvas { display: block; cursor: grab; }
-    canvas:active { cursor: grabbing; }
-    #tooltip {
-      position: absolute;
-      background: rgba(20, 20, 30, 0.95);
-      border: 1px solid #444;
-      padding: 8px 12px;
-      border-radius: 4px;
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #graph-container { width: 100%; height: 100%; }
+
+    /* Top bar */
+    #top-bar {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 12px 20px;
+      background: linear-gradient(to bottom, rgba(0,0,17,0.9), transparent);
+      display: flex; align-items: center; gap: 16px; z-index: 20;
       pointer-events: none;
-      font-size: 12px;
-      max-width: 300px;
-      z-index: 100;
     }
-    #tooltip.hidden { display: none; }
+    #top-bar * { pointer-events: auto; }
+    #top-bar h1 {
+      color: rgba(255,255,255,0.85);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 16px; font-weight: 300; letter-spacing: 2px;
+    }
+    #top-bar .status {
+      color: rgba(255,255,255,0.4);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+    }
+    #top-bar .stats {
+      color: rgba(79,195,247,0.7);
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      margin-left: auto;
+    }
+
+    /* Info message (hover) */
+    #info-msg {
+      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.7);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px; pointer-events: none; z-index: 10;
+      text-align: center; max-width: 80%;
+    }
+
+    /* Legend */
+    #legend {
+      position: absolute; bottom: 20px; right: 20px;
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 12px 16px;
+      z-index: 20;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+    }
+    #legend h3 {
+      color: rgba(255,255,255,0.6);
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 4px;
+    }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-label { color: rgba(255,255,255,0.5); }
+
+    /* Loading overlay */
+    #loading {
+      position: absolute; inset: 0;
+      background: #000011;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      transition: opacity 0.5s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading .spinner {
+      width: 40px; height: 40px;
+      border: 2px solid rgba(79,195,247,0.2);
+      border-top-color: rgba(79,195,247,0.8);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    #loading .text {
+      color: rgba(255,255,255,0.5);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    #loading .error {
+      color: #e57373;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      margin-top: 8px;
+      max-width: 400px;
+      text-align: center;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Search */
+    #search-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #search-type-btn {
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      padding: 5px 8px;
+      border-radius: 4px 0 0 4px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #search-type-btn:hover { border-color: rgba(79,195,247,0.4); color: rgba(255,255,255,0.9); }
+    #search-type-btn .type-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    #search-type-dropdown {
+      position: absolute;
+      top: 100%; left: 0;
+      margin-top: 4px;
+      background: rgba(0,0,17,0.95);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      min-width: 160px;
+      z-index: 30;
+      display: none;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    #search-type-dropdown.active { display: block; }
+    .type-filter-item {
+      padding: 7px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .type-filter-item:last-child { border-bottom: none; }
+    .type-filter-item:hover { background: rgba(79,195,247,0.15); color: rgba(255,255,255,0.95); }
+    .type-filter-item.active { background: rgba(79,195,247,0.1); color: rgba(255,255,255,0.9); }
+    .type-filter-item .type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .type-filter-item .type-count { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.25); }
+    #search-input {
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-left: none;
+      border-radius: 0;
+      color: rgba(255,255,255,0.8);
+      padding: 5px 10px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      width: 160px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    #search-input:focus { border-color: rgba(79,195,247,0.5); width: 220px; }
+    #search-input::placeholder { color: rgba(255,255,255,0.25); }
+    #search-btn {
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.5);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #search-btn:hover { border-color: rgba(79,195,247,0.4); color: rgba(255,255,255,0.9); }
+    #search-results {
+      position: absolute;
+      top: 100%; right: 0;
+      margin-top: 4px;
+      background: rgba(0,0,17,0.95);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      min-width: 260px;
+      z-index: 30;
+      display: none;
+    }
+    #search-results.active { display: block; }
+    .search-result-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: rgba(79,195,247,0.15); color: rgba(255,255,255,0.95); }
+    .search-result-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .search-result-name { flex: 1; }
+    .search-result-type { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; }
+    .search-no-results {
+      padding: 12px;
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+    }
+
+    /* Focus mode */
+    #focus-banner {
+      display: none;
+      position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,17,0.9);
+      border: 1px solid rgba(79,195,247,0.3);
+      border-radius: 6px;
+      padding: 8px 16px;
+      z-index: 25;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      align-items: center;
+      gap: 12px;
+    }
+    #focus-banner.active { display: flex; }
+    #focus-banner .focus-name {
+      color: #4fc3f7;
+      font-weight: 500;
+      max-width: 300px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #focus-back {
+      background: rgba(79,195,247,0.15);
+      border: 1px solid rgba(79,195,247,0.3);
+      color: #4fc3f7;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #focus-back:hover { background: rgba(79,195,247,0.25); }
+
+    /* Breadcrumb */
+    #breadcrumb {
+      display: none;
+      position: absolute; top: 50px; left: 20px;
+      z-index: 25;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      align-items: center;
+      gap: 4px;
+      background: rgba(0,0,17,0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px;
+      padding: 4px 10px;
+    }
+    #breadcrumb.active { display: flex; }
+    .bc-item {
+      cursor: pointer; color: rgba(255,255,255,0.5);
+      transition: color 0.2s;
+      max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .bc-item:hover { color: #4fc3f7; }
+    .bc-item:last-child { color: rgba(255,255,255,0.8); cursor: default; }
+    .bc-sep { color: rgba(255,255,255,0.15); margin: 0 2px; }
+
+    /* Minimap */
+    #minimap {
+      position: absolute; bottom: 20px; left: 20px;
+      width: 180px; height: 120px;
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      z-index: 20;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    #minimap-canvas { width: 100%; height: 100%; }
+    #minimap-viewbox {
+      position: absolute;
+      border: 1px solid rgba(79,195,247,0.5);
+      background: rgba(79,195,247,0.05);
+      pointer-events: none;
+    }
+
+    /* Controls */
+    #controls {
+      position: absolute; top: 60px; left: 20px;
+      z-index: 20;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #controls button {
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #controls button:hover {
+      background: rgba(79,195,247,0.15);
+      border-color: rgba(79,195,247,0.4);
+      color: rgba(255,255,255,0.9);
+    }
+
+    /* Node detail panel */
+    #node-detail {
+      position: absolute; top: 50px; right: 20px;
+      width: 260px;
+      background: rgba(0,0,17,0.92);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 16px;
+      z-index: 20;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      display: none;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+    #node-detail.active { display: block; }
+    #node-detail-close {
+      float: right;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+    }
+    #node-detail-close:hover { color: rgba(255,255,255,0.7); }
+    #node-detail h2 {
+      color: rgba(255,255,255,0.9);
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      margin-right: 20px;
+      word-break: break-word;
+    }
+    .detail-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      color: #000;
+    }
+    .detail-path {
+      color: rgba(255,255,255,0.35);
+      font-size: 10px;
+      word-break: break-all;
+      margin-bottom: 12px;
+      font-family: 'Courier New', monospace;
+    }
+    .detail-meta {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 10px;
+    }
+    .detail-meta-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: rgba(255,255,255,0.4);
+    }
+    .detail-meta-row span:last-child { color: rgba(255,255,255,0.7); }
   </style>
 </head>
 <body>
-  <div id="container">
-    <canvas id="graph"></canvas>
-    <div id="tooltip" class="hidden"></div>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="text" id="loading-text">Cargando vault…</div>
+    <div class="error" id="loading-error" style="display:none"></div>
   </div>
+
+  <div id="top-bar">
+    <h1>LA GRAN BIBLIOTECA</h1>
+    <span class="status" id="status">Conectando…</span>
+    <div id="search-container">
+      <button id="search-type-btn" title="Filtrar por tipo">
+        <span class="type-dot" id="search-type-dot" style="background:#90a4ae"></span>
+        <span id="search-type-label">Todos</span>
+      </button>
+      <div id="search-type-dropdown"></div>
+      <input type="text" id="search-input" placeholder="Buscar… (Ctrl+K)" />
+      <button id="search-btn">Buscar</button>
+      <div id="search-results"></div>
+    </div>
+    <span class="stats" id="stats"></span>
+  </div>
+
+  <div id="controls">
+    <button id="btn-reset" title="Reset cámara">Reset View</button>
+    <button id="btn-focus" title="Focus en nodo seleccionado (F)">Focus+</button>
+  </div>
+
+  <div id="focus-banner">
+    <span>Focus:</span>
+    <span class="focus-name" id="focus-name"></span>
+    <button id="focus-back">← Volver</button>
+  </div>
+
+  <div id="breadcrumb"></div>
+
+  <div id="minimap">
+    <canvas id="minimap-canvas"></canvas>
+    <div id="minimap-viewbox"></div>
+  </div>
+
+  <div id="graph-container"></div>
+  <div id="info-msg"></div>
+
+  <aside id="node-detail">
+    <button id="node-detail-close">×</button>
+    <h2 id="node-detail-name"></h2>
+    <div class="detail-type" id="node-detail-type"></div>
+    <div class="detail-path" id="node-detail-path"></div>
+    <div class="detail-meta" id="node-detail-meta"></div>
+  </aside>
+
+  <div id="legend">
+    <h3>Tipos de nodo</h3>
+    <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div><span class="legend-label">file</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffb74d"></div><span class="legend-label">folder</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#81c784"></div><span class="legend-label">research</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e57373"></div><span class="legend-label">project</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ba68c8"></div><span class="legend-label">event</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fff59d"></div><span class="legend-label">tag</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#90a4ae"></div><span class="legend-label">otros</span></div>
+  </div>
+
+  <script>
+    window.addEventListener('error', function(e) {
+      var err = document.getElementById('loading-error');
+      var txt = document.getElementById('loading-text');
+      var spin = document.querySelector('#loading .spinner');
+      if (err) { err.style.display = 'block'; err.textContent = 'JS Error: ' + e.message + ' (' + (e.filename||'') + ':' + e.lineno + ')'; }
+      if (txt) txt.style.display = 'none';
+      if (spin) spin.style.display = 'none';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      var err = document.getElementById('loading-error');
+      var txt = document.getElementById('loading-text');
+      var spin = document.querySelector('#loading .spinner');
+      if (err) { err.style.display = 'block'; err.textContent = 'Promise Error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)); }
+      if (txt) txt.style.display = 'none';
+      if (spin) spin.style.display = 'none';
+    });
+  </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

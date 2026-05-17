@@ -9,8 +9,10 @@ services:
       - "3001:3001"
     volumes:
       - ./backend:/app
+      - /home/gris/.hermes/workspaces:/workspaces:ro
     environment:
       - PYTHONPATH=/app
+      - WORKSPACE_ROOT=/workspaces
 
   frontend:
     build:

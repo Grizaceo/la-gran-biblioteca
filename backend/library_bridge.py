@@ -111,9 +111,11 @@ app.add_middleware(
 async def get_graph():
     """Retorna el grafo completo con posiciones (limitado a 1000 nodos para frontend)."""
     graph = get_current_graph()
-    # Limit frontend to 1000 nodes for performance
     if len(graph["nodes"]) > 1000:
-        return {"nodes": graph["nodes"][:1000], "edges": graph["edges"][:1000]}
+        nodes = graph["nodes"][:1000]
+        node_ids = {n["id"] for n in nodes}
+        edges = [e for e in graph["edges"] if e["source"] in node_ids and e["target"] in node_ids]
+        return {"nodes": nodes, "edges": edges}
     return graph
 
 
