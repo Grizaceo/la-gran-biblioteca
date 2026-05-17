@@ -7,11 +7,14 @@ Endpoints: /api/graph, /api/node/{id}, /api/study, /api/stream (SSE)
 import os
 import json
 import asyncio
+import subprocess
+import platform
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
@@ -26,8 +29,10 @@ logger = logging.getLogger(__name__)
 # Global state
 engine = GraphEngine()
 _graph_state = {"graph": {"nodes": [], "edges": []}}
+_node_index: dict[str, dict] = {}
 SCAN_MAX_FILES = int(os.environ.get("SCAN_MAX_FILES", "5000"))
 SCAN_MAX_CHILDREN = int(os.environ.get("SCAN_MAX_CHILDREN", "50"))
+_IS_WSL: bool | None = None
 
 event_queue = None
 graph_update_event = asyncio.Event()
@@ -39,12 +44,15 @@ def get_current_graph():
 
 
 def set_current_graph(g):
+    global _node_index
     _graph_state["graph"] = g
+    _node_index = {n["id"]: n for n in g["nodes"]}
 
 
 async def process_fs_events():
     while True:
-        event = await event_queue.get()
+        await event_queue.get()
+        event_queue.task_done()
         # Coalesce events in a 500ms window
         await asyncio.sleep(0.5)
         while not event_queue.empty():
@@ -111,21 +119,22 @@ app.add_middleware(
 async def get_graph():
     """Retorna el grafo completo con posiciones (limitado a 1000 nodos para frontend)."""
     graph = get_current_graph()
-    if len(graph["nodes"]) > 1000:
+    total = len(graph["nodes"])
+    if total > 1000:
         nodes = graph["nodes"][:1000]
         node_ids = {n["id"] for n in nodes}
         edges = [e for e in graph["edges"] if e["source"] in node_ids and e["target"] in node_ids]
-        return {"nodes": nodes, "edges": edges}
-    return graph
+        return {"nodes": nodes, "edges": edges, "total": total}
+    return {**graph, "total": total}
 
 
 @app.get("/api/node/{node_id}")
 async def get_node(node_id: str):
     """Retorna un nodo específico por ID."""
-    for node in get_current_graph()["nodes"]:
-        if node["id"] == node_id:
-            return node
-    raise HTTPException(status_code=404, detail="Node not found")
+    node = _get_node_by_id(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return node
 
 
 class StudyRequest(BaseModel):
@@ -195,6 +204,132 @@ async def trigger_rollback():
     graph = engine.load_from_db()
     set_current_graph(graph)
     return {"status": "restored", "nodes": len(graph["nodes"]), "edges": len(graph["edges"])}
+
+
+CONTENT_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+
+TEXT_EXTENSIONS: dict[str, str] = {
+    "md": "markdown", "txt": "text", "rst": "rst",
+    "py": "python", "js": "javascript", "ts": "typescript",
+    "jsx": "javascript", "tsx": "typescript",
+    "json": "json", "yaml": "yaml", "yml": "yaml",
+    "toml": "toml", "ini": "ini", "cfg": "ini",
+    "sh": "bash", "bash": "bash", "zsh": "bash",
+    "rs": "rust", "go": "go", "c": "c", "cpp": "cpp",
+    "h": "c", "hpp": "cpp", "java": "java", "rb": "ruby",
+    "php": "php", "cs": "csharp", "swift": "swift",
+    "kt": "kotlin", "r": "r", "sql": "sql",
+    "css": "css", "scss": "scss", "html": "html", "xml": "xml",
+    "dockerfile": "dockerfile",
+}
+
+
+def _get_node_by_id(node_id: str):
+    return _node_index.get(node_id)
+
+
+def _validate_path(path_str: str) -> Path:
+    """Resolve path and ensure it's within WORKSPACE_ROOT."""
+    p = Path(path_str).resolve()
+    root = Path(str(WORKSPACE_ROOT)).resolve()
+    if not str(p).startswith(str(root)):
+        raise HTTPException(status_code=403, detail="Path outside workspace")
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    return p
+
+
+@app.get("/api/node/{node_id}/content")
+async def get_node_content(node_id: str):
+    """Retorna el contenido textual de un nodo archivo."""
+    node = _get_node_by_id(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    path_str = node.get("path", "")
+    if not path_str:
+        raise HTTPException(status_code=422, detail="Node has no path")
+
+    p = _validate_path(path_str)
+
+    if not p.is_file():
+        raise HTTPException(status_code=422, detail="Path is not a file")
+
+    ext = p.suffix.lstrip(".").lower()
+    if p.name.lower() == "dockerfile":
+        ext = "dockerfile"
+
+    lang = TEXT_EXTENSIONS.get(ext)
+    if lang is None:
+        raise HTTPException(status_code=415, detail="Unsupported file type for preview")
+
+    size = p.stat().st_size
+    truncated = size > CONTENT_MAX_BYTES
+
+    try:
+        with open(p, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read(CONTENT_MAX_BYTES)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not read file: {e}")
+
+    return {"content": content, "lang": lang, "size": size, "truncated": truncated}
+
+
+def _is_wsl() -> bool:
+    global _IS_WSL
+    if _IS_WSL is None:
+        try:
+            with open("/proc/version") as f:
+                _IS_WSL = "microsoft" in f.read().lower()
+        except Exception:
+            _IS_WSL = False
+    return _IS_WSL
+
+
+class OpenRequest(BaseModel):
+    reveal: bool = False
+
+
+@app.post("/api/node/{node_id}/open")
+async def open_node(node_id: str, req: OpenRequest = OpenRequest()):
+    """Abre el archivo en el SO local. Solo disponible con LGB_ALLOW_OPEN=1."""
+    if os.environ.get("LGB_ALLOW_OPEN") != "1":
+        raise HTTPException(status_code=403, detail="LGB_ALLOW_OPEN not enabled")
+
+    node = _get_node_by_id(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    path_str = node.get("path", "")
+    if not path_str:
+        raise HTTPException(status_code=422, detail="Node has no path")
+
+    p = _validate_path(path_str)
+
+    try:
+        if _is_wsl():
+            win_path_result = subprocess.run(
+                ["wslpath", "-w", str(p)], capture_output=True, text=True, timeout=5
+            )
+            win_path = win_path_result.stdout.strip()
+            if req.reveal:
+                subprocess.Popen(["explorer.exe", f"/select,{win_path}"])
+            else:
+                subprocess.Popen(["cmd.exe", "/c", "start", "", win_path])
+        elif platform.system() == "Darwin":
+            if req.reveal:
+                subprocess.Popen(["open", "-R", str(p)])
+            else:
+                subprocess.Popen(["open", str(p)])
+        else:
+            if req.reveal:
+                subprocess.Popen(["xdg-open", str(p.parent)])
+            else:
+                subprocess.Popen(["xdg-open", str(p)])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not open file: {e}")
+
+    return {"ok": True}
 
 
 @app.get("/api/health")
