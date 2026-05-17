@@ -7,7 +7,7 @@ export interface Node {
   type: string
   label: string
   path: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   position: { x: number; y: number }
 }
 
@@ -20,6 +20,7 @@ export interface Edge {
 export interface Graph {
   nodes: Node[]
   edges: Edge[]
+  total?: number
 }
 
 export async function fetchGraph(): Promise<Graph> {
@@ -42,6 +43,28 @@ export async function studyNode(id: string): Promise<any> {
   })
   if (!res.ok) throw new Error(`Failed to study node ${id}: ${res.status} ${res.statusText}`)
   return res.json()
+}
+
+export interface NodeContent {
+  content: string
+  lang: string
+  size: number
+  truncated: boolean
+}
+
+export async function fetchNodeContent(id: string): Promise<NodeContent> {
+  const res = await fetch(`${API_BASE}/node/${encodeURIComponent(id)}/content`)
+  if (!res.ok) throw new Error(`${res.status}`)
+  return res.json()
+}
+
+export async function openNode(id: string, reveal: boolean): Promise<void> {
+  const res = await fetch(`${API_BASE}/node/${encodeURIComponent(id)}/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reveal }),
+  })
+  if (!res.ok) throw new Error(`${res.status}`)
 }
 
 export function subscribeToUpdates(

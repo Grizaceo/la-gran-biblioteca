@@ -93,6 +93,9 @@ export class Graph3DEngine {
   private _rafId = 0
   private _rafFrame = 0
   private _lastCamPos = new THREE.Vector3()
+  private _paused = false
+  private _savedParticles = 2
+  private _tick!: () => void
 
   constructor(container: HTMLElement) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -137,15 +140,15 @@ export class Graph3DEngine {
 
     // rAF loop: starfield rotation + distance-based particle throttling.
     // Must never throw — wraps all logic in try/catch.
-    const tick = () => {
-      this._rafId = requestAnimationFrame(tick)
+    this._tick = () => {
+      this._rafId = requestAnimationFrame(this._tick)
       try {
         this.starfield.rotation.y += 0.0001
         this.starfield.rotation.x += 0.00005
         if (++this._rafFrame % 6 === 0) this.updateParticleVisibility()
       } catch (_) { /* swallow — loop must survive */ }
     }
-    this._rafId = requestAnimationFrame(tick)
+    this._rafId = requestAnimationFrame(this._tick)
   }
 
   private updateParticleVisibility(): void {
@@ -205,6 +208,23 @@ export class Graph3DEngine {
       if (lineObj)  lineObj.visible  = visible
       if (arrowObj) arrowObj.visible = visible
     }
+  }
+
+  pause(): void {
+    if (this._paused) return
+    this._paused = true
+    cancelAnimationFrame(this._rafId)
+    this._rafId = 0
+    this.fg.pauseAnimation()
+    this.fg.linkDirectionalParticles(0)
+  }
+
+  resume(): void {
+    if (!this._paused) return
+    this._paused = false
+    this.fg.resumeAnimation()
+    this.fg.linkDirectionalParticles(this._savedParticles)
+    this._rafId = requestAnimationFrame(this._tick)
   }
 
   setTypeVisible(type: string, visible: boolean): void {
