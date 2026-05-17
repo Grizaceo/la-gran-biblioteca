@@ -72,21 +72,75 @@ async function init(): Promise<void> {
   try {
     const focus = initFocus(engine.fg)
 
+    // ── Floating tooltip ──────────────────────────────────────────────────────
+    const tooltip = document.createElement('div')
+    tooltip.id = 'node-tooltip'
+    document.body.appendChild(tooltip)
+
+    let mouseX = 0
+    let mouseY = 0
+    let isHovering = false
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX
+      mouseY = e.clientY
+      if (isHovering) positionTooltip()
+    })
+
+    function positionTooltip(): void {
+      const tw = tooltip.offsetWidth
+      const th = tooltip.offsetHeight
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      let x = mouseX + 16
+      let y = mouseY - 12
+      if (x + tw > vw - 8) x = mouseX - tw - 16
+      if (y + th > vh - 8) y = vh - th - 8
+      tooltip.style.left = x + 'px'
+      tooltip.style.top  = y + 'px'
+    }
+
     engine.onNodeHover((node) => {
-      const infoEl = document.getElementById('info-msg')!
       if (node) {
-        infoEl.textContent = (node.name as string) || (node.id as string)
+        const name  = (node.name as string) || (node.id as string)
+        const type  = (node.type as string) || 'unknown'
+        const path  = (node.path as string) || ''
+        const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
+        const pathShort = path.length > 48 ? '…' + path.slice(-47) : path
+
+        tooltip.innerHTML = `
+          <div class="tt-name">${name}</div>
+          <div class="tt-type"><span class="tt-dot" style="background:${color}"></span>${type}</div>
+          ${pathShort ? `<div class="tt-path">${pathShort}</div>` : ''}
+        `
+        isHovering = true
+        tooltip.classList.add('active')
+        positionTooltip()
         container.style.cursor = 'pointer'
         focus.setHoveredNode(node)
       } else {
-        infoEl.textContent = ''
+        isHovering = false
+        tooltip.classList.remove('active')
         container.style.cursor = 'grab'
         focus.setHoveredNode(null)
       }
     })
 
+    // ── Node click: fly camera + show detail ──────────────────────────────────
     engine.onNodeClick(async (node) => {
       const nodeId = node.id as string
+      const nx = (node.x as number) || 0
+      const ny = (node.y as number) || 0
+      const nz = (node.z as number) || 0
+      const dist = 80
+      const hyp  = Math.hypot(nx, ny, nz) || 1
+      const ratio = 1 + dist / hyp
+      engine.fg.cameraPosition(
+        { x: nx * ratio, y: ny * ratio, z: nz * ratio },
+        { x: nx, y: ny, z: nz },
+        800,
+      )
+
       try {
         await studyNode(nodeId)
         const detail = await fetchNode(nodeId)
@@ -126,7 +180,7 @@ async function init(): Promise<void> {
     const search  = initSearch(engine.fg)
 
     engine.onMinimapTick = () => minimap.update()
-    engine.fg.onEngineStop(() => minimap.invalidateBounds())
+    engine.onStop = () => minimap.invalidateBounds()
 
     search.setup(graph.nodes)
     minimap.update()

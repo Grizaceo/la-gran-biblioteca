@@ -35,13 +35,41 @@
       margin-left: auto;
     }
 
-    /* Info message (hover) */
+    /* Info message (search highlight) */
     #info-msg {
       position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
       color: rgba(255,255,255,0.7);
       font-family: 'Helvetica Neue', Arial, sans-serif;
       font-size: 14px; pointer-events: none; z-index: 10;
       text-align: center; max-width: 80%;
+    }
+
+    /* Floating hover tooltip */
+    #node-tooltip {
+      position: fixed; display: none; pointer-events: none; z-index: 50;
+      background: rgba(0,0,17,0.93);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px; padding: 9px 13px;
+      max-width: 280px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    #node-tooltip.active { display: block; }
+    .tt-name {
+      color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 500;
+      margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .tt-type {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.45);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .tt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+    .tt-path {
+      color: rgba(255,255,255,0.3); font-size: 10px; margin-top: 5px;
+      font-family: 'Courier New', monospace;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
     /* Legend */
@@ -439,12 +467,13 @@
   <div id="legend">
     <h3>Tipos de nodo</h3>
     <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div><span class="legend-label">file</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffb74d"></div><span class="legend-label">folder</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#81c784"></div><span class="legend-label">research</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#e57373"></div><span class="legend-label">project</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ba68c8"></div><span class="legend-label">event</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#fff59d"></div><span class="legend-label">tag</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#90a4ae"></div><span class="legend-label">otros</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffa726"></div><span class="legend-label">folder</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#66bb6a"></div><span class="legend-label">document</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff7043"></div><span class="legend-label">config</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ab47bc"></div><span class="legend-label">workspace</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ef5350"></div><span class="legend-label">project</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffee58"></div><span class="legend-label">tag</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#546e7a"></div><span class="legend-label">otros</span></div>
   </div>
 
   <script>
