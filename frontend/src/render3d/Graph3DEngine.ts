@@ -46,28 +46,44 @@ function computeDegree(edges: Edge[]): Map<string, number> {
   return deg
 }
 
-function createStarfield(scene: THREE.Scene, count = 2000): THREE.Points {
-  const positions = new Float32Array(count * 3)
-  const colors    = new Float32Array(count * 3)
-  for (let i = 0; i < count; i++) {
+// Adapted from Graphium (MIT license)
+// Original source: graphium/src/main.js (_createStarfield method)
+function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
+  const starsGeo = new THREE.BufferGeometry()
+  const starCount = count
+  const positions = new Float32Array(starCount * 3)
+  const colors = new Float32Array(starCount * 3)
+
+  for (let i = 0; i < starCount; i++) {
+    // Random positions on a large sphere
     const theta = Math.random() * Math.PI * 2
-    const phi   = Math.acos(2 * Math.random() - 1)
-    const r     = 700 + Math.random() * 100
-    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
+    const phi = Math.acos(2 * Math.random() - 1)
+    const r = 700 + Math.random() * 100
+
+    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
     positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
     positions[i * 3 + 2] = r * Math.cos(phi)
-    const b = 0.5 + Math.random() * 0.5
-    colors[i * 3] = 0.8 * b; colors[i * 3 + 1] = 0.9 * b; colors[i * 3 + 2] = b
+
+    // Slightly varied star colors (white to blue-white)
+    const brightness = 0.5 + Math.random() * 0.5
+    colors[i * 3] = 0.8 * brightness
+    colors[i * 3 + 1] = 0.9 * brightness
+    colors[i * 3 + 2] = 1.0 * brightness
   }
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3))
-  const mat = new THREE.PointsMaterial({
-    size: 1.5, vertexColors: true,
+
+  starsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  starsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+
+  const starsMat = new THREE.PointsMaterial({
+    size: 1.5,
+    vertexColors: true,
     blending: THREE.AdditiveBlending,
-    depthWrite: false, transparent: true, opacity: 0.8,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.8,
   })
-  const starfield = new THREE.Points(geo, mat)
+
+  const starfield = new THREE.Points(starsGeo, starsMat)
   scene.add(starfield)
   return starfield
 }
