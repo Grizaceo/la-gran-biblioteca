@@ -7,22 +7,21 @@ Endpoints: /api/graph, /api/node/{id}, /api/study, /api/stream (SSE)
 import os
 import json
 import asyncio
-import subprocess
-import platform
 from pathlib import Path
-from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 import uvicorn
 import logging
 
-from scan_workspaces import scan_workspaces, WORKSPACE_ROOT
+from scan_workspaces import scan_workspaces
 from graph_engine import GraphEngine
 from workspace_watcher import start_watcher
+from constants import WORKSPACE_ROOT
+from os_open import open_in_os
+from preview import read_preview
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,6 @@ _graph_state = {"graph": {"nodes": [], "edges": []}}
 _node_index: dict[str, dict] = {}
 SCAN_MAX_FILES = int(os.environ.get("SCAN_MAX_FILES", "5000"))
 SCAN_MAX_CHILDREN = int(os.environ.get("SCAN_MAX_CHILDREN", "50"))
-_IS_WSL: bool | None = None
 
 event_queue = None
 graph_update_event = asyncio.Event()
@@ -206,22 +204,6 @@ async def trigger_rollback():
     return {"status": "restored", "nodes": len(graph["nodes"]), "edges": len(graph["edges"])}
 
 
-CONTENT_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
-
-TEXT_EXTENSIONS: dict[str, str] = {
-    "md": "markdown", "txt": "text", "rst": "rst",
-    "py": "python", "js": "javascript", "ts": "typescript",
-    "jsx": "javascript", "tsx": "typescript",
-    "json": "json", "yaml": "yaml", "yml": "yaml",
-    "toml": "toml", "ini": "ini", "cfg": "ini",
-    "sh": "bash", "bash": "bash", "zsh": "bash",
-    "rs": "rust", "go": "go", "c": "c", "cpp": "cpp",
-    "h": "c", "hpp": "cpp", "java": "java", "rb": "ruby",
-    "php": "php", "cs": "csharp", "swift": "swift",
-    "kt": "kotlin", "r": "r", "sql": "sql",
-    "css": "css", "scss": "scss", "html": "html", "xml": "xml",
-    "dockerfile": "dockerfile",
-}
 
 
 def _get_node_by_id(node_id: str):
@@ -255,35 +237,7 @@ async def get_node_content(node_id: str):
     if not p.is_file():
         raise HTTPException(status_code=422, detail="Path is not a file")
 
-    ext = p.suffix.lstrip(".").lower()
-    if p.name.lower() == "dockerfile":
-        ext = "dockerfile"
-
-    lang = TEXT_EXTENSIONS.get(ext)
-    if lang is None:
-        raise HTTPException(status_code=415, detail="Unsupported file type for preview")
-
-    size = p.stat().st_size
-    truncated = size > CONTENT_MAX_BYTES
-
-    try:
-        with open(p, "r", encoding="utf-8", errors="replace") as f:
-            content = f.read(CONTENT_MAX_BYTES)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not read file: {e}")
-
-    return {"content": content, "lang": lang, "size": size, "truncated": truncated}
-
-
-def _is_wsl() -> bool:
-    global _IS_WSL
-    if _IS_WSL is None:
-        try:
-            with open("/proc/version") as f:
-                _IS_WSL = "microsoft" in f.read().lower()
-        except Exception:
-            _IS_WSL = False
-    return _IS_WSL
+    return read_preview(p)
 
 
 class OpenRequest(BaseModel):
@@ -305,25 +259,7 @@ async def open_node(req: OpenRequest):
     p = _validate_path(path_str)
 
     try:
-        if _is_wsl():
-            win_path_result = subprocess.run(
-                ["wslpath", "-w", str(p)], capture_output=True, text=True, timeout=5
-            )
-            win_path = win_path_result.stdout.strip()
-            if req.reveal:
-                subprocess.Popen(["explorer.exe", f"/select,{win_path}"])
-            else:
-                subprocess.Popen(["cmd.exe", "/c", "start", "", win_path])
-        elif platform.system() == "Darwin":
-            if req.reveal:
-                subprocess.Popen(["open", "-R", str(p)])
-            else:
-                subprocess.Popen(["open", str(p)])
-        else:
-            if req.reveal:
-                subprocess.Popen(["xdg-open", str(p.parent)])
-            else:
-                subprocess.Popen(["xdg-open", str(p)])
+        open_in_os(p, req.reveal)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not open file: {e}")
 

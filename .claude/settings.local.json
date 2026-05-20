@@ -32,7 +32,8 @@
       "Bash(docker-compose version *)",
       "Bash(docker run *)",
       "Bash(awk '{print $2}')",
-      "Bash(kill 875069 *)"
+      "Bash(kill 875069 *)",
+      "Bash(python -m pytest -q)"
     ]
   }
 }

@@ -1,14 +1,12 @@
-import os
 import asyncio
 from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 import logging
 
-logger = logging.getLogger(__name__)
+from constants import EXCLUDE_DIRS, SCAN_EXTENSIONS
 
-EXCLUDE_DIRS = {".hermes", "__pycache__", "node_modules", ".git", "archive", "backups", "snapshots"}
-SCAN_EXTENSIONS = {".md", ".py", ".ts", ".js", ".json", ".txt", ".yaml", ".yml"}
+logger = logging.getLogger(__name__)
 
 def is_valid_path(path_str: str) -> bool:
     path = Path(path_str)

@@ -3,25 +3,15 @@
 scan_workspaces.py - Versión rápida sin hashes
 """
 
-import os
 import json
 import logging
 from pathlib import Path
 from collections import deque
 from typing import Dict, Any
 
-import os
-
-_DEFAULT_WORKSPACE = str(Path.home() / ".hermes" / "workspaces")
-WORKSPACE_ROOT = Path(os.environ.get("WORKSPACE_ROOT", _DEFAULT_WORKSPACE))
+from constants import WORKSPACE_ROOT, EXCLUDE_DIRS, SCAN_EXTENSIONS
 
 logger = logging.getLogger(__name__)
-
-# Directorios a excluir
-EXCLUDE_DIRS = {".hermes", "__pycache__", "node_modules", ".git", "archive", "backups", "snapshots"}
-
-# Extensiones importantes
-SCAN_EXTENSIONS = {".md", ".py", ".ts", ".js", ".json", ".txt", ".yaml", ".yml"}
 
 
 def get_node_type(filepath: Path) -> str:
