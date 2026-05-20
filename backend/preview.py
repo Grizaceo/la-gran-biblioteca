@@ -1,6 +1,6 @@
 from pathlib import Path
 from fastapi import HTTPException
-from constants import TEXT_EXTENSIONS, CONTENT_MAX_BYTES
+from .constants import TEXT_EXTENSIONS, CONTENT_MAX_BYTES
 
 
 def read_preview(path: Path) -> dict:

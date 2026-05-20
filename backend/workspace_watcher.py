@@ -4,7 +4,7 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 import logging
 
-from constants import EXCLUDE_DIRS, SCAN_EXTENSIONS
+from .constants import EXCLUDE_DIRS, SCAN_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 

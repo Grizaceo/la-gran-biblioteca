@@ -16,12 +16,12 @@ from sse_starlette.sse import EventSourceResponse
 import uvicorn
 import logging
 
-from scan_workspaces import scan_workspaces
-from graph_engine import GraphEngine
-from workspace_watcher import start_watcher
-from constants import WORKSPACE_ROOT
-from os_open import open_in_os
-from preview import read_preview
+from .scan_workspaces import scan_workspaces
+from .graph_engine import GraphEngine
+from .workspace_watcher import start_watcher
+from .constants import WORKSPACE_ROOT
+from .os_open import open_in_os
+from .preview import read_preview
 
 logger = logging.getLogger(__name__)
 

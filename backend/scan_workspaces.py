@@ -9,7 +9,7 @@ from pathlib import Path
 from collections import deque
 from typing import Dict, Any
 
-from constants import WORKSPACE_ROOT, EXCLUDE_DIRS, SCAN_EXTENSIONS
+from .constants import WORKSPACE_ROOT, EXCLUDE_DIRS, SCAN_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
