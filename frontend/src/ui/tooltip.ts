@@ -44,11 +44,29 @@ export function setupTooltip(
       const color = (PALETTE as Record<string, string>)[type] ?? (PALETTE as Record<string, string>).default
       const pathShort = path.length > 48 ? '…' + path.slice(-47) : path
 
-      tooltip.innerHTML = `
-        <div class="tt-name">${name}</div>
-        <div class="tt-type"><span class="tt-dot" style="background:${color}"></span>${type}</div>
-        ${pathShort ? `<div class="tt-path">${pathShort}</div>` : ''}
-      `
+      tooltip.innerHTML = ''
+
+      const ttName = document.createElement('div')
+      ttName.className = 'tt-name'
+      ttName.textContent = name
+      tooltip.appendChild(ttName)
+
+      const ttType = document.createElement('div')
+      ttType.className = 'tt-type'
+      const dot = document.createElement('span')
+      dot.className = 'tt-dot'
+      dot.style.background = color
+      const typeText = document.createTextNode(type)
+      ttType.appendChild(dot)
+      ttType.appendChild(typeText)
+      tooltip.appendChild(ttType)
+
+      if (pathShort) {
+        const ttPath = document.createElement('div')
+        ttPath.className = 'tt-path'
+        ttPath.textContent = pathShort
+        tooltip.appendChild(ttPath)
+      }
       isHovering = true
       tooltip.classList.add('active')
       positionTooltip()

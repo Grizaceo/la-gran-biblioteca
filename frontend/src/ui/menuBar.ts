@@ -280,7 +280,7 @@ export function initMenuBar(engine: Graph3DEngine): void {
       if ((window as any).addActivityLog) {
         (window as any).addActivityLog(`Archivo seleccionado con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
       }
-      (engine as any).pendingFocusPath = res.path
+      ((engine as any)._pendingFocusQueue ??= []).push(res.path)
     } catch (err: any) {
       if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
         showNotification('Operación cancelada o sin selección', 'info')
@@ -307,7 +307,7 @@ export function initMenuBar(engine: Graph3DEngine): void {
       if ((window as any).addActivityLog) {
         (window as any).addActivityLog(`Carpeta seleccionada con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
       }
-      (engine as any).pendingFocusPath = res.path
+      ((engine as any)._pendingFocusQueue ??= []).push(res.path)
     } catch (err: any) {
       if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
         showNotification('Operación cancelada o sin selección', 'info')
@@ -347,7 +347,7 @@ export function initMenuBar(engine: Graph3DEngine): void {
         if ((window as any).addActivityLog) {
           (window as any).addActivityLog(`GitHub importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
         }
-        (engine as any).pendingFocusPath = res.path
+        ((engine as any)._pendingFocusQueue ??= []).push(res.path)
       }
     )
   }
@@ -375,7 +375,7 @@ export function initMenuBar(engine: Graph3DEngine): void {
         if ((window as any).addActivityLog) {
           (window as any).addActivityLog(`arXiv importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
         }
-        (engine as any).pendingFocusPath = res.path
+        ((engine as any)._pendingFocusQueue ??= []).push(res.path)
       }
     )
   }
@@ -403,7 +403,7 @@ export function initMenuBar(engine: Graph3DEngine): void {
         if ((window as any).addActivityLog) {
           (window as any).addActivityLog(`PubMed importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
         }
-        (engine as any).pendingFocusPath = res.path
+        ((engine as any)._pendingFocusQueue ??= []).push(res.path)
       }
     )
   }

@@ -89,17 +89,10 @@ export function subscribeToUpdates(
 }
 
 async function handleResponseError(res: Response, fallbackMsg: string): Promise<never> {
-  try {
-    const data = await res.json()
-    if (data && data.detail) {
-      if (typeof data.detail === 'string') {
-        throw new Error(data.detail)
-      } else if (Array.isArray(data.detail)) {
-        throw new Error(data.detail.map((d: any) => d.msg).join(', '))
-      }
-    }
-  } catch (e: any) {
-    if (e.message) throw e
+  const data = await res.json().catch(() => null)
+  if (data?.detail) {
+    if (typeof data.detail === 'string') throw new Error(data.detail)
+    if (Array.isArray(data.detail)) throw new Error(data.detail.map((d: any) => d.msg).join(', '))
   }
   throw new Error(fallbackMsg)
 }

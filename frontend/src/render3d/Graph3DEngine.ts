@@ -159,6 +159,9 @@ export class Graph3DEngine {
   private _rafId = 0
   private _rafFrame = 0
   private _lastCamPos = new THREE.Vector3()
+  private _lastLodCamPos = new THREE.Vector3()
+  private _lodCamPos = new THREE.Vector3()
+  private _lodNodePos = new THREE.Vector3()
   private _paused = false
   private _savedParticles = 2
   private _tick!: () => void
@@ -262,12 +265,16 @@ export class Graph3DEngine {
     if (!camera) return
     const camPos = camera.position
 
+    // Skip when camera is still — avoids O(N) JS loop for nothing
+    if (camPos.distanceToSquared(this._lastLodCamPos) < 1) return
+    this._lastLodCamPos.copy(camPos)
+
     const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
     if (!nodes?.length) return
 
-    const _cameraPos = new THREE.Vector3().copy(camPos)
-    const _nodePos = new THREE.Vector3()
+    this._lodCamPos.copy(camPos)
 
+    // Thresholds are normalized by node size, so compare normDist² to avoid sqrt
     const LOD_NEAR = 150
     const LOD_MID = 400
 
@@ -276,10 +283,10 @@ export class Graph3DEngine {
       const obj = n.__threeObj as THREE.Group | undefined
       if (!obj || !obj.isGroup) continue
 
-      _nodePos.set((n.x as number) || 0, (n.y as number) || 0, (n.z as number) || 0)
-      const dist = _cameraPos.distanceTo(_nodePos)
-      const size = (obj.userData._lodDistance as number) || 3
-      const normDist = dist / Math.max(size, 1)
+      this._lodNodePos.set((n.x as number) || 0, (n.y as number) || 0, (n.z as number) || 0)
+      const distSq = this._lodCamPos.distanceToSquared(this._lodNodePos)
+      const size = Math.max((obj.userData._lodDistance as number) || 3, 1)
+      const normDist = Math.sqrt(distSq) / size
 
       const hi = obj.getObjectByName('lod_hi')
       const mid = obj.getObjectByName('lod_mid')

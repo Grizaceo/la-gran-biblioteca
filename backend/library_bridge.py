@@ -201,8 +201,7 @@ class StudyRequest(BaseModel):
 @app.post("/api/study")
 async def study_node(req: StudyRequest):
     """Endpoint para registrar estudio de un nodo."""
-    graph = get_current_graph()
-    node = next((n for n in graph["nodes"] if n["id"] == req.node_id), None)
+    node = _get_node_by_id(req.node_id)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
 
@@ -301,7 +300,7 @@ def _validate_new_path(path_str: str) -> Path:
         p = Path(WORKSPACE_ROOT) / p
     p = p.resolve()
     root = Path(str(WORKSPACE_ROOT)).resolve()
-    if not str(p).startswith(str(root)):
+    if not p.is_relative_to(root):
         raise HTTPException(status_code=403, detail="Path outside workspace")
     return p
 
@@ -442,7 +441,7 @@ def _validate_path(path_str: str) -> Path:
     """Resolve path and ensure it's within WORKSPACE_ROOT."""
     p = Path(path_str).resolve()
     root = Path(str(WORKSPACE_ROOT)).resolve()
-    if not str(p).startswith(str(root)):
+    if not p.is_relative_to(root):
         raise HTTPException(status_code=403, detail="Path outside workspace")
     if not p.exists():
         raise HTTPException(status_code=404, detail="File not found on disk")

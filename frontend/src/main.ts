@@ -162,30 +162,32 @@ async function init(): Promise<void> {
         (window as any).addActivityLog(`Grafo sincronizado: ${updated.nodes.length} nodos, ${updated.edges.length} aristas.`, 'info');
       }
 
-      // Handle autofocus of pending nodes
-      if ((engine as any).pendingFocusPath) {
-        const targetPath = (engine as any).pendingFocusPath.replace(/\\/g, '/').toLowerCase();
-        const cleanTarget = targetPath.replace(/^\/+|\/+$/g, '');
-        
+      // Handle autofocus queue — each pending path is consumed once matched
+      const pendingQueue: string[] = (engine as any)._pendingFocusQueue ?? []
+      ;(engine as any)._pendingFocusQueue = pendingQueue
+      const remaining: string[] = []
+      for (const rawPath of pendingQueue) {
+        const targetPath = rawPath.replace(/\\/g, '/').toLowerCase()
+        const cleanTarget = targetPath.replace(/^\/+|\/+$/g, '')
         const matchedNode = updated.nodes.find(node => {
-          const nodePath = (node.path || '').replace(/\\/g, '/').toLowerCase();
-          const cleanNode = nodePath.replace(/^\/+|\/+$/g, '');
-          return cleanNode === cleanTarget || cleanNode.endsWith(cleanTarget) || cleanTarget.endsWith(cleanNode);
-        });
-
+          const nodePath = (node.path || '').replace(/\\/g, '/').toLowerCase()
+          const cleanNode = nodePath.replace(/^\/+|\/+$/g, '')
+          return cleanNode === cleanTarget || cleanNode.endsWith(cleanTarget) || cleanTarget.endsWith(cleanNode)
+        })
         if (matchedNode) {
-          (engine as any).pendingFocusPath = null; // Clear immediately to avoid re-triggering
           if ((window as any).addActivityLog) {
-            (window as any).addActivityLog(`Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`, 'success');
+            (window as any).addActivityLog(`Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`, 'success')
           }
-          // Highlight and select the node
           setTimeout(() => {
             panel.selectNode(matchedNode.id).catch(err => {
-              console.error('Error auto-selecting node:', err);
-            });
-          }, 100);
+              console.error('Error auto-selecting node:', err)
+            })
+          }, 100)
+        } else {
+          remaining.push(rawPath)
         }
       }
+      ;(engine as any)._pendingFocusQueue = remaining
     })
     window.addEventListener('beforeunload', unsubscribe)
   } catch (err) {

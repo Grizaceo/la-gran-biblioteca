@@ -3,6 +3,16 @@ import { fetchNodeContent, openNode, studyNode, fetchNode } from '../lib/bridge'
 import { PALETTE } from '../render3d/palette.js'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
+import DOMPurify from 'dompurify'
+
+const ESC_RE = /[&<>"']/g
+const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+function escapeHtml(s: string | null | undefined): string {
+  return String(s ?? '').replace(ESC_RE, c => ESC_MAP[c])
+}
+function escapeAttr(s: string | null | undefined): string {
+  return escapeHtml(s)
+}
 
 const NON_FILE_TYPES = new Set(['folder', 'workspace', 'project'])
 
@@ -84,10 +94,10 @@ export function setupDetailPanel(
           const color = (PALETTE as Record<string, string>)[n.type] ?? (PALETTE as Record<string, string>).default
           const name = n.label || n.id
           const short = name.length > 36 ? name.slice(0, 34) + '…' : name
-          return `<div class="neighbor-item" data-id="${n.id}">
+          return `<div class="neighbor-item" data-id="${escapeAttr(n.id)}">
             <span class="neighbor-dot" style="background:${color}"></span>
-            <span class="neighbor-name">${short}</span>
-            <span class="neighbor-type">${n.type}</span>
+            <span class="neighbor-name">${escapeHtml(short)}</span>
+            <span class="neighbor-type">${escapeHtml(n.type)}</span>
           </div>`
         }).join('')}
         ${more}
@@ -115,7 +125,7 @@ export function setupDetailPanel(
 
       let html = ''
       if (lang === 'markdown') {
-        html = await Promise.resolve(marked.parse(content))
+        html = DOMPurify.sanitize(await Promise.resolve(marked.parse(content)))
       } else {
         const highlighted = lang
           ? hljs.highlight(content, { language: lang, ignoreIllegals: true }).value
@@ -178,7 +188,7 @@ export function setupDetailPanel(
     const meta = node.metadata ?? {}
     const rows = Object.entries(meta)
       .filter(([, v]) => v !== null && v !== undefined && v !== '')
-      .map(([k, v]) => `<div class="detail-meta-row"><span>${k}</span><span>${String(v)}</span></div>`)
+      .map(([k, v]) => `<div class="detail-meta-row"><span>${escapeHtml(k)}</span><span>${escapeHtml(String(v))}</span></div>`)
       .join('')
     detailMeta.innerHTML = rows
       || '<div class="detail-meta-row"><span style="opacity:.4">sin metadatos</span></div>'

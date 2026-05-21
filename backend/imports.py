@@ -160,7 +160,8 @@ def import_arxiv(arxiv_id: str, workspace_root: Path) -> Path:
         
     authors_yaml = ", ".join([f'"{auth}"' for auth in authors])
     tags_yaml = ", ".join([f'"{t}"' for t in tags])
-    
+    categories_yaml = ", ".join([f'"{c}"' for c in categories])
+
     md_content = f"""---
 title: "{title}"
 authors: [{authors_yaml}]
@@ -168,7 +169,7 @@ date: "{published}"
 arxiv_id: "{arxiv_id}"
 doi: "{doi}"
 url: "{url}"
-categories: {categories}
+categories: [{categories_yaml}]
 tags: [{tags_yaml}]
 type: "paper"
 ---
@@ -241,7 +242,7 @@ def import_pubmed(pmid: str, workspace_root: Path) -> Path:
                 abstract_texts.append(text)
                 
         summary = "\n\n".join(abstract_texts)
-        summary = " ".join(summary.split()) # clean up extra space
+        summary = "\n\n".join(" ".join(p.split()) for p in summary.split("\n\n"))
         
         authors = []
         for author in article.findall('.//AuthorList/Author'):
