@@ -149,6 +149,9 @@ export class Graph3DEngine {
   onStop?: () => void
   onTypesChanged?: () => void
 
+  public starfieldRotationEnabled = true
+  public photonsEnabled = true
+
   private nodeIndex = new Map<string, Record<string, unknown>>()
   private starfield: THREE.Points
   private hiddenTypes = new Set<string>()
@@ -238,8 +241,10 @@ export class Graph3DEngine {
     this._tick = () => {
       this._rafId = requestAnimationFrame(this._tick)
       try {
-        this.starfield.rotation.y += 0.0001
-        this.starfield.rotation.x += 0.00005
+        if (this.starfieldRotationEnabled) {
+          this.starfield.rotation.y += 0.0001
+          this.starfield.rotation.x += 0.00005
+        }
         
         // Throttled CPU tasks (run every 6 frames ~ 100ms)
         if (++this._rafFrame % 6 === 0) {
@@ -370,6 +375,14 @@ export class Graph3DEngine {
     this.fg.resumeAnimation()
     this.fg.linkDirectionalParticles(this._savedParticles)
     this._rafId = requestAnimationFrame(this._tick)
+  }
+
+  setPhotonsEnabled(enabled: boolean): void {
+    this.photonsEnabled = enabled
+    this._savedParticles = enabled ? 2 : 0
+    if (!this._paused) {
+      this.fg.linkDirectionalParticles(this._savedParticles)
+    }
   }
 
   setTypeVisible(type: string, visible: boolean): void {

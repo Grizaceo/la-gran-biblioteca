@@ -22,6 +22,7 @@ from .workspace_watcher import start_watcher
 from .constants import WORKSPACE_ROOT
 from .os_open import open_in_os
 from .preview import read_preview
+from .imports import download_and_extract_github, import_arxiv, import_pubmed
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,113 @@ async def trigger_rollback():
     return {"status": "restored", "nodes": len(graph["nodes"]), "edges": len(graph["edges"])}
 
 
+# Models for resource creation and import
+class CreateFileRequest(BaseModel):
+    path: str
+    content: str = ""
+
+class CreateFolderRequest(BaseModel):
+    path: str
+
+class ImportGithubRequest(BaseModel):
+    url: str
+
+class ImportArxivRequest(BaseModel):
+    id: str
+
+class ImportPubmedRequest(BaseModel):
+    id: str
+
+
+def _validate_new_path(path_str: str) -> Path:
+    """Ensure path is within WORKSPACE_ROOT, but does not have to exist yet."""
+    p = Path(path_str)
+    if not p.is_absolute():
+        p = Path(WORKSPACE_ROOT) / p
+    p = p.resolve()
+    root = Path(str(WORKSPACE_ROOT)).resolve()
+    if not str(p).startswith(str(root)):
+        raise HTTPException(status_code=403, detail="Path outside workspace")
+    return p
+
+
+@app.post("/api/create/file")
+async def create_file(req: CreateFileRequest):
+    """Creates a new text or Markdown file inside the workspace."""
+    try:
+        dest_path = _validate_new_path(req.path)
+        if dest_path.exists():
+            raise HTTPException(status_code=400, detail="El archivo o carpeta ya existe.")
+        
+        # Ensure parent directories exist
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Write content
+        with open(dest_path, "w", encoding="utf-8") as f:
+            f.write(req.content)
+            
+        return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creando archivo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/create/folder")
+async def create_folder(req: CreateFolderRequest):
+    """Creates a new folder/directory inside the workspace."""
+    try:
+        dest_path = _validate_new_path(req.path)
+        if dest_path.exists():
+            raise HTTPException(status_code=400, detail="El archivo o carpeta ya existe.")
+            
+        dest_path.mkdir(parents=True, exist_ok=True)
+        return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creando carpeta: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/create/github")
+async def create_github(req: ImportGithubRequest):
+    """Downloads a public GitHub repository zipball and extracts it in the workspace."""
+    try:
+        dest_dir = await asyncio.to_thread(
+            download_and_extract_github, req.url, WORKSPACE_ROOT
+        )
+        return {"status": "ok", "path": str(dest_dir.relative_to(WORKSPACE_ROOT))}
+    except Exception as e:
+        logger.error(f"Error importando repositorio de GitHub: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/create/arxiv")
+async def create_arxiv(req: ImportArxivRequest):
+    """Queries arXiv API for a publication and generates a structured Markdown file in the workspace."""
+    try:
+        file_path = await asyncio.to_thread(
+            import_arxiv, req.id, WORKSPACE_ROOT
+        )
+        return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
+    except Exception as e:
+        logger.error(f"Error importando de arXiv: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/create/pubmed")
+async def create_pubmed(req: ImportPubmedRequest):
+    """Queries PubMed API for a publication and generates a structured Markdown file in the workspace."""
+    try:
+        file_path = await asyncio.to_thread(
+            import_pubmed, req.id, WORKSPACE_ROOT
+        )
+        return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
+    except Exception as e:
+        logger.error(f"Error importando de PubMed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def _get_node_by_id(node_id: str):

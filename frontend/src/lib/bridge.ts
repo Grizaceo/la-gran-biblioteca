@@ -87,3 +87,79 @@ export function subscribeToUpdates(
 
   return () => evtSource.close()
 }
+
+async function handleResponseError(res: Response, fallbackMsg: string): Promise<never> {
+  try {
+    const data = await res.json()
+    if (data && data.detail) {
+      if (typeof data.detail === 'string') {
+        throw new Error(data.detail)
+      } else if (Array.isArray(data.detail)) {
+        throw new Error(data.detail.map((d: any) => d.msg).join(', '))
+      }
+    }
+  } catch (e: any) {
+    if (e.message) throw e
+  }
+  throw new Error(fallbackMsg)
+}
+
+export async function createFile(path: string, content: string = ''): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/file`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, content })
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo crear el archivo '${path}'`)
+  }
+  return res.json()
+}
+
+export async function createFolder(path: string): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/folder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo crear la carpeta '${path}'`)
+  }
+  return res.json()
+}
+
+export async function importGithub(url: string): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/github`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url })
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo importar el repositorio de GitHub: ${url}`)
+  }
+  return res.json()
+}
+
+export async function importArxiv(id: string): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/arxiv`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo importar el artículo de arXiv: ${id}`)
+  }
+  return res.json()
+}
+
+export async function importPubmed(id: string): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/pubmed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo importar el artículo de PubMed: ${id}`)
+  }
+  return res.json()
+}

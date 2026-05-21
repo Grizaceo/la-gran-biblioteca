@@ -8,6 +8,7 @@ import { initVisibility } from './render3d/ui/visibility.js'
 import { setupDetailPanel } from './ui/detailPanel'
 import { setupTooltip } from './ui/tooltip'
 import { setupContextMenu } from './ui/contextMenu'
+import { initMenuBar } from './ui/menuBar'
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,8 @@ async function init(): Promise<void> {
     setupTooltip(engine, container, (node) => focus.setHoveredNode(node))
 
     setupContextMenu(engine, showToast)
+
+    initMenuBar(engine)
 
     engine.onNodeClick(async (node) => {
       await panel.selectNode(node.id as string)
