@@ -96,6 +96,7 @@ function computeDegree(edges: Edge[]): Map<string, number> {
   return deg
 }
 
+// Starfield background generator - adapted from Graphium/SAIR
 function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
   const starsGeo = new THREE.BufferGeometry()
   const starCount = count
@@ -206,6 +207,11 @@ export class Graph3DEngine {
       .warmupTicks(120)
       .cooldownTicks(0)
       .backgroundColor('#000011')
+      .linkColor((link: Record<string, unknown>) => {
+        const type = (link.type as string) || 'default'
+        return (PALETTE as Record<string, string>)[type] ?? PALETTE.default
+      })
+      .linkOpacity(0.7)
 
     const scene = this.fg.scene()
     this.starfield = createStarfield(scene)
@@ -424,6 +430,13 @@ export class Graph3DEngine {
       }
     }
     this.starfield = createStarfield(scene, profile.starCount)
+
+    // Optimize link geometry (Tube vs Simple Line) based on graph scale
+    if (nodeCount >= 800) {
+      this.fg.linkResolution(0) // Draw simple lines to save GPU draw calls
+    } else {
+      this.fg.linkResolution(6) // Glowing 3D tubular filaments
+    }
 
     this._zoomOnStop = true
 
