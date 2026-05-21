@@ -43,9 +43,82 @@ event_queue = None
 graph_update_event = asyncio.Event()
 observer = None
 
+recently_imported_paths = []
+
+def register_recently_imported(path: Path):
+    try:
+        abs_path = str(path.resolve())
+        if abs_path in recently_imported_paths:
+            recently_imported_paths.remove(abs_path)
+        recently_imported_paths.append(abs_path)
+        if len(recently_imported_paths) > 50:
+            recently_imported_paths.pop(0)
+    except Exception as e:
+        logger.warning(f"Error registering recently imported path: {e}")
+
 
 def get_current_graph():
     return _graph_state["graph"]
+
+
+def get_limited_graph():
+    graph = get_current_graph()
+    total = len(graph["nodes"])
+    if total > 1000:
+        nodes = graph["nodes"]
+
+        prioritized = []
+        ordinary = []
+
+        for n in nodes:
+            node_path_str = n.get("path", "")
+            if not node_path_str:
+                ordinary.append(n)
+                continue
+
+            try:
+                node_abs_path = str(Path(node_path_str).resolve())
+            except Exception:
+                node_abs_path = node_path_str
+
+            is_recent = False
+            for recent in recently_imported_paths:
+                if (recent == node_abs_path or 
+                    node_abs_path.startswith(recent + "/") or 
+                    recent.startswith(node_abs_path + "/")):
+                    is_recent = True
+                    break
+
+            if is_recent:
+                prioritized.append(n)
+            else:
+                ordinary.append(n)
+
+        selected_nodes = prioritized + ordinary
+        selected_nodes = selected_nodes[:1000]
+
+        node_ids = {n["id"] for n in selected_nodes}
+        edges = [e for e in graph["edges"] if e["source"] in node_ids and e["target"] in node_ids]
+        return {"nodes": selected_nodes, "edges": edges, "total": total}
+    return {**graph, "total": total}
+
+
+async def force_graph_update():
+    try:
+        raw = await asyncio.to_thread(
+            scan_workspaces, max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN
+        )
+        new_graph = await asyncio.to_thread(engine.build_graph, raw)
+        set_current_graph(new_graph)
+        
+        # Notify clients creando un nuevo evento para evitar condiciones de carrera
+        global graph_update_event
+        old_event = graph_update_event
+        graph_update_event = asyncio.Event()
+        old_event.set()
+        logger.info("Forced graph update and notified SSE clients successfully.")
+    except Exception as e:
+        logger.error(f"Error in force_graph_update: {e}")
 
 
 def set_current_graph(g):
@@ -67,21 +140,7 @@ async def process_fs_events():
             except asyncio.QueueEmpty:
                 break
         
-        try:
-            # Ejecutar operaciones pesadas de I/O de disco y SQLite en un hilo separado
-            raw = await asyncio.to_thread(
-                scan_workspaces, max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN
-            )
-            new_graph = await asyncio.to_thread(engine.build_graph, raw)
-            set_current_graph(new_graph)
-            
-            # Notify clients creando un nuevo evento para evitar condiciones de carrera
-            global graph_update_event
-            old_event = graph_update_event
-            graph_update_event = asyncio.Event()
-            old_event.set()
-        except Exception as e:
-            logger.error(f"Error processing fs events: {e}")
+        await force_graph_update()
 
 
 @asynccontextmanager
@@ -123,14 +182,7 @@ app.add_middleware(
 @app.get("/api/graph")
 async def get_graph():
     """Retorna el grafo completo con posiciones (limitado a 1000 nodos para frontend)."""
-    graph = get_current_graph()
-    total = len(graph["nodes"])
-    if total > 1000:
-        nodes = graph["nodes"][:1000]
-        node_ids = {n["id"] for n in nodes}
-        edges = [e for e in graph["edges"] if e["source"] in node_ids and e["target"] in node_ids]
-        return {"nodes": nodes, "edges": edges, "total": total}
-    return {**graph, "total": total}
+    return get_limited_graph()
 
 
 @app.get("/api/node/{node_id}")
@@ -168,7 +220,7 @@ async def stream_graph():
     """SSE para actualizaciones en vivo del grafo."""
     
     async def event_generator():
-        graph = get_current_graph()
+        graph = get_limited_graph()
         yield {"event": "init", "data": json.dumps(graph)}
 
         try:
@@ -177,7 +229,7 @@ async def stream_graph():
                 try:
                     # Usamos timeout para emitir pings y mantener la conexión (Vite/Proxy)
                     await asyncio.wait_for(current_event.wait(), timeout=15.0)
-                    graph = get_current_graph()
+                    graph = get_limited_graph()
                     yield {"event": "update", "data": json.dumps(graph)}
                 except asyncio.TimeoutError:
                     yield {"event": "ping", "data": "{}"}
@@ -197,6 +249,12 @@ async def trigger_rescan():
         raise HTTPException(status_code=500, detail=f"Rebuild failed: {e}")
     set_current_graph(new_graph)
 
+    # Notify clients
+    global graph_update_event
+    old_event = graph_update_event
+    graph_update_event = asyncio.Event()
+    old_event.set()
+
     return {"status": "ok", "nodes": len(new_graph["nodes"]), "edges": len(new_graph["edges"])}
 
 
@@ -208,6 +266,13 @@ async def trigger_rollback():
         raise HTTPException(status_code=404, detail="No backup found")
     graph = engine.load_from_db()
     set_current_graph(graph)
+
+    # Notify clients
+    global graph_update_event
+    old_event = graph_update_event
+    graph_update_event = asyncio.Event()
+    old_event.set()
+
     return {"status": "restored", "nodes": len(graph["nodes"]), "edges": len(graph["edges"])}
 
 
@@ -256,6 +321,8 @@ async def create_file(req: CreateFileRequest):
         with open(dest_path, "w", encoding="utf-8") as f:
             f.write(req.content)
             
+        register_recently_imported(dest_path)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
     except HTTPException:
         raise
@@ -273,6 +340,8 @@ async def create_folder(req: CreateFolderRequest):
             raise HTTPException(status_code=400, detail="El archivo o carpeta ya existe.")
             
         dest_path.mkdir(parents=True, exist_ok=True)
+        register_recently_imported(dest_path)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
     except HTTPException:
         raise
@@ -290,6 +359,8 @@ async def create_system_file():
             raise HTTPException(status_code=400, detail="Operación cancelada por el usuario o diálogo cerrado.")
             
         dest_path = await asyncio.to_thread(import_selected_file, selected_path, WORKSPACE_ROOT)
+        register_recently_imported(dest_path)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
     except HTTPException:
         raise
@@ -307,6 +378,8 @@ async def create_system_folder():
             raise HTTPException(status_code=400, detail="Operación cancelada por el usuario o diálogo cerrado.")
             
         dest_path = await asyncio.to_thread(import_selected_folder, selected_path, WORKSPACE_ROOT)
+        register_recently_imported(dest_path)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
     except HTTPException:
         raise
@@ -323,6 +396,8 @@ async def create_github(req: ImportGithubRequest):
         dest_dir = await asyncio.to_thread(
             download_and_extract_github, req.url, WORKSPACE_ROOT
         )
+        register_recently_imported(dest_dir)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(dest_dir.relative_to(WORKSPACE_ROOT))}
     except Exception as e:
         logger.error(f"Error importando repositorio de GitHub: {e}")
@@ -336,6 +411,8 @@ async def create_arxiv(req: ImportArxivRequest):
         file_path = await asyncio.to_thread(
             import_arxiv, req.id, WORKSPACE_ROOT
         )
+        register_recently_imported(file_path)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
     except Exception as e:
         logger.error(f"Error importando de arXiv: {e}")
@@ -349,6 +426,8 @@ async def create_pubmed(req: ImportPubmedRequest):
         file_path = await asyncio.to_thread(
             import_pubmed, req.id, WORKSPACE_ROOT
         )
+        register_recently_imported(file_path)
+        asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
     except Exception as e:
         logger.error(f"Error importando de PubMed: {e}")
