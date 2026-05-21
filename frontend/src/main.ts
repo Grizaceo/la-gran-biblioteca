@@ -178,11 +178,10 @@ async function init(): Promise<void> {
           if ((window as any).addActivityLog) {
             (window as any).addActivityLog(`Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`, 'success')
           }
-          setTimeout(() => {
-            panel.selectNode(matchedNode.id).catch(err => {
-              console.error('Error auto-selecting node:', err)
-            })
-          }, 100)
+          // waitForCameraMs = 950 lets the 800ms camera animation play before the panel opens
+          panel.selectNode(matchedNode.id, 950).catch(err => {
+            console.error('Error auto-selecting node:', err)
+          })
         } else {
           remaining.push(rawPath)
         }

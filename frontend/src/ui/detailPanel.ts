@@ -31,7 +31,7 @@ interface Engine {
 }
 
 export interface DetailPanelAPI {
-  selectNode(nodeId: string): Promise<void>
+  selectNode(nodeId: string, waitForCameraMs?: number): Promise<void>
   refreshNeighbors(nodeId: string): void
   getCurrentNodeId(): string | null
 }
@@ -154,8 +154,21 @@ export function setupDetailPanel(
   }
 
   function renderActions(node: Node): void {
-    const hasPath = !!node.path && !NON_FILE_TYPES.has(node.type)
-    if (!hasPath) { detailActions.innerHTML = ''; return }
+    if (!node.path) { detailActions.innerHTML = ''; return }
+
+    if (node.type === 'folder') {
+      detailActions.innerHTML = `<button class="detail-btn" id="btn-open-folder">Abrir carpeta</button>`
+      document.getElementById('btn-open-folder')!.addEventListener('click', async () => {
+        try {
+          await openNode(node.id, false)
+        } catch (err) {
+          showToast(`No se pudo abrir la carpeta: ${(err as Error).message}`, true)
+        }
+      })
+      return
+    }
+
+    if (NON_FILE_TYPES.has(node.type)) { detailActions.innerHTML = ''; return }
 
     detailActions.innerHTML = `
       <button class="detail-btn" id="btn-open-file">Abrir</button>
@@ -164,16 +177,16 @@ export function setupDetailPanel(
     document.getElementById('btn-open-file')!.addEventListener('click', async () => {
       try {
         await openNode(node.id, false)
-      } catch {
-        showToast('No se pudo abrir. Verifica que LGB_ALLOW_OPEN=1 está activo.', true)
+      } catch (err) {
+        showToast(`No se pudo abrir: ${(err as Error).message}`, true)
       }
     })
 
     document.getElementById('btn-reveal-file')!.addEventListener('click', async () => {
       try {
         await openNode(node.id, true)
-      } catch {
-        showToast('No se pudo revelar el archivo.', true)
+      } catch (err) {
+        showToast(`No se pudo revelar: ${(err as Error).message}`, true)
       }
     })
   }
@@ -207,7 +220,10 @@ export function setupDetailPanel(
     renderPreview(node).catch(() => {})
   }
 
-  async function selectNode(nodeId: string): Promise<void> {
+  async function selectNode(nodeId: string, waitForCameraMs = 0): Promise<void> {
+    const CAMERA_ANIM_MS = 800
+    const t0 = Date.now()
+
     const graphData = engine.fg.graphData()
     const graphNode = graphData.nodes.find((n: Record<string, unknown>) => n.id === nodeId)
 
@@ -221,7 +237,7 @@ export function setupDetailPanel(
       engine.fg.cameraPosition(
         { x: nx * ratio, y: ny * ratio, z: nz * ratio },
         { x: nx, y: ny, z: nz },
-        800,
+        CAMERA_ANIM_MS,
       )
     }
 
@@ -229,6 +245,15 @@ export function setupDetailPanel(
       await studyNode(nodeId)
       const detail = await fetchNode(nodeId)
       currentNodeId = nodeId
+
+      // When called from autofocus, wait for the camera animation to finish
+      // before opening the panel so the user can see the graph navigate to the node.
+      if (waitForCameraMs > 0) {
+        const elapsed = Date.now() - t0
+        const remaining = Math.max(0, waitForCameraMs - elapsed)
+        if (remaining > 0) await new Promise<void>(r => setTimeout(r, remaining))
+      }
+
       await renderDetailPanel(detail)
     } catch (err) {
       console.warn('[LGB] selectNode failed:', err)

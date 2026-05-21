@@ -64,7 +64,7 @@ export async function openNode(id: string, reveal: boolean): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ node_id: id, reveal }),
   })
-  if (!res.ok) throw new Error(`${res.status}`)
+  if (!res.ok) await handleResponseError(res, `Error al abrir nodo (${res.status})`)
 }
 
 export function subscribeToUpdates(

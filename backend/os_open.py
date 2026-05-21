@@ -18,22 +18,27 @@ def is_wsl() -> bool:
 
 def open_in_os(path: Path, reveal: bool) -> None:
     """Open a file or reveal it in the system file manager."""
+    is_dir = path.is_dir()
     if is_wsl():
         result = subprocess.run(
             ["wslpath", "-w", str(path)], capture_output=True, text=True, timeout=5
         )
         win_path = result.stdout.strip()
-        if reveal:
+        if not win_path:
+            raise RuntimeError(f"wslpath no pudo convertir la ruta: {path}")
+        if reveal and not is_dir:
+            # Select the file inside its parent folder in Explorer
             subprocess.Popen(["explorer.exe", f"/select,{win_path}"])
         else:
-            subprocess.Popen(["cmd.exe", "/c", "start", "", win_path])
+            # Open the file or folder directly
+            subprocess.Popen(["explorer.exe", win_path])
     elif platform.system() == "Darwin":
-        if reveal:
+        if reveal and not is_dir:
             subprocess.Popen(["open", "-R", str(path)])
         else:
             subprocess.Popen(["open", str(path)])
     else:
-        if reveal:
+        if reveal and not is_dir:
             subprocess.Popen(["xdg-open", str(path.parent)])
         else:
             subprocess.Popen(["xdg-open", str(path)])
