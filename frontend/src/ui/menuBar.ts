@@ -97,6 +97,12 @@ export function initMenuBar(engine: Graph3DEngine): void {
         break
 
       // View actions
+      case 'focus-selected':
+        document.getElementById('btn-focus')?.click()
+        break
+      case 'toggle-types':
+        document.getElementById('btn-visibility')?.click()
+        break
       case 'reset-camera':
         engine.fg.cameraPosition({ x: 0, y: 0, z: 400 }, null, 1000)
         showNotification('Vista de cámara reestablecida', 'info')
@@ -266,13 +272,26 @@ export function initMenuBar(engine: Graph3DEngine): void {
   async function openCreateFileModal(): Promise<void> {
     try {
       showNotification('Abriendo selector de archivos del SO...', 'info')
+      if ((window as any).addActivityLog) {
+        (window as any).addActivityLog('Abriendo selector de archivos nativo del SO...', 'info')
+      }
       const res = await bridge.createSystemFile()
       showNotification(`Archivo importado con éxito: ${res.path}`, 'success')
+      if ((window as any).addActivityLog) {
+        (window as any).addActivityLog(`Archivo seleccionado con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
+      }
+      (engine as any).pendingFocusPath = res.path
     } catch (err: any) {
       if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
         showNotification('Operación cancelada o sin selección', 'info')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog('Operación de selección de archivo cancelada', 'warn')
+        }
       } else {
         showNotification(err.message || 'Error al seleccionar archivo', 'error')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`Error al seleccionar archivo: ${err.message}`, 'error')
+        }
       }
     }
   }
@@ -280,13 +299,26 @@ export function initMenuBar(engine: Graph3DEngine): void {
   async function openCreateFolderModal(): Promise<void> {
     try {
       showNotification('Abriendo selector de carpetas del SO...', 'info')
+      if ((window as any).addActivityLog) {
+        (window as any).addActivityLog('Abriendo selector de carpetas nativo del SO...', 'info')
+      }
       const res = await bridge.createSystemFolder()
       showNotification(`Carpeta importada con éxito: ${res.path}`, 'success')
+      if ((window as any).addActivityLog) {
+        (window as any).addActivityLog(`Carpeta seleccionada con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
+      }
+      (engine as any).pendingFocusPath = res.path
     } catch (err: any) {
       if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
         showNotification('Operación cancelada o sin selección', 'info')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog('Operación de selección de carpeta cancelada', 'warn')
+        }
       } else {
         showNotification(err.message || 'Error al seleccionar carpeta', 'error')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`Error al seleccionar carpeta: ${err.message}`, 'error')
+        }
       }
     }
   }
@@ -307,8 +339,15 @@ export function initMenuBar(engine: Graph3DEngine): void {
         const url = values.url.trim()
         if (!url) throw new Error('El repositorio es obligatorio')
         showNotification('Iniciando descarga de GitHub...', 'info')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`Descargando repositorio GitHub: ${url}...`, 'info')
+        }
         const res = await bridge.importGithub(url)
         showNotification(`Repositorio importado con éxito en: ${res.path}`, 'success')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`GitHub importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
+        }
+        (engine as any).pendingFocusPath = res.path
       }
     )
   }
@@ -328,8 +367,15 @@ export function initMenuBar(engine: Graph3DEngine): void {
         const arxivId = values.arxivId.trim()
         if (!arxivId) throw new Error('El identificador de arXiv es obligatorio')
         showNotification('Consultando arXiv API...', 'info')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`Buscando arXiv ID: ${arxivId}...`, 'info')
+        }
         const res = await bridge.importArxiv(arxivId)
         showNotification(`Paper importado como Markdown en: ${res.path}`, 'success')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`arXiv importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
+        }
+        (engine as any).pendingFocusPath = res.path
       }
     )
   }
@@ -349,8 +395,15 @@ export function initMenuBar(engine: Graph3DEngine): void {
         const pmid = values.pmid.trim()
         if (!pmid) throw new Error('El PMID de PubMed es obligatorio')
         showNotification('Consultando PubMed API...', 'info')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`Buscando PubMed PMID: ${pmid}...`, 'info')
+        }
         const res = await bridge.importPubmed(pmid)
         showNotification(`Artículo importado como Markdown en: ${res.path}`, 'success')
+        if ((window as any).addActivityLog) {
+          (window as any).addActivityLog(`PubMed importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
+        }
+        (engine as any).pendingFocusPath = res.path
       }
     )
   }

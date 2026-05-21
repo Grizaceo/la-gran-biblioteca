@@ -74,6 +74,36 @@ async function init(): Promise<void> {
 
     initMenuBar(engine)
 
+    // Activity Log Collapsible & Global Logger initialization
+    const logPanel = document.getElementById('activity-log')
+    const logHeader = document.getElementById('activity-log-header')
+    if (logPanel && logHeader) {
+      logHeader.addEventListener('click', () => {
+        logPanel.classList.toggle('expanded')
+      })
+    }
+
+    (window as any).addActivityLog = (msg: string, type: 'info' | 'success' | 'error' | 'warn' = 'info') => {
+      const content = document.getElementById('activity-log-content')
+      if (!content) return
+      const entry = document.createElement('div')
+      entry.className = `log-entry log-${type}`
+      
+      const timeSpan = document.createElement('span')
+      timeSpan.className = 'log-time'
+      const now = new Date()
+      timeSpan.textContent = now.toTimeString().split(' ')[0]
+      
+      const textSpan = document.createElement('span')
+      textSpan.className = 'log-text'
+      textSpan.textContent = msg
+      
+      entry.appendChild(timeSpan)
+      entry.appendChild(textSpan)
+      content.appendChild(entry)
+      content.scrollTop = content.scrollHeight
+    }
+
     engine.onNodeClick(async (node) => {
       await panel.selectNode(node.id as string)
     })
@@ -102,6 +132,11 @@ async function init(): Promise<void> {
   statsEl.textContent  = `${graph.nodes.length} nodos · ${graph.edges.length} aristas`
   statusEl.textContent = 'Conectado'
 
+  if ((window as any).addActivityLog) {
+    (window as any).addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success');
+    (window as any).addActivityLog(`Grafo inicial cargado: ${graph.nodes.length} nodos y ${graph.edges.length} enlaces.`, 'info');
+  }
+
   step('5/6 Iniciando minimap y búsqueda…')
   try {
     const minimap = initMinimap(engine.fg)
@@ -122,6 +157,35 @@ async function init(): Promise<void> {
       search.setup(updated.nodes)
       const nodeId = panel.getCurrentNodeId()
       if (nodeId) panel.refreshNeighbors(nodeId)
+
+      if ((window as any).addActivityLog) {
+        (window as any).addActivityLog(`Grafo sincronizado: ${updated.nodes.length} nodos, ${updated.edges.length} aristas.`, 'info');
+      }
+
+      // Handle autofocus of pending nodes
+      if ((engine as any).pendingFocusPath) {
+        const targetPath = (engine as any).pendingFocusPath.replace(/\\/g, '/').toLowerCase();
+        const cleanTarget = targetPath.replace(/^\/+|\/+$/g, '');
+        
+        const matchedNode = updated.nodes.find(node => {
+          const nodePath = (node.path || '').replace(/\\/g, '/').toLowerCase();
+          const cleanNode = nodePath.replace(/^\/+|\/+$/g, '');
+          return cleanNode === cleanTarget || cleanNode.endsWith(cleanTarget) || cleanTarget.endsWith(cleanNode);
+        });
+
+        if (matchedNode) {
+          (engine as any).pendingFocusPath = null; // Clear immediately to avoid re-triggering
+          if ((window as any).addActivityLog) {
+            (window as any).addActivityLog(`Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`, 'success');
+          }
+          // Highlight and select the node
+          setTimeout(() => {
+            panel.selectNode(matchedNode.id).catch(err => {
+              console.error('Error auto-selecting node:', err);
+            });
+          }, 100);
+        }
+      }
     })
     window.addEventListener('beforeunload', unsubscribe)
   } catch (err) {
