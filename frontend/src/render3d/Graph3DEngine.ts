@@ -3,34 +3,84 @@ import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { Node, Edge, Graph } from '../lib/bridge'
 import { PALETTE } from './palette.js'
+import { getRenderProfile, createProgressiveLoader } from './renderOptimizations'
 
-// Shared geometry buckets for raycasting/visual (keyed by rounded size)
-const geoCache = new Map<number, THREE.SphereGeometry>()
-// Shared materials per type — 1 draw call contribution per type
-const matCache = new Map<string, THREE.MeshLambertMaterial>()
+// Caches for GPU/Three.js resources to prevent duplicate allocation and memory thrashing
+const sphereGeoCache = new Map<string, THREE.SphereGeometry>()
+const ringGeoCache = new Map<string, THREE.RingGeometry>()
+const lambertMatCache = new Map<string, THREE.MeshLambertMaterial>()
+const basicMatCache = new Map<string, THREE.MeshBasicMaterial>()
+const ringMatCache = new Map<string, THREE.MeshBasicMaterial>()
 
 const PARTICLE_RADIUS = 280
 
-function getGeo(size: number): THREE.SphereGeometry {
-  const bucket = Math.max(1, Math.round(size))
-  if (!geoCache.has(bucket)) {
-    geoCache.set(bucket, new THREE.SphereGeometry(bucket, 10, 7))
+function getSphereGeo(radius: number, segments: number): THREE.SphereGeometry {
+  const bucketRadius = Math.max(0.5, Math.round(radius * 10) / 10)
+  const key = `${bucketRadius.toFixed(1)}_${segments}`
+  if (!sphereGeoCache.has(key)) {
+    sphereGeoCache.set(key, new THREE.SphereGeometry(bucketRadius, segments, segments))
   }
-  return geoCache.get(bucket)!
+  return sphereGeoCache.get(key)!
 }
 
-function getMat(type: string): THREE.MeshLambertMaterial {
-  if (!matCache.has(type)) {
+function getRingGeo(inner: number, outer: number, segments: number): THREE.RingGeometry {
+  const key = `${inner.toFixed(1)}_${outer.toFixed(1)}_${segments}`
+  if (!ringGeoCache.has(key)) {
+    ringGeoCache.set(key, new THREE.RingGeometry(inner, outer, segments))
+  }
+  return ringGeoCache.get(key)!
+}
+
+function getLambertMat(type: string): THREE.MeshLambertMaterial {
+  if (!lambertMatCache.has(type)) {
     const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
-    matCache.set(type, new THREE.MeshLambertMaterial({
+    lambertMatCache.set(type, new THREE.MeshLambertMaterial({
       color: new THREE.Color(color),
       emissive: new THREE.Color(color),
       emissiveIntensity: 0.15,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.85,
     }))
   }
-  return matCache.get(type)!
+  return lambertMatCache.get(type)!
+}
+
+function getBasicMat(type: string): THREE.MeshBasicMaterial {
+  if (!basicMatCache.has(type)) {
+    const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
+    basicMatCache.set(type, new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      transparent: true,
+      opacity: 0.7,
+    }))
+  }
+  return basicMatCache.get(type)!
+}
+
+function getLowBasicMat(type: string): THREE.MeshBasicMaterial {
+  const key = `${type}_low`
+  if (!basicMatCache.has(key)) {
+    const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
+    basicMatCache.set(key, new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      transparent: true,
+      opacity: 0.45,
+    }))
+  }
+  return basicMatCache.get(key)!
+}
+
+function getRingMat(type: string): THREE.MeshBasicMaterial {
+  if (!ringMatCache.has(type)) {
+    const color = (PALETTE as Record<string, string>)[type] ?? PALETTE.default
+    ringMatCache.set(type, new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.25,
+    }))
+  }
+  return ringMatCache.get(type)!
 }
 
 function nodeSize(weight: number): number {
@@ -46,8 +96,6 @@ function computeDegree(edges: Edge[]): Map<string, number> {
   return deg
 }
 
-// Adapted from Graphium (MIT license)
-// Original source: graphium/src/main.js (_createStarfield method)
 function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
   const starsGeo = new THREE.BufferGeometry()
   const starCount = count
@@ -55,7 +103,6 @@ function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
   const colors = new Float32Array(starCount * 3)
 
   for (let i = 0; i < starCount; i++) {
-    // Random positions on a large sphere
     const theta = Math.random() * Math.PI * 2
     const phi = Math.acos(2 * Math.random() - 1)
     const r = 700 + Math.random() * 100
@@ -64,7 +111,6 @@ function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
     positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
     positions[i * 3 + 2] = r * Math.cos(phi)
 
-    // Slightly varied star colors (white to blue-white)
     const brightness = 0.5 + Math.random() * 0.5
     colors[i * 3] = 0.8 * brightness
     colors[i * 3 + 1] = 0.9 * brightness
@@ -120,7 +166,35 @@ export class Graph3DEngine {
       .nodeThreeObject((node: Record<string, unknown>) => {
         const size = nodeSize(node.weight as number)
         const type = (node.type as string) || 'default'
-        return new THREE.Mesh(getGeo(size), getMat(type))
+        
+        // Multi-level LOD Group representation
+        const group = new THREE.Group()
+        group.userData = { _lodDistance: size }
+
+        // HI-LOD: Lambert lighting, 10 segments, glow ring
+        const hiMesh = new THREE.Mesh(getSphereGeo(size, 10), getLambertMat(type))
+        hiMesh.name = 'lod_hi'
+
+        const ringGeo = getRingGeo(size - 0.5, size + 0.5, 24)
+        const ring = new THREE.Mesh(ringGeo, getRingMat(type))
+        ring.lookAt(new THREE.Vector3(0, 0, 1))
+        ring.name = 'lod_ring'
+        hiMesh.add(ring)
+        group.add(hiMesh)
+
+        // MID-LOD: Basic lighting (faster!), 7 segments, no ring
+        const midMesh = new THREE.Mesh(getSphereGeo(size, 7), getBasicMat(type))
+        midMesh.name = 'lod_mid'
+        midMesh.visible = false
+        group.add(midMesh)
+
+        // LOW-LOD: Basic lighting, 4 segments, no ring
+        const lowMesh = new THREE.Mesh(getSphereGeo(size, 4), getLowBasicMat(type))
+        lowMesh.name = 'lod_low'
+        lowMesh.visible = false
+        group.add(lowMesh)
+
+        return group
       })
       .nodeThreeObjectExtend(false)
       .linkDirectionalParticles(2)
@@ -154,17 +228,66 @@ export class Graph3DEngine {
       if (++minimapFrame % 30 === 0) this.onMinimapTick?.()
     })
 
-    // rAF loop: starfield rotation + distance-based particle throttling.
-    // Must never throw — wraps all logic in try/catch.
+    // rAF loop: starfield rotation + throttled updates for LOD and link particles
     this._tick = () => {
       this._rafId = requestAnimationFrame(this._tick)
       try {
         this.starfield.rotation.y += 0.0001
         this.starfield.rotation.x += 0.00005
-        if (++this._rafFrame % 6 === 0) this.updateParticleVisibility()
+        
+        // Throttled CPU tasks (run every 6 frames ~ 100ms)
+        if (++this._rafFrame % 6 === 0) {
+          this.updateParticleVisibility()
+          this.updateLOD()
+        }
       } catch (_) { /* swallow — loop must survive */ }
     }
     this._rafId = requestAnimationFrame(this._tick)
+  }
+
+  // Camera distance-driven level of detail selection (HI, MID, LOW meshes)
+  private updateLOD(): void {
+    const camera: THREE.Camera = this.fg.camera()
+    if (!camera) return
+    const camPos = camera.position
+
+    const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
+    if (!nodes?.length) return
+
+    const _cameraPos = new THREE.Vector3().copy(camPos)
+    const _nodePos = new THREE.Vector3()
+
+    const LOD_NEAR = 150
+    const LOD_MID = 400
+
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i]
+      const obj = n.__threeObj as THREE.Group | undefined
+      if (!obj || !obj.isGroup) continue
+
+      _nodePos.set((n.x as number) || 0, (n.y as number) || 0, (n.z as number) || 0)
+      const dist = _cameraPos.distanceTo(_nodePos)
+      const size = (obj.userData._lodDistance as number) || 3
+      const normDist = dist / Math.max(size, 1)
+
+      const hi = obj.getObjectByName('lod_hi')
+      const mid = obj.getObjectByName('lod_mid')
+      const low = obj.getObjectByName('lod_low')
+
+      if (normDist < LOD_NEAR) {
+        if (hi) hi.visible = true
+        if (mid) mid.visible = false
+        if (low) low.visible = false
+      } else if (normDist < LOD_MID) {
+        if (hi) hi.visible = false
+        if (mid) mid.visible = true
+        if (low) low.visible = false
+      } else {
+        if (hi) hi.visible = false
+        if (mid) mid.visible = false
+        if (low) low.visible = true
+      }
+    }
   }
 
   private updateParticleVisibility(): void {
@@ -272,16 +395,54 @@ export class Graph3DEngine {
   setGraph(g: Graph): void {
     const degree = computeDegree(g.edges)
     this.nodeIndex.clear()
-    const nodes = g.nodes.map(n => {
+    
+    const processedNodes = g.nodes.map(n => {
       const h = this.hydrate(n, degree.get(n.id) || 0)
       this.nodeIndex.set(n.id, h)
       return h
     })
+    const processedLinks = g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
+
+    const nodeCount = processedNodes.length
+    const profile = getRenderProfile(nodeCount)
+
+    // Apply adaptive render profile settings
+    this.fg
+      .antialias(profile.antialias)
+      .warmupTicks(profile.warmupTicks)
+      .cooldownTicks(profile.cooldownTicks)
+
+    // Update adaptive starfield stars
+    const scene = this.fg.scene()
+    if (this.starfield) {
+      scene.remove(this.starfield)
+      this.starfield.geometry.dispose()
+      if (Array.isArray(this.starfield.material)) {
+        this.starfield.material.forEach(m => m.dispose())
+      } else {
+        this.starfield.material.dispose()
+      }
+    }
+    this.starfield = createStarfield(scene, profile.starCount)
+
     this._zoomOnStop = true
-    this.fg.graphData({
-      nodes,
-      links: g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type })),
-    })
+
+    // Progressive loading via chunk-based streaming
+    const loader = createProgressiveLoader({ nodes: processedNodes, links: processedLinks })
+    let result = loader.append(profile.initialBatchSize)
+    this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+
+    const pump = () => {
+      if (this._paused) return
+      if (result.done) return
+      result = loader.append(profile.batchSize)
+      this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+      setTimeout(pump, profile.chunkDelay)
+    }
+    
+    if (!result.done) {
+      setTimeout(pump, profile.chunkDelay)
+    }
   }
 
   applyUpdate(g: Graph): void {
@@ -328,10 +489,16 @@ export class Graph3DEngine {
 
   destroy(): void {
     cancelAnimationFrame(this._rafId)
-    geoCache.forEach(g => g.dispose())
-    geoCache.clear()
-    matCache.forEach(m => m.dispose())
-    matCache.clear()
+    sphereGeoCache.forEach(g => g.dispose())
+    sphereGeoCache.clear()
+    ringGeoCache.forEach(g => g.dispose())
+    ringGeoCache.clear()
+    lambertMatCache.forEach(m => m.dispose())
+    lambertMatCache.clear()
+    basicMatCache.forEach(m => m.dispose())
+    basicMatCache.clear()
+    ringMatCache.forEach(m => m.dispose())
+    ringMatCache.clear()
     ;(this.fg as unknown as { _destructor: () => void })._destructor()
   }
 }
