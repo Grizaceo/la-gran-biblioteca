@@ -1,10 +1,10 @@
 import tempfile
 from pathlib import Path
 from fastapi.testclient import TestClient
-from graph_engine import GraphEngine
+from backend.graph_engine import GraphEngine
 
 # We need to import the app after setting up a temporary DB
-import library_bridge as bridge
+import backend.library_bridge as bridge
 
 
 def test_health():

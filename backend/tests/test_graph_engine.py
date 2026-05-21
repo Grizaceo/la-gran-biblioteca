@@ -2,7 +2,7 @@ import json
 import sqlite3
 import tempfile
 from pathlib import Path
-from graph_engine import GraphEngine, Node, Edge
+from backend.graph_engine import GraphEngine, Node, Edge
 
 
 def test_build_graph_clears_previous_state():

@@ -7,7 +7,7 @@ import pytest
 
 def test_excluded_dirs_are_filtered():
     """Test that excluded directories are properly filtered."""
-    from workspace_watcher import is_valid_path, EXCLUDE_DIRS
+    from backend.workspace_watcher import is_valid_path, EXCLUDE_DIRS
     
     # .hermes is in EXCLUDE_DIRS, so any path containing it should be excluded
     assert is_valid_path("/home/user/.hermes/workspaces/test.md") == False  # .hermes excluded
@@ -21,7 +21,7 @@ def test_excluded_dirs_are_filtered():
 
 def test_valid_extensions():
     """Test that watched file extensions are recognized."""
-    from workspace_watcher import is_valid_path, SCAN_EXTENSIONS
+    from backend.workspace_watcher import is_valid_path, SCAN_EXTENSIONS
     
     # Valid extensions should pass
     for ext in SCAN_EXTENSIONS:
@@ -33,7 +33,7 @@ def test_valid_extensions():
 
 def test_directory_handling():
     """Test that directories are handled specially."""
-    from workspace_watcher import is_valid_path
+    from backend.workspace_watcher import is_valid_path
     
     # Directories don't have suffixes, so they pass the suffix check
     # but are filtered by EXCLUDE_DIRS
@@ -44,7 +44,7 @@ def test_directory_handling():
 
 def test_on_created_modified_deleted():
     """Test that handlers don't raise errors."""
-    from workspace_watcher import WorkspaceEventHandler
+    from backend.workspace_watcher import WorkspaceEventHandler
     
     loop = asyncio.new_event_loop()
     queue = asyncio.Queue()
@@ -63,7 +63,7 @@ def test_on_created_modified_deleted():
 
 def test_start_watcher_returns_observer():
     """Test that start_watcher returns a valid Observer instance."""
-    from workspace_watcher import start_watcher
+    from backend.workspace_watcher import start_watcher
     from watchdog.observers import Observer
     
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -83,7 +83,7 @@ def test_start_watcher_returns_observer():
 
 def test_handler_enqueue_thread_safety():
     """Test that handler uses call_soon_threadsafe for queue operations."""
-    from workspace_watcher import WorkspaceEventHandler
+    from backend.workspace_watcher import WorkspaceEventHandler
     
     loop = asyncio.new_event_loop()
     queue = asyncio.Queue()

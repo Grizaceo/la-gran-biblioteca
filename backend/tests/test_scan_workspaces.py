@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from scan_workspaces import scan_workspaces
+from backend.scan_workspaces import scan_workspaces
 
 
 def test_scan_empty_directory():

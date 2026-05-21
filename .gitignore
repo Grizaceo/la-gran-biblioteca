@@ -7,6 +7,10 @@ backend/venv/
 data/
 frontend/node_modules/
 frontend/dist/
+.pytest_cache/
+.coverage
+.env
+*.sqlite
 export/
 .DS_Store
 *.log
