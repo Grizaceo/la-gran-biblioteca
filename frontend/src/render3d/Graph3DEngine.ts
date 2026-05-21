@@ -414,7 +414,6 @@ export class Graph3DEngine {
 
     // Apply adaptive render profile settings
     this.fg
-      .antialias(profile.antialias)
       .warmupTicks(profile.warmupTicks)
       .cooldownTicks(profile.cooldownTicks)
 
