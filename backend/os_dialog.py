@@ -1,0 +1,140 @@
+import platform
+import subprocess
+import shutil
+import logging
+from pathlib import Path
+from .os_open import is_wsl
+
+logger = logging.getLogger("la-gran-biblioteca")
+
+def select_file_in_os() -> str:
+    """Opens a native system file selector dialog and returns the absolute path of the selected file."""
+    try:
+        if is_wsl():
+            # PowerShell File Open Dialog via .NET Forms
+            cmd = [
+                "powershell.exe", "-NoProfile", "-Command",
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                "$f = New-Object System.Windows.Forms.OpenFileDialog; "
+                "$f.Filter = 'All Files (*.*)|*.*'; "
+                "$f.Title = 'Seleccionar Archivo para La Gran Biblioteca'; "
+                "$res = $f.ShowDialog(); "
+                "if ($res -eq 'OK') { Write-Output $f.FileName }"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            win_path = result.stdout.strip()
+            if not win_path:
+                return ""
+            
+            # Convert Windows path to WSL Linux path
+            res_wsl = subprocess.run(["wslpath", win_path], capture_output=True, text=True, timeout=5)
+            return res_wsl.stdout.strip()
+            
+        elif platform.system() == "Darwin":
+            # macOS AppleScript dialog
+            cmd = [
+                "osascript", "-e",
+                'POSIX path of (choose file with prompt "Seleccionar Archivo para La Gran Biblioteca")'
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            return result.stdout.strip()
+            
+        else:
+            # Linux Zenity dialog
+            cmd = [
+                "zenity", "--file-selection",
+                "--title=Seleccionar Archivo para La Gran Biblioteca"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            return result.stdout.strip()
+            
+    except subprocess.TimeoutExpired:
+        logger.warning("El selector de archivos del SO expiró tras 120 segundos.")
+        return ""
+    except Exception as e:
+        logger.error(f"Error al abrir el selector de archivos del SO: {e}")
+        return ""
+
+def select_folder_in_os() -> str:
+    """Opens a native system folder selector dialog and returns the absolute path of the selected folder."""
+    try:
+        if is_wsl():
+            # PowerShell Folder Browser Dialog
+            cmd = [
+                "powershell.exe", "-NoProfile", "-Command",
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                "$f = New-Object System.Windows.Forms.FolderBrowserDialog; "
+                "$f.Description = 'Seleccionar Carpeta para La Gran Biblioteca'; "
+                "$res = $f.ShowDialog(); "
+                "if ($res -eq 'OK') { Write-Output $f.SelectedPath }"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            win_path = result.stdout.strip()
+            if not win_path:
+                return ""
+                
+            # Convert Windows path to WSL Linux path
+            res_wsl = subprocess.run(["wslpath", win_path], capture_output=True, text=True, timeout=5)
+            return res_wsl.stdout.strip()
+            
+        elif platform.system() == "Darwin":
+            # macOS AppleScript folder dialog
+            cmd = [
+                "osascript", "-e",
+                'POSIX path of (choose folder with prompt "Seleccionar Carpeta para La Gran Biblioteca")'
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            return result.stdout.strip()
+            
+        else:
+            # Linux Zenity folder dialog
+            cmd = [
+                "zenity", "--file-selection", "--directory",
+                "--title=Seleccionar Carpeta para La Gran Biblioteca"
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            return result.stdout.strip()
+            
+    except subprocess.TimeoutExpired:
+        logger.warning("El selector de carpetas del SO expiró tras 120 segundos.")
+        return ""
+    except Exception as e:
+        logger.error(f"Error al abrir el selector de carpetas del SO: {e}")
+        return ""
+
+def import_selected_file(src_path_str: str, workspace_root: Path) -> Path:
+    """Copies selected file into workspace_root, managing any name conflicts with numeric suffixes."""
+    src_path = Path(src_path_str)
+    if not src_path.exists() or not src_path.is_file():
+        raise ValueError("El archivo seleccionado no existe o no es válido.")
+        
+    dest_path = workspace_root / src_path.name
+    if dest_path.exists():
+        base = dest_path.stem
+        ext = dest_path.suffix
+        counter = 1
+        while dest_path.exists():
+            dest_path = workspace_root / f"{base}_{counter}{ext}"
+            counter += 1
+            
+    shutil.copy2(src_path, dest_path)
+    logger.info(f"Archivo importado con éxito: {src_path} -> {dest_path}")
+    return dest_path
+
+def import_selected_folder(src_path_str: str, workspace_root: Path) -> Path:
+    """Recursively copies selected directory into workspace_root, resolving name conflicts."""
+    src_path = Path(src_path_str)
+    if not src_path.exists() or not src_path.is_dir():
+        raise ValueError("La carpeta seleccionada no existe o no es válida.")
+        
+    dest_path = workspace_root / src_path.name
+    if dest_path.exists():
+        base = dest_path.name
+        counter = 1
+        while dest_path.exists():
+            dest_path = workspace_root / f"{base}_{counter}"
+            counter += 1
+            
+    shutil.copytree(src_path, dest_path)
+    logger.info(f"Carpeta importada con éxito: {src_path} -> {dest_path}")
+    return dest_path

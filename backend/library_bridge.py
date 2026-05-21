@@ -23,6 +23,12 @@ from .constants import WORKSPACE_ROOT
 from .os_open import open_in_os
 from .preview import read_preview
 from .imports import download_and_extract_github, import_arxiv, import_pubmed
+from .os_dialog import (
+    select_file_in_os,
+    select_folder_in_os,
+    import_selected_file,
+    import_selected_folder,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -273,6 +279,41 @@ async def create_folder(req: CreateFolderRequest):
     except Exception as e:
         logger.error(f"Error creando carpeta: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/create/system-file")
+async def create_system_file():
+    """Abre el diálogo nativo del SO para seleccionar un archivo, y lo importa al workspace."""
+    try:
+        selected_path = await asyncio.to_thread(select_file_in_os)
+        if not selected_path:
+            raise HTTPException(status_code=400, detail="Operación cancelada por el usuario o diálogo cerrado.")
+            
+        dest_path = await asyncio.to_thread(import_selected_file, selected_path, WORKSPACE_ROOT)
+        return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error importando archivo del sistema: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/create/system-folder")
+async def create_system_folder():
+    """Abre el diálogo nativo del SO para seleccionar una carpeta, y la importa al workspace."""
+    try:
+        selected_path = await asyncio.to_thread(select_folder_in_os)
+        if not selected_path:
+            raise HTTPException(status_code=400, detail="Operación cancelada por el usuario o diálogo cerrado.")
+            
+        dest_path = await asyncio.to_thread(import_selected_folder, selected_path, WORKSPACE_ROOT)
+        return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error importando carpeta del sistema: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/api/create/github")

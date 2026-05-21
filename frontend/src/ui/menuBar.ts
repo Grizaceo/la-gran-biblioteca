@@ -263,51 +263,34 @@ export function initMenuBar(engine: Graph3DEngine): void {
 
   // --- Specific Modal Handlers ---
 
-  function openCreateFileModal(): void {
-    showModal(
-      'Nuevo Archivo',
-      [
-        {
-          label: 'Ruta relativa (ej: notas/mi_nota.md)',
-          id: 'path',
-          type: 'text',
-          placeholder: 'Ruta dentro del workspace...'
-        },
-        {
-          label: 'Contenido Inicial (opcional)',
-          id: 'content',
-          type: 'textarea',
-          placeholder: 'Escribe tu contenido Markdown aquí...'
-        }
-      ],
-      async (values) => {
-        const path = values.path.trim()
-        if (!path) throw new Error('La ruta del archivo es obligatoria')
-        const res = await bridge.createFile(path, values.content)
-        showNotification(`Archivo creado con éxito: ${res.path}`, 'success')
+  async function openCreateFileModal(): Promise<void> {
+    try {
+      showNotification('Abriendo selector de archivos del SO...', 'info')
+      const res = await bridge.createSystemFile()
+      showNotification(`Archivo importado con éxito: ${res.path}`, 'success')
+    } catch (err: any) {
+      if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
+        showNotification('Operación cancelada o sin selección', 'info')
+      } else {
+        showNotification(err.message || 'Error al seleccionar archivo', 'error')
       }
-    )
+    }
   }
 
-  function openCreateFolderModal(): void {
-    showModal(
-      'Nueva Carpeta',
-      [
-        {
-          label: 'Ruta de la carpeta (ej: notas/referencias)',
-          id: 'path',
-          type: 'text',
-          placeholder: 'Ruta dentro del workspace...'
-        }
-      ],
-      async (values) => {
-        const path = values.path.trim()
-        if (!path) throw new Error('La ruta de la carpeta es obligatoria')
-        const res = await bridge.createFolder(path)
-        showNotification(`Carpeta creada con éxito: ${res.path}`, 'success')
+  async function openCreateFolderModal(): Promise<void> {
+    try {
+      showNotification('Abriendo selector de carpetas del SO...', 'info')
+      const res = await bridge.createSystemFolder()
+      showNotification(`Carpeta importada con éxito: ${res.path}`, 'success')
+    } catch (err: any) {
+      if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
+        showNotification('Operación cancelada o sin selección', 'info')
+      } else {
+        showNotification(err.message || 'Error al seleccionar carpeta', 'error')
       }
-    )
+    }
   }
+
 
   function openImportGithubModal(): void {
     showModal(

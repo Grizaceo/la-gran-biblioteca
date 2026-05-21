@@ -163,3 +163,25 @@ export async function importPubmed(id: string): Promise<{ status: string; path: 
   }
   return res.json()
 }
+
+export async function createSystemFile(): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/system-file`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo seleccionar o importar el archivo del sistema`)
+  }
+  return res.json()
+}
+
+export async function createSystemFolder(): Promise<{ status: string; path: string }> {
+  const res = await fetch(`${API_BASE}/create/system-folder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `No se pudo seleccionar o importar la carpeta del sistema`)
+  }
+  return res.json()
+}
