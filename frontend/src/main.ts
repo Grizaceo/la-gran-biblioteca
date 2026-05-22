@@ -1,16 +1,31 @@
-import { fetchGraph, subscribeToUpdates } from './lib/bridge'
-import type { Graph } from './lib/bridge'
+import { fetchGraph, fetchOverview, subscribeToUpdates } from './lib/bridge'
+import type { Graph, Overview } from './lib/bridge'
 import { Graph3DEngine } from './render3d/Graph3DEngine'
 import { initSearch } from './render3d/ui/search.js'
 import { initMinimap } from './render3d/ui/minimap.js'
 import { initFocus } from './render3d/ui/focus.js'
 import { initVisibility } from './render3d/ui/visibility.js'
+import { initViewOptions } from './render3d/ui/viewOptions.js'
 import { setupDetailPanel } from './ui/detailPanel'
 import { setupTooltip } from './ui/tooltip'
 import { setupContextMenu } from './ui/contextMenu'
 import { initMenuBar } from './ui/menuBar'
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+function formatStats(graph: Graph, overview: Overview | null): string {
+  const shown = graph.nodes.length
+  const total = graph.total ?? overview?.total_nodes ?? shown
+  const edges = graph.edges.length
+  let text = total > shown
+    ? `${shown} / ${total} nodos · ${edges} aristas`
+    : `${shown} nodos · ${edges} aristas`
+  const top = overview?.top_workspaces?.[0]
+  if (top?.workspace) {
+    text += ` · ${top.workspace}`
+  }
+  return text
+}
 
 async function init(): Promise<void> {
   const container   = document.getElementById('graph-container')!
@@ -21,12 +36,15 @@ async function init(): Promise<void> {
   const loadingEl   = document.getElementById('loading')!
 
   let currentGraph: Graph | null = null
+  let overview: Overview | null = null
+  let graphHydrated = false
 
-  function showError(msg: string): void {
+  function showError(msg: string, err?: Error): void {
     loadingText.style.display = 'none'
     ;(loadingEl.querySelector('.spinner') as HTMLElement).style.display = 'none'
     loadingErr.style.display = 'block'
     loadingErr.textContent   = msg
+    if (err) console.error(msg, err)
   }
 
   function showToast(msg: string, isError = false): void {
@@ -42,19 +60,30 @@ async function init(): Promise<void> {
   step('1/6 Conectando al backend…')
   let graph: Graph
   try {
-    graph = await fetchGraph()
+    const [g, ov] = await Promise.all([fetchGraph(), fetchOverview()])
+    graph = g
+    overview = ov
   } catch (err) {
     showError(`No se pudo conectar al backend: ${(err as Error).message}`)
     return
   }
   currentGraph = graph
+  statsEl.textContent = formatStats(graph, overview)
 
   step('2/6 Iniciando motor 3D…')
   let engine: Graph3DEngine
   try {
     engine = new Graph3DEngine(container)
+    if (overview?.workspace_root) {
+      engine.setWorkspaceRoot(overview.workspace_root)
+    }
+    engine.onLoadProgress = ({ loaded, total }) => {
+      if (total > 0) {
+        loadingText.textContent = `4/6 Cargando grafo… ${loaded}/${total} nodos`
+      }
+    }
   } catch (err) {
-    showError(`Error motor 3D: ${(err as Error).stack ?? (err as Error).message}`)
+    showError(`Error motor 3D: ${(err as Error).message}`, err as Error)
     return
   }
 
@@ -62,9 +91,11 @@ async function init(): Promise<void> {
 
   step('3/6 Conectando UI…')
   let panel!: ReturnType<typeof setupDetailPanel>
+  let viewOptions!: ReturnType<typeof initViewOptions>
   try {
-    const focus = initFocus(engine.fg)
+    const focus = initFocus(engine.fg, engine)
     initVisibility(engine)
+    viewOptions = initViewOptions(engine)
 
     panel = setupDetailPanel(container, engine, () => currentGraph, showToast)
 
@@ -72,7 +103,12 @@ async function init(): Promise<void> {
 
     setupContextMenu(engine, showToast)
 
-    initMenuBar(engine)
+    initMenuBar(engine, {
+      openViewOptions: () => viewOptions.openPanel(),
+      onRescanComplete: () => {
+        statusEl.textContent = 'Sincronizando tras escaneo…'
+      },
+    })
 
     // Activity Log Collapsible & Global Logger initialization
     const logPanel = document.getElementById('activity-log')
@@ -88,16 +124,16 @@ async function init(): Promise<void> {
       if (!content) return
       const entry = document.createElement('div')
       entry.className = `log-entry log-${type}`
-      
+
       const timeSpan = document.createElement('span')
       timeSpan.className = 'log-time'
       const now = new Date()
       timeSpan.textContent = now.toTimeString().split(' ')[0]
-      
+
       const textSpan = document.createElement('span')
       textSpan.className = 'log-text'
       textSpan.textContent = msg
-      
+
       entry.appendChild(timeSpan)
       entry.appendChild(textSpan)
       content.appendChild(entry)
@@ -117,68 +153,93 @@ async function init(): Promise<void> {
       engine.fg.width(width).height(height)
     })
   } catch (err) {
-    showError(`Error UI: ${(err as Error).stack ?? (err as Error).message}`)
+    showError(`Error UI: ${(err as Error).message}`, err as Error)
     return
   }
 
   step('4/6 Cargando grafo…')
   try {
     engine.setGraph(graph)
+    graphHydrated = true
   } catch (err) {
-    showError(`Error cargando grafo: ${(err as Error).stack ?? (err as Error).message}`)
+    showError(`Error cargando grafo: ${(err as Error).message}`, err as Error)
     return
   }
 
-  statsEl.textContent  = `${graph.nodes.length} nodos · ${graph.edges.length} aristas`
+  statsEl.textContent = formatStats(graph, overview)
   statusEl.textContent = 'Conectado'
 
   if ((window as any).addActivityLog) {
-    (window as any).addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success');
-    (window as any).addActivityLog(`Grafo inicial cargado: ${graph.nodes.length} nodos y ${graph.edges.length} enlaces.`, 'info');
+    (window as any).addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success')
+    ;(window as any).addActivityLog(
+      `Grafo inicial cargado: ${graph.nodes.length} nodos y ${graph.edges.length} enlaces.`,
+      'info',
+    )
   }
 
   step('5/6 Iniciando minimap y búsqueda…')
   try {
-    const minimap = initMinimap(engine.fg)
-    const search  = initSearch(engine.fg)
+    const minimap = initMinimap(engine.fg, engine)
+    const search  = initSearch(engine.fg, engine)
 
     engine.onMinimapTick = () => minimap.update()
     engine.onStop = () => minimap.invalidateBounds()
 
     search.setup(graph.nodes)
     minimap.update()
+    viewOptions.renderList()
 
-    const unsubscribe = subscribeToUpdates((updated: Graph) => {
+    const unsubscribe = subscribeToUpdates((updated, event) => {
+      if (event === 'init' && graphHydrated) {
+        return
+      }
       currentGraph = updated
       engine.applyUpdate(updated)
-      statsEl.textContent = `${updated.nodes.length} nodos · ${updated.edges.length} aristas`
+      graphHydrated = true
+      statsEl.textContent = formatStats(updated, overview)
       minimap.invalidateBounds()
       minimap.update()
       search.setup(updated.nodes)
+      viewOptions.renderList()
       const nodeId = panel.getCurrentNodeId()
       if (nodeId) panel.refreshNeighbors(nodeId)
 
       if ((window as any).addActivityLog) {
-        (window as any).addActivityLog(`Grafo sincronizado: ${updated.nodes.length} nodos, ${updated.edges.length} aristas.`, 'info');
+        ;(window as any).addActivityLog(
+          `Grafo sincronizado: ${updated.nodes.length} nodos, ${updated.edges.length} aristas.`,
+          'info',
+        )
       }
 
-      // Handle autofocus queue — each pending path is consumed once matched
       const pendingQueue: string[] = (engine as any)._pendingFocusQueue ?? []
       ;(engine as any)._pendingFocusQueue = pendingQueue
       const remaining: string[] = []
       for (const rawPath of pendingQueue) {
         const targetPath = rawPath.replace(/\\/g, '/').toLowerCase()
         const cleanTarget = targetPath.replace(/^\/+|\/+$/g, '')
+        const fileStem = cleanTarget.split('/').pop() || cleanTarget
         const matchedNode = updated.nodes.find(node => {
           const nodePath = (node.path || '').replace(/\\/g, '/').toLowerCase()
           const cleanNode = nodePath.replace(/^\/+|\/+$/g, '')
-          return cleanNode === cleanTarget || cleanNode.endsWith(cleanTarget) || cleanTarget.endsWith(cleanNode)
+          const nodeId = (node.id || '').replace(/\\/g, '/').toLowerCase()
+          return (
+            cleanNode === cleanTarget
+            || cleanNode.endsWith('/' + cleanTarget)
+            || cleanNode.endsWith(cleanTarget)
+            || cleanTarget.endsWith(cleanNode)
+            || nodeId === cleanTarget
+            || nodeId.endsWith('/' + cleanTarget)
+            || nodeId.endsWith(cleanTarget)
+            || (fileStem.length > 4 && (cleanNode.includes(fileStem) || nodeId.includes(fileStem)))
+          )
         })
         if (matchedNode) {
           if ((window as any).addActivityLog) {
-            (window as any).addActivityLog(`Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`, 'success')
+            ;(window as any).addActivityLog(
+              `Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`,
+              'success',
+            )
           }
-          // waitForCameraMs = 950 lets the 800ms camera animation play before the panel opens
           panel.selectNode(matchedNode.id, 950).catch(err => {
             console.error('Error auto-selecting node:', err)
           })
@@ -190,7 +251,7 @@ async function init(): Promise<void> {
     })
     window.addEventListener('beforeunload', unsubscribe)
   } catch (err) {
-    showError(`Error minimap/búsqueda: ${(err as Error).stack ?? (err as Error).message}`)
+    showError(`Error minimap/búsqueda: ${(err as Error).message}`, err as Error)
     return
   }
 

@@ -16,14 +16,19 @@ from sse_starlette.sse import EventSourceResponse
 import uvicorn
 import logging
 
-from .scan_workspaces import scan_workspaces
+from .scan_workspaces import (
+    scan_workspaces,
+    scan_import_paths,
+    merge_scan_graphs,
+    node_id_for_import_path,
+)
 from .graph_engine import GraphEngine
 from .workspace_watcher import start_watcher
 from .constants import WORKSPACE_ROOT
 from .os_open import open_in_os
 from .path_utils import is_windows_path, resolve_node_path
 from .preview import read_preview
-from .imports import download_and_extract_github, import_arxiv, import_pubmed
+from .imports import download_and_extract_github, import_arxiv, import_pubmed, search_arxiv
 from .overview import build_overview
 from .security import SecurityMiddleware, safe_error_detail, PRODUCTION
 from .os_dialog import (
@@ -64,53 +69,82 @@ def get_current_graph():
     return _graph_state["graph"]
 
 
+def _path_matches_recent(node_path_str: str, recent: str) -> bool:
+    if not node_path_str or not recent:
+        return False
+    try:
+        node_abs = str(Path(node_path_str).resolve())
+    except Exception:
+        node_abs = node_path_str
+    recent_abs = recent
+    try:
+        recent_abs = str(Path(recent).resolve())
+    except Exception:
+        pass
+    return (
+        recent_abs == node_abs
+        or node_abs.startswith(recent_abs + os.sep)
+        or recent_abs.startswith(node_abs + os.sep)
+        or node_abs.endswith(recent_abs)
+        or recent_abs.endswith(node_abs)
+    )
+
+
+def _node_priority_key(n: dict, degree: int, root: Path) -> tuple:
+    """Higher sort key = higher priority for the 1000-node cap."""
+    node_path_str = n.get("path", "")
+    is_recent = 0
+    if node_path_str:
+        for recent in recently_imported_paths:
+            if _path_matches_recent(node_path_str, recent):
+                is_recent = 1
+                break
+    study = int((n.get("metadata") or {}).get("study_count") or 0)
+    return (is_recent, 1 if study > 0 else 0, study, degree)
+
+
 def get_limited_graph():
     graph = get_current_graph()
     total = len(graph["nodes"])
     if total > 1000:
         nodes = graph["nodes"]
+        degree: dict[str, int] = {}
+        for e in graph["edges"]:
+            degree[e["source"]] = degree.get(e["source"], 0) + 1
+            degree[e["target"]] = degree.get(e["target"], 0) + 1
 
-        prioritized = []
-        ordinary = []
+        root = Path(str(WORKSPACE_ROOT)).resolve()
+        ranked = sorted(
+            nodes,
+            key=lambda n: _node_priority_key(n, degree.get(n["id"], 0), root),
+            reverse=True,
+        )
+        selected_nodes = ranked[:1000]
+        selected_ids = {n["id"] for n in selected_nodes}
 
         for n in nodes:
-            node_path_str = n.get("path", "")
-            if not node_path_str:
-                ordinary.append(n)
+            if n["id"] in selected_ids:
                 continue
-
-            try:
-                node_abs_path = str(Path(node_path_str).resolve())
-            except Exception:
-                node_abs_path = node_path_str
-
-            is_recent = False
             for recent in recently_imported_paths:
-                if (recent == node_abs_path or 
-                    node_abs_path.startswith(recent + "/") or 
-                    recent.startswith(node_abs_path + "/")):
-                    is_recent = True
+                if _path_matches_recent(n.get("path", ""), recent):
+                    selected_nodes.append(n)
+                    selected_ids.add(n["id"])
                     break
 
-            if is_recent:
-                prioritized.append(n)
-            else:
-                ordinary.append(n)
-
-        selected_nodes = prioritized + ordinary
-        selected_nodes = selected_nodes[:1000]
-
-        node_ids = {n["id"] for n in selected_nodes}
+        node_ids = selected_ids
         edges = [e for e in graph["edges"] if e["source"] in node_ids and e["target"] in node_ids]
         return {"nodes": selected_nodes, "edges": edges, "total": total}
     return {**graph, "total": total}
 
 
-async def force_graph_update():
+async def force_graph_update(ensure_paths: list[Path | str] | None = None):
     try:
         raw = await asyncio.to_thread(
             scan_workspaces, max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN
         )
+        if ensure_paths:
+            patch = await asyncio.to_thread(scan_import_paths, ensure_paths, WORKSPACE_ROOT)
+            raw = merge_scan_graphs(raw, patch)
         new_graph = await asyncio.to_thread(engine.build_graph, raw)
         set_current_graph(new_graph)
         
@@ -278,7 +312,7 @@ async def trigger_rescan():
     try:
         new_graph = engine.rebuild_graph(raw)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Rebuild failed: {e}")
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
     set_current_graph(new_graph)
 
     # Notify clients
@@ -436,6 +470,41 @@ async def create_github(req: ImportGithubRequest):
         raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
+@app.get("/api/arxiv/search")
+async def arxiv_search(
+    q: str | None = None,
+    max: int = 10,
+    sort: str = "relevance",
+    author: str | None = None,
+    cat: str | None = None,
+):
+    """Search arXiv (read-only). At least one of q, author, or cat is required."""
+    q_val = (q or "").strip()
+    author_val = (author or "").strip()
+    cat_val = (cat or "").strip()
+    if not q_val and not author_val and not cat_val:
+        raise HTTPException(
+            status_code=400,
+            detail="Indica al menos uno de: q, author o cat.",
+        )
+    if max < 1 or max > 30:
+        raise HTTPException(status_code=400, detail="max debe estar entre 1 y 30.")
+    try:
+        return await asyncio.to_thread(
+            search_arxiv,
+            query=q_val or None,
+            author=author_val or None,
+            category=cat_val or None,
+            max_results=max,
+            sort=sort,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error buscando en arXiv: {e}")
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
+
+
 @app.post("/api/create/arxiv")
 async def create_arxiv(req: ImportArxivRequest):
     """Queries arXiv API for a publication and generates a structured Markdown file in the workspace."""
@@ -444,8 +513,17 @@ async def create_arxiv(req: ImportArxivRequest):
             import_arxiv, req.id, WORKSPACE_ROOT
         )
         register_recently_imported(file_path)
-        asyncio.create_task(force_graph_update())
-        return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
+        rel_path = str(file_path.relative_to(WORKSPACE_ROOT))
+        node_id = node_id_for_import_path(file_path, WORKSPACE_ROOT)
+        asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
+        return {
+            "status": "ok",
+            "path": rel_path,
+            "node_id": node_id,
+            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error importando de arXiv: {e}")
         raise HTTPException(status_code=500, detail=safe_error_detail(e))
@@ -459,8 +537,15 @@ async def create_pubmed(req: ImportPubmedRequest):
             import_pubmed, req.id, WORKSPACE_ROOT
         )
         register_recently_imported(file_path)
-        asyncio.create_task(force_graph_update())
-        return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
+        rel_path = str(file_path.relative_to(WORKSPACE_ROOT))
+        node_id = node_id_for_import_path(file_path, WORKSPACE_ROOT)
+        asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
+        return {
+            "status": "ok",
+            "path": rel_path,
+            "node_id": node_id,
+            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+        }
     except Exception as e:
         logger.error(f"Error importando de PubMed: {e}")
         raise HTTPException(status_code=500, detail=safe_error_detail(e))
@@ -544,7 +629,7 @@ async def open_node(req: OpenRequest):
             req.reveal,
             e,
         )
-        raise HTTPException(status_code=500, detail=f"Could not open file: {e}")
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
     return {"ok": True}
 

@@ -1,3 +1,4 @@
+import MiniSearch from 'minisearch'
 import * as THREE from 'three'
 import { PALETTE } from '../palette.js'
 
@@ -9,7 +10,7 @@ function escapeHtml(s) {
   )
 }
 
-export function initSearch(forceGraph) {
+export function initSearch(forceGraph, engine = null) {
   const searchInput        = document.getElementById('search-input')
   const searchBtn          = document.getElementById('search-btn')
   const searchResults      = document.getElementById('search-results')
@@ -22,14 +23,34 @@ export function initSearch(forceGraph) {
   let nodesByType      = new Map()
   let activeTypeFilter = null
   let debounceTimer    = null
+  let miniSearch       = null
+  let lastNodeIds      = ''
 
   function setup(nodes) {
+    const ids = nodes.map((n) => n.id).join(',')
+    if (ids === lastNodeIds && miniSearch) return
+    lastNodeIds = ids
+
     allNodes = nodes
     nodesByType = new Map()
     for (const n of nodes) {
       if (!nodesByType.has(n.type)) nodesByType.set(n.type, [])
       nodesByType.get(n.type).push(n)
     }
+
+    miniSearch = new MiniSearch({
+      fields: ['name', 'label', 'id'],
+      storeFields: ['id', 'name', 'label', 'type'],
+      searchOptions: { prefix: true, fuzzy: 0.15 },
+    })
+    miniSearch.addAll(
+      nodes.map((n) => ({
+        id: n.id,
+        name: String(n.name || n.id || ''),
+        label: String(n.label || ''),
+        type: n.type,
+      })),
+    )
     buildTypeDropdown()
   }
 
@@ -64,6 +85,7 @@ export function initSearch(forceGraph) {
       activeTypeFilter = type
       searchTypeDot.style.background = PALETTE[type] || PALETTE.default
       searchTypeLabel.textContent = type
+      if (engine) engine.setTypeVisible(type, true)
     }
     searchTypeDropdown.querySelectorAll('.type-filter-item').forEach(item => {
       item.classList.toggle('active', item.dataset.type === type)
@@ -108,18 +130,20 @@ export function initSearch(forceGraph) {
   }
 
   function doSearch() {
-    const query = searchInput.value.trim().toLowerCase()
-    if (!query || !allNodes.length) {
+    const query = searchInput.value.trim()
+    if (!query || !allNodes.length || !miniSearch) {
       searchResults.classList.remove('active')
       return
     }
 
-    const pool = activeTypeFilter ? (nodesByType.get(activeTypeFilter) || []) : allNodes
-    const matches = pool.filter(n => {
-      const name  = (n.name || n.id || '').toLowerCase()
-      const label = (n.label || '').toLowerCase()
-      return name.includes(query) || label.includes(query)
-    }).slice(0, 20)
+    let hits = miniSearch.search(query, { limit: 40 })
+    if (activeTypeFilter) {
+      hits = hits.filter((h) => h.type === activeTypeFilter)
+    }
+    const matches = hits.slice(0, 20).map((h) => {
+      const n = allNodes.find((x) => x.id === h.id)
+      return n || { id: h.id, name: h.name, label: h.label, type: h.type }
+    })
 
     if (!matches.length) {
       const typeLabel = activeTypeFilter ? ` en "${activeTypeFilter}"` : ''

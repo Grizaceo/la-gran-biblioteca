@@ -7,10 +7,56 @@ from unittest.mock import patch, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.imports import import_arxiv, import_pubmed, download_and_extract_github, _safe_extract_zip
+from backend.imports import (
+    import_arxiv,
+    import_pubmed,
+    download_and_extract_github,
+    _safe_extract_zip,
+    search_arxiv,
+)
+from backend.scan_workspaces import scan_import_paths, merge_scan_graphs, node_id_for_import_path
 import backend.library_bridge as bridge
 
 # Mock XML content for arXiv
+MOCK_ARXIV_SEARCH_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/"
+      xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <opensearch:totalResults>2</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/1706.03762v5</id>
+    <title>Attention Is All You Need</title>
+    <summary>We propose the Transformer architecture for sequence transduction.</summary>
+    <published>2017-06-12T10:00:00Z</published>
+    <updated>2017-08-02T10:00:00Z</updated>
+    <author><name>Ashish Vaswani</name></author>
+    <arxiv:primary_category term="cs.CL"/>
+    <category term="cs.CL"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1810.04805v2</id>
+    <title>BERT: Pre-training of Deep Bidirectional Transformers</title>
+    <summary>We introduce a new language representation model called BERT.</summary>
+    <published>2018-10-11T10:00:00Z</published>
+    <updated>2019-05-24T10:00:00Z</updated>
+    <author><name>Jacob Devlin</name></author>
+    <arxiv:primary_category term="cs.CL"/>
+  </entry>
+</feed>
+"""
+
+MOCK_ARXIV_WITHDRAWN_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/abs/9999.99999v1</id>
+    <title>Withdrawn Paper Example</title>
+    <summary>This paper has been withdrawn and should not be cited.</summary>
+    <published>2020-01-01T10:00:00Z</published>
+    <author><name>Test Author</name></author>
+  </entry>
+</feed>
+"""
+
 MOCK_ARXIV_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <entry>
@@ -78,6 +124,82 @@ def create_mock_zip():
 
 
 @patch("urllib.request.urlopen")
+def test_search_arxiv_returns_two_results(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.read.return_value = MOCK_ARXIV_SEARCH_XML.encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    result = search_arxiv(query="transformer", max_results=10)
+    assert result["total"] == 2
+    assert len(result["results"]) == 2
+    first = result["results"][0]
+    assert first["arxiv_id"] == "1706.03762"
+    assert first["title"] == "Attention Is All You Need"
+    assert first["authors"] == ["Ashish Vaswani"]
+    assert first["published"] == "2017-06-12"
+    assert first["updated"] == "2017-08-02"
+    assert first["categories"] == ["cs.CL"]
+    assert "Transformer" in first["abstract"]
+    assert first["abs_url"].startswith("http")
+    assert "1706.03762" in first["pdf_url"]
+    assert first["withdrawn"] is False
+
+    req = mock_urlopen.call_args[0][0]
+    assert "export.arxiv.org" in req.full_url
+    assert "search_query=" in req.full_url
+    assert "max_results=10" in req.full_url
+
+
+@patch("urllib.request.urlopen")
+def test_search_arxiv_withdrawn(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.read.return_value = MOCK_ARXIV_WITHDRAWN_XML.encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    result = search_arxiv(query="withdrawn", max_results=5)
+    assert len(result["results"]) == 1
+    assert result["results"][0]["withdrawn"] is True
+
+
+@patch("urllib.request.urlopen")
+def test_api_arxiv_search_endpoint(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.read.return_value = MOCK_ARXIV_SEARCH_XML.encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    client = TestClient(bridge.app)
+    resp = client.get("/api/arxiv/search", params={"q": "transformer", "max": 5})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 2
+    assert len(data["results"]) == 2
+    assert data["results"][0]["arxiv_id"] == "1706.03762"
+
+
+def test_scan_import_paths_adds_file_node():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        root = Path(tmp_dir)
+        dest = root / "imports" / "arxiv"
+        dest.mkdir(parents=True)
+        paper = dest / "2605.21675.md"
+        paper.write_text("# Test\n", encoding="utf-8")
+        patch = scan_import_paths([paper], root)
+        ids = {n["id"] for n in patch["nodes"]}
+        assert node_id_for_import_path(paper, root) in ids
+        file_nodes = [n for n in patch["nodes"] if n["id"] == "file_imports/arxiv/2605.21675.md"]
+        assert len(file_nodes) == 1
+        assert "2605.21675" in file_nodes[0]["path"]
+
+
+def test_merge_scan_graphs_dedupes_nodes():
+    base = {"nodes": [{"id": "a", "type": "file", "label": "A", "path": "/a", "metadata": {}, "position": {}}], "edges": []}
+    extra = {"nodes": [{"id": "a", "label": "A2", "type": "file", "path": "/a", "metadata": {}, "position": {}}], "edges": []}
+    merged = merge_scan_graphs(base, extra)
+    assert len(merged["nodes"]) == 1
+    assert merged["nodes"][0]["label"] == "A2"
+
+
+@patch("urllib.request.urlopen")
 def test_import_arxiv(mock_urlopen):
     # Setup mock response
     mock_response = MagicMock()
@@ -101,6 +223,45 @@ def test_import_arxiv(mock_urlopen):
         assert "We propose a new simple network architecture" in content
         assert "#arxiv" in content
         assert "#arxiv_cs_CL" in content
+
+        # HTTPS export API + encoded id_list
+        req = mock_urlopen.call_args[0][0]
+        assert "export.arxiv.org" in req.full_url
+        assert "id_list=2303.08774" in req.full_url
+
+
+@patch("urllib.request.urlopen")
+def test_import_arxiv_old_id_with_slash(mock_urlopen):
+    mock_response = MagicMock()
+    mock_response.read.return_value = MOCK_ARXIV_XML.encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        workspace_root = Path(tmp_dir)
+        file_path = import_arxiv("https://arxiv.org/abs/astro-ph/0411386v1", workspace_root)
+        assert file_path.name == "astro-ph_0411386v1.md"
+        req = mock_urlopen.call_args[0][0]
+        assert "id_list=astro-ph%2F0411386v1" in req.full_url
+
+
+@patch("urllib.request.urlopen")
+def test_import_arxiv_rejects_api_error_entry(mock_urlopen):
+    error_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/api/errors/invalid_id</id>
+    <title>Error</title>
+    <summary>Invalid arXiv ID: 9999.99999</summary>
+  </entry>
+</feed>
+"""
+    mock_response = MagicMock()
+    mock_response.read.return_value = error_xml.encode("utf-8")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with pytest.raises(ValueError, match="Invalid arXiv ID"):
+            import_arxiv("9999.99999", Path(tmp_dir))
 
 
 @patch("urllib.request.urlopen")
@@ -198,5 +359,8 @@ def test_api_create_endpoints(mock_urlopen):
         # Test 4: /api/create/arxiv
         resp = client.post("/api/create/arxiv", json={"id": "2303.08774"})
         assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert data["path"] == "imports/arxiv/2303.08774.md"
+        assert data["node_id"] == "file_imports/arxiv/2303.08774.md"
         assert (workspace_root / "imports" / "arxiv" / "2303.08774.md").exists()

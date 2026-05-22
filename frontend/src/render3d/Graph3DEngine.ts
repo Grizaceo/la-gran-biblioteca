@@ -3,7 +3,20 @@ import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { Node, Edge, Graph } from '../lib/bridge'
 import { PALETTE } from './palette.js'
-import { getRenderProfile, createProgressiveLoader } from './renderOptimizations'
+import { getRenderProfile, createProgressiveLoader, type RenderProfile } from './renderOptimizations'
+import {
+  type GraphFiltersState,
+  type QualityPreset,
+  DEFAULT_GRAPH_FILTERS,
+  loadGraphFilters,
+} from './viewPrefs'
+
+export type { GraphFiltersState }
+
+export interface LoadProgress {
+  loaded: number
+  total: number
+}
 
 // Caches for GPU/Three.js resources to prevent duplicate allocation and memory thrashing
 const sphereGeoCache = new Map<string, THREE.SphereGeometry>()
@@ -151,8 +164,19 @@ export class Graph3DEngine {
 
   public starfieldRotationEnabled = true
   public photonsEnabled = true
+  public showLabels = false
+  public minimapStride = 1
+  public qualityPreset: QualityPreset = 'auto'
+
+  onLoadProgress?: (p: LoadProgress) => void
 
   private nodeIndex = new Map<string, Record<string, unknown>>()
+  private workspaceRoot = ''
+  private graphFilters: GraphFiltersState = { ...DEFAULT_GRAPH_FILTERS }
+  private _lodSegHi = 10
+  private _lodSegMid = 7
+  private _lodSegLow = 4
+  private _inFocusMode = false
   private starfield: THREE.Points
   private hiddenTypes = new Set<string>()
   private _zoomOnStop = false
@@ -176,6 +200,8 @@ export class Graph3DEngine {
       controlType: 'orbit',
       rendererConfig: { antialias: bootProfile.antialias, alpha: false },
     })(container)
+      .nodeLabel((node: Record<string, unknown>) =>
+        this.showLabels ? String(node.name || node.label || node.id || '') : '')
       .nodeThreeObject((node: Record<string, unknown>) => {
         const size = nodeSize(node.weight as number)
         const type = (node.type as string) || 'default'
@@ -184,8 +210,8 @@ export class Graph3DEngine {
         const group = new THREE.Group()
         group.userData = { _lodDistance: size }
 
-        // HI-LOD: Lambert lighting, 10 segments, glow ring
-        const hiMesh = new THREE.Mesh(getSphereGeo(size, 10), getLambertMat(type))
+        // HI-LOD: Lambert lighting, configurable segments, glow ring
+        const hiMesh = new THREE.Mesh(getSphereGeo(size, this._lodSegHi), getLambertMat(type))
         hiMesh.name = 'lod_hi'
 
         const ringGeo = getRingGeo(size - 0.5, size + 0.5, 24)
@@ -196,13 +222,13 @@ export class Graph3DEngine {
         group.add(hiMesh)
 
         // MID-LOD: Basic lighting (faster!), 7 segments, no ring
-        const midMesh = new THREE.Mesh(getSphereGeo(size, 7), getBasicMat(type))
+        const midMesh = new THREE.Mesh(getSphereGeo(size, this._lodSegMid), getBasicMat(type))
         midMesh.name = 'lod_mid'
         midMesh.visible = false
         group.add(midMesh)
 
-        // LOW-LOD: Basic lighting, 4 segments, no ring
-        const lowMesh = new THREE.Mesh(getSphereGeo(size, 4), getLowBasicMat(type))
+        // LOW-LOD: Basic lighting, fewer segments, no ring
+        const lowMesh = new THREE.Mesh(getSphereGeo(size, this._lodSegLow), getLowBasicMat(type))
         lowMesh.name = 'lod_low'
         lowMesh.visible = false
         group.add(lowMesh)
@@ -342,38 +368,153 @@ export class Graph3DEngine {
       const dz = mz - camPos.z
       const distSq = dx * dx + dy * dy + dz * dz
 
-      const srcType = resolveType(link.source)
-      const tgtType = resolveType(link.target)
-      const typeVisible = !this.hiddenTypes.has(srcType) && !this.hiddenTypes.has(tgtType)
+      const linkVisible =
+        this.isLinkGraphVisible(link) && link.__filterVisible !== false
 
       // photons are stored internally by 3d-force-graph; access via __photonsObj if present
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const photons = (link as any).__photonsObj as THREE.Object3D | undefined
-      if (photons) photons.visible = typeVisible && distSq < radiusSq
+      if (photons) {
+        photons.visible = Boolean(
+          this.photonsEnabled && linkVisible && distSq < radiusSq,
+        )
+      }
     }
   }
 
-  private applyNodeVisibility(type: string, visible: boolean): void {
-    const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
+  setWorkspaceRoot(root: string): void {
+    this.workspaceRoot = root.replace(/\\/g, '/').replace(/\/$/, '')
+  }
+
+  getGraphFilters(): GraphFiltersState {
+    return { ...this.graphFilters, hiddenEdgeTypes: [...this.graphFilters.hiddenEdgeTypes] }
+  }
+
+  setGraphFilters(partial: Partial<GraphFiltersState>): void {
+    this.graphFilters = {
+      ...this.graphFilters,
+      ...partial,
+      hiddenEdgeTypes: partial.hiddenEdgeTypes
+        ? [...partial.hiddenEdgeTypes]
+        : this.graphFilters.hiddenEdgeTypes,
+    }
+    if (!this._inFocusMode) this.refreshVisibility()
+  }
+
+  getWorkspaceList(): string[] {
+    const ws = new Set<string>()
+    for (const node of this.nodeIndex.values()) {
+      const w = this.getNodeWorkspace(node)
+      if (w) ws.add(w)
+    }
+    return Array.from(ws).sort()
+  }
+
+  getNodeWorkspace(node: Record<string, unknown>): string {
+    const path = String(node.path || '').replace(/\\/g, '/')
+    if (!path || !this.workspaceRoot) return ''
+    const root = this.workspaceRoot.replace(/\\/g, '/')
+    if (path.startsWith(root + '/')) {
+      const rel = path.slice(root.length + 1)
+      return rel.split('/')[0] || 'root'
+    }
+    const parts = path.split('/').filter(Boolean)
+    return parts.length >= 2 ? parts[parts.length - 2] : ''
+  }
+
+  private passesGraphFilters(node: Record<string, unknown>): boolean {
+    const f = this.graphFilters
+    const type = (node.type as string) || 'default'
+    if (f.hideTags && (type === 'tag' || (node.metadata as Record<string, unknown>)?.is_tag)) {
+      return false
+    }
+    if (f.workspaces !== null) {
+      if (f.workspaces.length === 0) return false
+      const ws = this.getNodeWorkspace(node)
+      if (!ws || !f.workspaces.includes(ws)) return false
+    }
+    const study = Number((node.metadata as Record<string, unknown>)?.study_count) || 0
+    if (f.studyFilter === 'studied' && study <= 0) return false
+    if (f.studyFilter === 'unstudied' && study > 0) return false
+    const degree = Number(node.degree) || 0
+    if (f.minDegree > 0 && degree < f.minDegree) return false
+    return true
+  }
+
+  isNodeGraphVisible(node: Record<string, unknown>): boolean {
+    const type = (node.type as string) || 'default'
+    return !this.hiddenTypes.has(type) && this.passesGraphFilters(node)
+  }
+
+  isLinkGraphVisible(link: Record<string, unknown>): boolean {
+    const edgeType = (link.type as string) || 'default'
+    if (this.graphFilters.hiddenEdgeTypes.includes(edgeType)) return false
+    const src = link.source as Record<string, unknown>
+    const tgt = link.target as Record<string, unknown>
+    if (!src || !tgt || typeof src !== 'object' || typeof tgt !== 'object') return false
+    return this.isNodeGraphVisible(src) && this.isNodeGraphVisible(tgt)
+  }
+
+  setFocusMode(active: boolean): void {
+    this._inFocusMode = active
+    if (!active) this.refreshVisibility()
+  }
+
+  refreshVisibility(): void {
+    const { nodes, links } = this.fg.graphData() as {
+      nodes: Record<string, unknown>[]
+      links: Record<string, unknown>[]
+    }
     for (const n of nodes) {
-      const nType = (n.type as string) || 'default'
-      if (nType !== type) continue
-      const obj = n.__threeObj as THREE.Object3D | undefined
-      if (obj) obj.visible = visible
+      const visible = this.isNodeGraphVisible(n)
+      n.__filterVisible = visible
+      if (!this._inFocusMode) {
+        const obj = n.__threeObj as THREE.Object3D | undefined
+        if (obj) obj.visible = visible
+      }
     }
+    for (const link of links) {
+      const visible = this.isLinkGraphVisible(link)
+      link.__filterVisible = visible
+      if (!this._inFocusMode) {
+        const lineObj = link.__lineObj as THREE.Object3D | undefined
+        const arrowObj = link.__arrowObj as THREE.Object3D | undefined
+        if (lineObj) lineObj.visible = visible
+        if (arrowObj) arrowObj.visible = visible
+      }
+    }
+    this.updateParticleVisibility()
   }
 
-  private applyEdgeVisibility(): void {
-    const { links } = this.fg.graphData() as { links: Record<string, unknown>[] }
-    for (const link of links) {
-      const srcType = resolveType(link.source)
-      const tgtType = resolveType(link.target)
-      const visible = !this.hiddenTypes.has(srcType) && !this.hiddenTypes.has(tgtType)
-      const lineObj  = link.__lineObj  as THREE.Object3D | undefined
-      const arrowObj = link.__arrowObj as THREE.Object3D | undefined
-      if (lineObj)  lineObj.visible  = visible
-      if (arrowObj) arrowObj.visible = visible
+  setQualityPreset(preset: QualityPreset): void {
+    this.qualityPreset = preset
+    const nodeCount = this._lodNodeCount || 400
+    const profile = this.getEffectiveProfile(nodeCount)
+    this._lodSegHi = Math.max(4, profile.nodeSegments + 2)
+    this._lodSegMid = Math.max(3, profile.nodeSegments)
+    this._lodSegLow = Math.max(2, Math.floor(profile.nodeSegments * 0.6))
+    this.minimapStride = profile.minimapStride
+  }
+
+  getEffectiveProfile(nodeCount: number): RenderProfile {
+    if (this.qualityPreset === 'high') {
+      return {
+        ...getRenderProfile(Math.min(nodeCount, 149)),
+        antialias: true,
+        nodeSegments: 10,
+        minimapStride: 10,
+      }
     }
+    if (this.qualityPreset === 'low') {
+      return getRenderProfile(1500)
+    }
+    return getRenderProfile(nodeCount)
+  }
+
+  setShowLabels(show: boolean): void {
+    this.showLabels = show
+    this.fg.nodeLabel((node: Record<string, unknown>) =>
+      show ? String(node.name || node.label || node.id || '') : '')
   }
 
   pause(): void {
@@ -404,8 +545,7 @@ export class Graph3DEngine {
   setTypeVisible(type: string, visible: boolean): void {
     if (visible) this.hiddenTypes.delete(type)
     else         this.hiddenTypes.add(type)
-    this.applyNodeVisibility(type, visible)
-    this.applyEdgeVisibility()
+    if (!this._inFocusMode) this.refreshVisibility()
   }
 
   isTypeVisible(type: string): boolean {
@@ -441,7 +581,12 @@ export class Graph3DEngine {
 
     const nodeCount = processedNodes.length
     this._lodNodeCount = nodeCount
-    const profile = getRenderProfile(nodeCount)
+    this.graphFilters = loadGraphFilters()
+    const profile = this.getEffectiveProfile(nodeCount)
+    this.minimapStride = profile.minimapStride
+    this._lodSegHi = Math.max(4, profile.nodeSegments + 2)
+    this._lodSegMid = Math.max(3, profile.nodeSegments)
+    this._lodSegLow = Math.max(2, Math.floor(profile.nodeSegments * 0.6))
 
     // Apply adaptive render profile settings
     this.fg
@@ -475,16 +620,25 @@ export class Graph3DEngine {
     let result = loader.append(profile.initialBatchSize)
     this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
 
+    this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
+
     const pump = () => {
       if (this._paused) return
-      if (result.done) return
+      if (result.done) {
+        this.refreshVisibility()
+        this.onLoadProgress?.({ loaded: result.totalNodes, total: result.totalNodes })
+        return
+      }
       result = loader.append(profile.batchSize)
       this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+      this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
       setTimeout(pump, profile.chunkDelay)
     }
-    
+
     if (!result.done) {
       setTimeout(pump, profile.chunkDelay)
+    } else {
+      this.refreshVisibility()
     }
   }
 
@@ -513,7 +667,8 @@ export class Graph3DEngine {
     const links = g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
     this._lodNodeCount = nodes.length
 
-    const profile = getRenderProfile(nodes.length)
+    const profile = this.getEffectiveProfile(nodes.length)
+    this.minimapStride = profile.minimapStride
     this.fg.warmupTicks(profile.warmupTicks).cooldownTicks(profile.cooldownTicks)
     if (nodes.length >= 800) {
       this.fg.linkResolution(0)
@@ -523,27 +678,44 @@ export class Graph3DEngine {
 
     if (nodes.length < 150) {
       this.fg.graphData({ nodes, links })
+      this.refreshVisibility()
       return
     }
 
     const loader = createProgressiveLoader({ nodes, links })
     let result = loader.append(profile.initialBatchSize)
     this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+    this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
 
     const pump = () => {
       if (this._paused) return
       if (result.done) {
         this._progressivePump = null
+        this.refreshVisibility()
+        this.onLoadProgress?.({ loaded: result.totalNodes, total: result.totalNodes })
         return
       }
       result = loader.append(profile.batchSize)
       this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+      this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
       setTimeout(pump, profile.chunkDelay)
     }
     this._progressivePump = pump
     if (!result.done) {
       setTimeout(pump, profile.chunkDelay)
+    } else {
+      this.refreshVisibility()
     }
+  }
+
+  updateNodeStudyCount(nodeId: string, studyCount: number): void {
+    const node = this.nodeIndex.get(nodeId)
+    if (!node) return
+    const meta = { ...(node.metadata as Record<string, unknown>), study_count: studyCount }
+    node.metadata = meta
+    const degree = Number(node.degree) || 0
+    node.weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
+    if (!this._inFocusMode) this.refreshVisibility()
   }
 
   onNodeClick(handler: (node: Record<string, unknown>) => void): void {

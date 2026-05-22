@@ -142,7 +142,7 @@ export function setupDetailPanel(
         const highlighted = lang
           ? hljs.highlight(content, { language: lang, ignoreIllegals: true }).value
           : hljs.highlightAuto(content).value
-        html = `<pre class="hljs"><code>${highlighted}</code></pre>`
+        html = DOMPurify.sanitize(`<pre class="hljs"><code>${highlighted}</code></pre>`)
       }
 
       const truncNote = truncated

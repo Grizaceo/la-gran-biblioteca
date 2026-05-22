@@ -1,6 +1,6 @@
 import { PALETTE } from '../palette.js'
 
-export function initMinimap(forceGraph) {
+export function initMinimap(forceGraph, engine = null) {
   const minimapEl      = document.getElementById('minimap')
   const minimapCanvas  = document.getElementById('minimap-canvas')
   const minimapViewbox = document.getElementById('minimap-viewbox')
@@ -40,10 +40,12 @@ export function initMinimap(forceGraph) {
     ctx.fillStyle = '#000011'
     ctx.fillRect(0, 0, 180, 120)
 
-    for (const n of nodes) {
+    const stride = Math.max(1, engine?.minimapStride ?? 1)
+    for (let i = 0; i < nodes.length; i += stride) {
+      const n = nodes[i]
       const x = pad + ((n.x - minX) / rangeX) * drawW
       const y = pad + ((n.y - minY) / rangeY) * drawH
-      const isVisible = n.__focusVisible !== false
+      const isVisible = n.__focusVisible !== false && n.__filterVisible !== false
       ctx.fillStyle = isVisible ? (PALETTE[n.type] || PALETTE.default) : 'rgba(100,100,100,0.2)'
       ctx.beginPath()
       ctx.arc(x, y, isVisible ? 1.5 : 0.8, 0, Math.PI * 2)

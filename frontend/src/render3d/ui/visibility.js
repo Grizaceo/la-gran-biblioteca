@@ -20,10 +20,11 @@ export function initVisibility(engine) {
 
     for (const { type, count, color } of stats) {
       const checked = engine.isTypeVisible(type) ? 'checked' : ''
-      html += `<label class="vis-item" data-type="${type}">
-        <input type="checkbox" class="vis-check" data-type="${type}" ${checked}>
+      const escType = type.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      html += `<label class="vis-item" data-type="${escType}">
+        <input type="checkbox" class="vis-check" data-type="${escType}" ${checked}>
         <span class="vis-dot" style="background:${color}"></span>
-        <span class="vis-name">${type}</span>
+        <span class="vis-name">${escType}</span>
         <span class="vis-count">${count}</span>
       </label>`
     }

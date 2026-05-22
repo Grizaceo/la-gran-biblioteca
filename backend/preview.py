@@ -1,6 +1,7 @@
 from pathlib import Path
 from fastapi import HTTPException
 from .constants import TEXT_EXTENSIONS, CONTENT_MAX_BYTES
+from .security import safe_error_detail
 
 
 def read_preview(path: Path) -> dict:
@@ -20,6 +21,6 @@ def read_preview(path: Path) -> dict:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read(CONTENT_MAX_BYTES)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not read file: {e}")
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
     return {"content": content, "lang": lang, "size": size, "truncated": truncated}

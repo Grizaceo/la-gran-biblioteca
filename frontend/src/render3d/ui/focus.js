@@ -1,4 +1,4 @@
-export function initFocus(forceGraph) {
+export function initFocus(forceGraph, engine) {
   const focusBanner = document.getElementById('focus-banner')
   const focusName   = document.getElementById('focus-name')
   const focusBack   = document.getElementById('focus-back')
@@ -13,12 +13,12 @@ export function initFocus(forceGraph) {
   function restoreAll() {
     const { nodes, links } = forceGraph.graphData()
     for (const n of nodes) {
-      if (n.__threeObj) { n.__threeObj.visible = true; n.__focusVisible = undefined }
+      n.__focusVisible = undefined
     }
     for (const l of links) {
-      const obj = l.__lineObj || l.__arrowObj
-      if (obj) { obj.visible = true; l.__focusVisible = undefined }
+      l.__focusVisible = undefined
     }
+    engine.setFocusMode(false)
   }
 
   function enterFocusMode(nodeId) {
@@ -36,22 +36,20 @@ export function initFocus(forceGraph) {
       if (tgt === nodeId) neighborIds.add(src)
     }
 
+    engine.setFocusMode(true)
+
     for (const n of nodes) {
-      if (n.__threeObj) {
-        const v = neighborIds.has(n.id)
-        n.__threeObj.visible = v
-        n.__focusVisible = v
-      }
+      const v = neighborIds.has(n.id) && engine.isNodeGraphVisible(n)
+      n.__focusVisible = v
+      if (n.__threeObj) n.__threeObj.visible = v
     }
     for (const l of links) {
+      const src = typeof l.source === 'object' ? l.source.id : l.source
+      const tgt = typeof l.target === 'object' ? l.target.id : l.target
+      const v = neighborIds.has(src) && neighborIds.has(tgt) && engine.isLinkGraphVisible(l)
+      l.__focusVisible = v
       const obj = l.__lineObj || l.__arrowObj
-      if (obj) {
-        const src = typeof l.source === 'object' ? l.source.id : l.source
-        const tgt = typeof l.target === 'object' ? l.target.id : l.target
-        const v = neighborIds.has(src) && neighborIds.has(tgt)
-        obj.visible = v
-        l.__focusVisible = v
-      }
+      if (obj) obj.visible = v
     }
 
     focusName.textContent = node.name || node.id
@@ -83,6 +81,10 @@ export function initFocus(forceGraph) {
     updateBreadcrumb()
   }
 
+  function escHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  }
+
   function updateBreadcrumb() {
     if (!focusHistory.length) {
       breadcrumb.classList.remove('active')
@@ -98,9 +100,9 @@ export function initFocus(forceGraph) {
       const shortName = name.length > 20 ? name.slice(0, 18) + '…' : name
       if (i > 0) html += '<span class="bc-sep">›</span>'
       if (i === focusHistory.length - 1) {
-        html += `<span class="bc-item">${shortName}</span>`
+        html += `<span class="bc-item">${escHtml(shortName)}</span>`
       } else {
-        html += `<span class="bc-item" data-focus-idx="${i}">${shortName}</span>`
+        html += `<span class="bc-item" data-focus-idx="${i}">${escHtml(shortName)}</span>`
       }
     })
     breadcrumb.innerHTML = html

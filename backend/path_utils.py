@@ -26,6 +26,17 @@ def is_windows_path(path_str: str) -> bool:
     return bool(_WIN_PATH_RE.match(path_str.strip()))
 
 
+def _safe_resolve(root: Path, rel: str) -> Path | None:
+    """Resolve a relative path under root, rejecting traversal escapes."""
+    try:
+        candidate = (root / rel).resolve()
+        if candidate.is_relative_to(root):
+            return candidate
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def path_from_node_id(node_id: str, workspace_root: Path) -> Path | None:
     """
     Canonical filesystem path from scanner node id (file_<rel> / folder_<rel>).
@@ -33,10 +44,10 @@ def path_from_node_id(node_id: str, workspace_root: Path) -> Path | None:
     root = workspace_root.resolve()
     if node_id.startswith("file_"):
         rel = node_id[5:].replace("\\", "/")
-        return root / rel
+        return _safe_resolve(root, rel)
     if node_id.startswith("folder_"):
         rel = node_id[7:].replace("\\", "/")
-        return root if rel == "dot" else root / rel
+        return root if rel == "dot" else _safe_resolve(root, rel)
     return None
 
 
@@ -83,7 +94,14 @@ def path_from_node_id_fuzzy(node_id: str, workspace_root: Path) -> Path | None:
                 return None
             current = nxt
         found = _match_child_file(current, parts[-1])
-        return found
+        if found is not None:
+            try:
+                if found.resolve().is_relative_to(root):
+                    return found
+                return None
+            except (OSError, ValueError):
+                return None
+        return None
     if node_id.startswith("folder_"):
         rel = node_id[7:].replace("\\", "/")
         if rel == "dot":
@@ -95,7 +113,12 @@ def path_from_node_id_fuzzy(node_id: str, workspace_root: Path) -> Path | None:
             if nxt is None:
                 return None
             current = nxt
-        return current
+        try:
+            if current.resolve().is_relative_to(root):
+                return current
+        except (OSError, ValueError):
+            pass
+        return None
     return None
 
 

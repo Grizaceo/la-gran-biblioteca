@@ -73,6 +73,23 @@ export interface Graph {
   total?: number
 }
 
+export interface Overview {
+  total_nodes: number
+  total_edges: number
+  by_type: Record<string, number>
+  top_workspaces: Array<{ workspace: string; nodes: number }>
+  recent_imports: string[]
+  workspace_root: string
+}
+
+export type GraphUpdateEvent = 'init' | 'update'
+
+export async function fetchOverview(): Promise<Overview> {
+  const res = await apiFetch('/overview')
+  if (!res.ok) throw new Error(`Failed to fetch overview: ${res.status} ${res.statusText}`)
+  return res.json()
+}
+
 export async function fetchGraph(): Promise<Graph> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), GRAPH_FETCH_MS)
@@ -128,18 +145,27 @@ export async function openNode(id: string, reveal: boolean): Promise<void> {
   if (!res.ok) await handleResponseError(res, `Error al abrir nodo (${res.status})`)
 }
 
+export async function triggerRescan(): Promise<{ status: string; nodes: number; edges: number }> {
+  const res = await apiFetch('/rescan', {
+    method: 'POST',
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
+  })
+  if (!res.ok) await handleResponseError(res, 'No se pudo re-escanear la biblioteca')
+  return res.json()
+}
+
 export function subscribeToUpdates(
-  onUpdate: (graph: Graph) => void,
+  onUpdate: (graph: Graph, event: GraphUpdateEvent) => void,
   onError?: (err: Error) => void
 ): () => void {
   const evtSource = new EventSource(streamUrl())
 
   evtSource.addEventListener('init', (e: MessageEvent) => {
-    onUpdate(JSON.parse(e.data))
+    onUpdate(JSON.parse(e.data), 'init')
   })
 
   evtSource.addEventListener('update', (e: MessageEvent) => {
-    onUpdate(JSON.parse(e.data))
+    onUpdate(JSON.parse(e.data), 'update')
   })
 
   evtSource.onerror = () => {
@@ -194,7 +220,53 @@ export async function importGithub(url: string): Promise<{ status: string; path:
   return res.json()
 }
 
-export async function importArxiv(id: string): Promise<{ status: string; path: string }> {
+export interface ArxivSearchHit {
+  arxiv_id: string
+  title: string
+  authors: string[]
+  published: string
+  updated: string
+  categories: string[]
+  abstract: string
+  abs_url: string
+  pdf_url: string
+  withdrawn?: boolean
+}
+
+export interface ArxivSearchResponse {
+  total: number | null
+  results: ArxivSearchHit[]
+}
+
+export async function searchArxiv(params: {
+  q?: string
+  author?: string
+  cat?: string
+  max?: number
+  sort?: 'relevance' | 'date'
+}): Promise<ArxivSearchResponse> {
+  const sp = new URLSearchParams()
+  if (params.q?.trim()) sp.set('q', params.q.trim())
+  if (params.author?.trim()) sp.set('author', params.author.trim())
+  if (params.cat?.trim()) sp.set('cat', params.cat.trim())
+  if (params.max != null) sp.set('max', String(params.max))
+  if (params.sort) sp.set('sort', params.sort)
+  const qs = sp.toString()
+  const res = await apiFetch(`/arxiv/search${qs ? `?${qs}` : ''}`)
+  if (!res.ok) {
+    await handleResponseError(res, 'No se pudo buscar en arXiv')
+  }
+  return res.json()
+}
+
+export interface ImportNoteResponse {
+  status: string
+  path: string
+  node_id?: string
+  workspace_root?: string
+}
+
+export async function importArxiv(id: string): Promise<ImportNoteResponse> {
   const res = await apiFetch('/create/arxiv', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
@@ -206,7 +278,7 @@ export async function importArxiv(id: string): Promise<{ status: string; path: s
   return res.json()
 }
 
-export async function importPubmed(id: string): Promise<{ status: string; path: string }> {
+export async function importPubmed(id: string): Promise<ImportNoteResponse> {
   const res = await apiFetch('/create/pubmed', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),

@@ -29,6 +29,7 @@ from .imports import (
     download_and_extract_github,
     import_arxiv as _import_arxiv,
     import_pubmed as _import_pubmed,
+    search_arxiv as _search_arxiv,
 )
 from .scan_workspaces import scan_workspaces
 
@@ -458,6 +459,42 @@ def import_github(repo_url: str) -> dict:
         if len(_recent_imports) > 50:
             _recent_imports.pop(0)
         return {"status": "ok", "path": str(dest.relative_to(WORKSPACE_ROOT))}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def search_arxiv(
+    query: str | None = None,
+    max_results: int = 10,
+    sort: str = "relevance",
+    author: str | None = None,
+    category: str | None = None,
+) -> dict:
+    """
+    Search arXiv papers (read-only). Returns {total, results} with metadata per hit.
+
+    Use before import_arxiv to pick an arxiv_id. At least one of query, author,
+    or category is required. Respect arXiv rate limits (~1 request per 3 seconds).
+
+    Args:
+        query: Free-text search (all fields).
+        max_results: 1–30 (default 10).
+        sort: 'relevance' or 'date'.
+        author: Author name filter.
+        category: arXiv category (e.g. cs.CL).
+
+    Returns:
+        {total: int|None, results: [{arxiv_id, title, authors, abstract, ...}]}
+    """
+    try:
+        return _search_arxiv(
+            query=query,
+            author=author,
+            category=category,
+            max_results=max_results,
+            sort=sort,
+        )
     except Exception as e:
         return {"error": str(e)}
 

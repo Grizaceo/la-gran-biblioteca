@@ -46,6 +46,7 @@ O en `~/.claude/claude_desktop_config.json`:
 | `create_file(relative_path, content?)` | Crea archivo dentro del workspace |
 | `create_folder(relative_path)` | Crea carpeta dentro del workspace |
 | `import_github(repo_url)` | Descarga repo público de GitHub |
+| `search_arxiv(query?, author?, category?, max_results?, sort?)` | Busca papers en arXiv (solo lectura; respeta ~1 req/3 s) |
 | `import_arxiv(arxiv_id)` | Importa paper de arXiv como Markdown |
 | `import_pubmed(pmid)` | Importa paper de PubMed como Markdown |
 | `open_in_os(id, reveal?)` | Abre en app del SO (requiere `LGB_MCP_ALLOW_OS_OPEN=1`) |
@@ -69,12 +70,16 @@ neighbors("<id>", direction="both", depth=2)
 
 ### Importar material nuevo y revisarlo
 ```
-import_arxiv("2401.00001")
+search_arxiv(query="transformers", max_results=5)   # elegir arxiv_id
+import_arxiv("2401.00001")                        # o ID conocido
 rescan()
 search("2401")                      # encontrar el nodo recién creado
 read_node("<id>")
 mark_studied("<id>")
 ```
+
+Flujo recomendado con arXiv: `search_arxiv` → revisar `results[].arxiv_id` → `import_arxiv(id)` → `rescan()`.
+En la UI: Archivo → Importar arXiv → pestaña **Buscar** → seleccionar fila → **Importar seleccionado**.
 
 ## Estructura del código (si necesitas tocar internals)
 
@@ -107,6 +112,41 @@ GET  /api/overview          ← equivale a tool overview()
 GET  /api/graph             ← grafo completo (limitado 1000 nodos)
 GET  /api/node/{id}         ← nodo por ID
 GET  /api/node/{id}/content ← contenido del archivo
+GET  /api/arxiv/search?q=…  ← búsqueda arXiv (sin API key; params: q, author, cat, max, sort)
 POST /api/study             ← marcar estudiado
 POST /api/rescan            ← re-escanear
 ```
+
+## Documentación adicional
+
+- [`README.md`](README.md) — descripción general, setup, endpoints
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — guía de contribución y PR workflow
+- [`SECURITY.md`](SECURITY.md) — modelo de seguridad y reporte de vulnerabilidades
+- [`CHANGELOG.md`](CHANGELOG.md) — historial de versiones
+- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — decisiones de arquitectura
+
+## Health Stack
+
+- **typecheck**: `cd frontend && npx tsc --noEmit`
+- **lint**: `ruff check backend/`
+- **test**: `cd backend && python -m pytest tests/ -v`
+- **deadcode**: no disponible (instalar `vulture` o `knip`)
+- **shell**: no aplica (sin scripts .sh propios)
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- Strategy/scope → invoke /plan-ceo-review
+- Architecture → invoke /plan-eng-review
+- Design system/plan review → invoke /design-consultation or /plan-design-review
+- Full review pipeline → invoke /autoplan
+- Bugs/errors → invoke /investigate
+- QA/testing site behavior → invoke /qa or /qa-only
+- Code review/diff check → invoke /review
+- Visual polish → invoke /design-review
+- Ship/deploy/PR → invoke /ship or /land-and-deploy
+- Save progress → invoke /context-save
+- Resume context → invoke /context-restore

@@ -5,10 +5,11 @@ scan_workspaces.py - Versión semántica y optimizada
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from collections import deque
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Iterable, Optional
 
 from .constants import WORKSPACE_ROOT, EXCLUDE_DIRS, SCAN_EXTENSIONS
 
@@ -255,22 +256,219 @@ def scan_workspaces(
                 "weight": 1.0
             })
 
-    # Resolve co-location relationships
+    # Resolve co-location relationships (clique or star when LGB_COLOCATED_MAX is set)
+    colocated_max = int(os.environ.get("LGB_COLOCATED_MAX", "0"))
     for folder_path, file_ids in folder_files.items():
         if 2 <= len(file_ids) <= 20:
-            for i in range(len(file_ids)):
-                for j in range(i + 1, len(file_ids)):
+            if colocated_max > 0 and len(file_ids) > colocated_max:
+                hub = file_ids[0]
+                for fid in file_ids[1:]:
                     graph["edges"].append({
-                        "source": file_ids[i],
-                        "target": file_ids[j],
+                        "source": hub,
+                        "target": fid,
                         "type": "co-located",
-                        "weight": 0.2
+                        "weight": 0.2,
                     })
+            else:
+                for i in range(len(file_ids)):
+                    for j in range(i + 1, len(file_ids)):
+                        graph["edges"].append({
+                            "source": file_ids[i],
+                            "target": file_ids[j],
+                            "type": "co-located",
+                            "weight": 0.2,
+                        })
 
     if file_count >= max_files:
         logger.warning("Escaneo truncado: se alcanzó el límite de %d archivos", max_files)
 
     return graph
+
+
+def _posix_rel(path: Path, root: Path) -> str:
+    return path.resolve().relative_to(root.resolve()).as_posix()
+
+
+def _folder_node_id(rel_posix: str) -> str:
+    return "folder_dot" if rel_posix == "." else f"folder_{rel_posix}"
+
+
+def _file_node_id(rel_posix: str) -> str:
+    return f"file_{rel_posix}"
+
+
+def merge_scan_graphs(base: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge nodes by id; dedupe edges by (source, target, type)."""
+    nodes_by_id = {n["id"]: n for n in base.get("nodes", [])}
+    for n in extra.get("nodes", []):
+        nodes_by_id[n["id"]] = n
+    edge_keys: set[tuple] = set()
+    edges: List[Dict[str, Any]] = []
+    for e in base.get("edges", []) + extra.get("edges", []):
+        key = (e["source"], e["target"], e["type"])
+        if key in edge_keys:
+            continue
+        edge_keys.add(key)
+        edges.append(e)
+    return {"nodes": list(nodes_by_id.values()), "edges": edges}
+
+
+def _append_folder_node(
+    graph: Dict[str, Any],
+    node_map: Dict[str, str],
+    folder: Path,
+    root: Path,
+    depth: int,
+) -> str:
+    rel = _posix_rel(folder, root)
+    node_id = _folder_node_id(rel)
+    folder_key = str(folder.resolve())
+    if folder_key in node_map:
+        return node_map[folder_key]
+    stored_path = str(folder.resolve())
+    graph["nodes"].append({
+        "id": node_id,
+        "type": "folder",
+        "label": folder.name if rel != "." else root.name,
+        "path": stored_path,
+        "metadata": {"depth": depth},
+        "position": {"x": 0, "y": depth * 150},
+    })
+    node_map[str(folder.resolve())] = node_id
+    if folder.parent != folder:
+        parent_id = node_map.get(str(folder.parent.resolve()))
+        if parent_id:
+            graph["edges"].append({
+                "source": parent_id,
+                "target": node_id,
+                "type": "contains",
+            })
+    return node_id
+
+
+def _append_file_node(
+    graph: Dict[str, Any],
+    node_map: Dict[str, str],
+    filepath: Path,
+    root: Path,
+    depth: int,
+) -> str:
+    rel_posix = _posix_rel(filepath, root)
+    node_id = _file_node_id(rel_posix)
+    size = 0
+    try:
+        size = filepath.stat().st_size
+    except (PermissionError, OSError) as e:
+        logger.warning("No se pudo leer tamaño de %s: %s", filepath, e)
+
+    frontmatter: dict = {}
+    tags: list = []
+    if filepath.suffix.lower() == ".md":
+        try:
+            if size < 2 * 1024 * 1024:
+                with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                frontmatter = parse_frontmatter(content)
+                tags = extract_tags(frontmatter, content)
+        except Exception as e:
+            logger.warning("No se pudo parsear contenido de %s: %s", filepath, e)
+
+    metadata: Dict[str, Any] = {"size": size, "depth": depth}
+    if frontmatter:
+        metadata["frontmatter"] = frontmatter
+    if tags:
+        metadata["tags"] = tags
+
+    label = filepath.name
+    if frontmatter.get("title"):
+        label = frontmatter["title"]
+
+    graph["nodes"].append({
+        "id": node_id,
+        "type": get_node_type(filepath),
+        "label": label,
+        "path": str(filepath.resolve()),
+        "metadata": metadata,
+        "position": {"x": 0, "y": depth * 150},
+    })
+    node_map[str(filepath.resolve())] = node_id
+
+    parent_id = node_map.get(str(filepath.parent.resolve()))
+    if parent_id:
+        graph["edges"].append({
+            "source": parent_id,
+            "target": node_id,
+            "type": "contains",
+        })
+
+    for tag in tags:
+        tag_id = f"tag_{tag}"
+        if not any(n["id"] == tag_id for n in graph["nodes"]):
+            graph["nodes"].append({
+                "id": tag_id,
+                "type": "tag",
+                "label": f"#{tag}",
+                "path": "",
+                "metadata": {"is_tag": True},
+                "position": {"x": 0, "y": depth * 150 + 40},
+            })
+        graph["edges"].append({
+            "source": node_id,
+            "target": tag_id,
+            "type": "tagged",
+            "weight": 0.3,
+        })
+
+    return node_id
+
+
+def scan_import_paths(
+    paths: Iterable[Path],
+    root: Path = WORKSPACE_ROOT,
+) -> Dict[str, Any]:
+    """
+    Scan specific imported files and their parent folders.
+    Used when the global scan hits SCAN_MAX_FILES before reaching new imports.
+    """
+    root = root.resolve()
+    graph: Dict[str, Any] = {"nodes": [], "edges": []}
+    node_map: Dict[str, str] = {}
+
+    for raw in paths:
+        filepath = Path(raw)
+        if not filepath.is_absolute():
+            filepath = root / filepath
+        filepath = filepath.resolve()
+        try:
+            filepath.relative_to(root)
+        except ValueError:
+            logger.warning("Import fuera del workspace, omitido: %s", filepath)
+            continue
+        if not filepath.exists():
+            continue
+
+        if filepath.is_dir():
+            parts = filepath.relative_to(root).parts
+            accum = root
+            for i, part in enumerate(parts):
+                accum = accum / part
+                _append_folder_node(graph, node_map, accum, root, i + 1)
+            continue
+
+        parts = filepath.relative_to(root).parts
+        accum = root
+        for i, part in enumerate(parts[:-1]):
+            accum = accum / part
+            _append_folder_node(graph, node_map, accum, root, i + 1)
+        _append_file_node(graph, node_map, filepath, root, len(parts))
+
+    return graph
+
+
+def node_id_for_import_path(path: Path, root: Path = WORKSPACE_ROOT) -> str:
+    """Predict graph node id for a file under workspace root."""
+    rel = _posix_rel(Path(path), root)
+    return _file_node_id(rel)
 
 
 if __name__ == "__main__":

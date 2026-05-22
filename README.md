@@ -2,6 +2,10 @@
 
 Visualizador 3D de grafo de conocimiento que escanea `~/.hermes/workspaces/`.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Security](SECURITY.md)](SECURITY.md)
+[![Contributing](CONTRIBUTING.md)](CONTRIBUTING.md)
+
 ## Stack
 
 - **Backend:** Python + FastAPI + SQLite + watchdog (puerto 3001)
@@ -95,3 +99,15 @@ claude mcp add la-gran-biblioteca -- python -m backend.mcp_server
 Tools principales: `overview`, `search`, `get_node`, `read_node`, `neighbors`, `mark_studied`, `rescan`, `create_file`, `create_folder`, `import_github`, `import_arxiv`, `import_pubmed`.
 
 Ver [`AGENTS.md`](AGENTS.md) para la guía completa.
+
+## Seguridad
+
+La aplicación es local-first por defecto. Ver [`SECURITY.md`](SECURITY.md) para el modelo de seguridad completo, hardening en producción, y cómo reportar vulnerabilidades.
+
+## Desarrollo
+
+Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) para guías de setup, testing, y PR workflow.
+
+## Changelog
+
+Ver [`CHANGELOG.md`](CHANGELOG.md) para el historial de versiones.

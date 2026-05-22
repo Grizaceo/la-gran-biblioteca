@@ -18,3 +18,4 @@ export/
 
 # Claude local config
 .claude/settings.local.json
+backend/library.db.bak

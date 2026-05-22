@@ -81,12 +81,27 @@ class GraphEngine:
             self.edges.append(Edge(ed["source"], ed["target"], ed["type"]))
 
         conn = self._connect()
-        for n in self.nodes.values():
-            conn.execute("INSERT OR REPLACE INTO nodes VALUES (?,?,?,?,?,?)", (n.id, n.type, n.label, n.path, json.dumps(n.metadata), json.dumps(n.position) if n.position else None))
-        for e in self.edges:
-            conn.execute("INSERT OR IGNORE INTO edges VALUES (?,?,?)", (e.source, e.target, e.type))
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DELETE FROM nodes")
+            conn.execute("DELETE FROM edges")
+            for n in self.nodes.values():
+                conn.execute(
+                    "INSERT INTO nodes VALUES (?,?,?,?,?,?)",
+                    (n.id, n.type, n.label, n.path, json.dumps(n.metadata),
+                     json.dumps(n.position) if n.position else None),
+                )
+            for e in self.edges:
+                conn.execute(
+                    "INSERT INTO edges VALUES (?,?,?)",
+                    (e.source, e.target, e.type),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
         return {"nodes": [n.to_dict() for n in self.nodes.values()], "edges": [e.to_dict() for e in self.edges]}
 
@@ -98,7 +113,7 @@ class GraphEngine:
 
         conn = self._connect()
         try:
-            conn.execute("BEGIN EXCLUSIVE")
+            conn.execute("BEGIN IMMEDIATE")
             conn.execute("DELETE FROM nodes")
             conn.execute("DELETE FROM edges")
 
