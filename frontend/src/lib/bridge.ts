@@ -2,6 +2,16 @@
 
 const API_BASE = '/api'
 
+const API_KEY = import.meta.env.VITE_LGB_API_KEY as string | undefined
+
+function apiHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...extra }
+  if (API_KEY) {
+    headers['X-API-Key'] = API_KEY
+  }
+  return headers
+}
+
 export interface Node {
   id: string
   type: string
@@ -38,8 +48,8 @@ export async function fetchNode(id: string): Promise<Node> {
 export async function studyNode(id: string): Promise<any> {
   const res = await fetch(`${API_BASE}/study`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ node_id: id })
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ node_id: id }),
   })
   if (!res.ok) throw new Error(`Failed to study node ${id}: ${res.status} ${res.statusText}`)
   return res.json()
@@ -61,7 +71,7 @@ export async function fetchNodeContent(id: string): Promise<NodeContent> {
 export async function openNode(id: string, reveal: boolean): Promise<void> {
   const res = await fetch(`${API_BASE}/open`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ node_id: id, reveal }),
   })
   if (!res.ok) await handleResponseError(res, `Error al abrir nodo (${res.status})`)
@@ -100,7 +110,7 @@ async function handleResponseError(res: Response, fallbackMsg: string): Promise<
 export async function createFile(path: string, content: string = ''): Promise<{ status: string; path: string }> {
   const res = await fetch(`${API_BASE}/create/file`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ path, content })
   })
   if (!res.ok) {
@@ -112,7 +122,7 @@ export async function createFile(path: string, content: string = ''): Promise<{ 
 export async function createFolder(path: string): Promise<{ status: string; path: string }> {
   const res = await fetch(`${API_BASE}/create/folder`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ path })
   })
   if (!res.ok) {
@@ -124,7 +134,7 @@ export async function createFolder(path: string): Promise<{ status: string; path
 export async function importGithub(url: string): Promise<{ status: string; path: string }> {
   const res = await fetch(`${API_BASE}/create/github`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ url })
   })
   if (!res.ok) {
@@ -136,7 +146,7 @@ export async function importGithub(url: string): Promise<{ status: string; path:
 export async function importArxiv(id: string): Promise<{ status: string; path: string }> {
   const res = await fetch(`${API_BASE}/create/arxiv`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ id })
   })
   if (!res.ok) {
@@ -148,7 +158,7 @@ export async function importArxiv(id: string): Promise<{ status: string; path: s
 export async function importPubmed(id: string): Promise<{ status: string; path: string }> {
   const res = await fetch(`${API_BASE}/create/pubmed`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ id })
   })
   if (!res.ok) {

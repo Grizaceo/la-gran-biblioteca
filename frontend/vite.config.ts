@@ -9,8 +9,19 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: apiTarget,
-        changeOrigin: true
-      }
-    }
-  }
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          forcegraph: ['3d-force-graph'],
+          markdown: ['marked', 'dompurify'],
+        },
+      },
+    },
+  },
 })

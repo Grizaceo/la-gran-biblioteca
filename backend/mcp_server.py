@@ -259,7 +259,14 @@ def read_node(node_id: str, max_chars: int = 8000) -> dict:
     if not path_str:
         return {"error": "Node has no path"}
 
-    p = Path(path_str)
+    try:
+        p = Path(path_str).resolve()
+        root = Path(WORKSPACE_ROOT).resolve()
+        if not p.is_relative_to(root):
+            return {"error": "Path outside workspace"}
+    except (OSError, ValueError) as e:
+        return {"error": f"Invalid path: {e}"}
+
     if not p.exists():
         return {"error": f"File not found on disk: {path_str}"}
     if not p.is_file():

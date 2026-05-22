@@ -47,13 +47,19 @@ class GraphEngine:
     
     def _init_db(self):
         conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute('CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, type TEXT, label TEXT, path TEXT, metadata TEXT, position TEXT)')
         conn.execute('CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, type TEXT, PRIMARY KEY (source, target, type))')
         conn.commit()
         conn.close()
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
     
     def load_from_db(self) -> Dict[str, Any]:
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         nodes = []
         for row in conn.execute("SELECT * FROM nodes"):
             node = Node(id=row[0], type=row[1], label=row[2], path=row[3], metadata=json.loads(row[4]), position=json.loads(row[5]) if row[5] else None)
@@ -74,7 +80,7 @@ class GraphEngine:
         for ed in raw["edges"]:
             self.edges.append(Edge(ed["source"], ed["target"], ed["type"]))
 
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         for n in self.nodes.values():
             conn.execute("INSERT OR REPLACE INTO nodes VALUES (?,?,?,?,?,?)", (n.id, n.type, n.label, n.path, json.dumps(n.metadata), json.dumps(n.position) if n.position else None))
         for e in self.edges:
@@ -90,7 +96,7 @@ class GraphEngine:
         if self.db_path.exists():
             shutil.copy2(self.db_path, backup_path)
 
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         try:
             conn.execute("BEGIN EXCLUSIVE")
             conn.execute("DELETE FROM nodes")
@@ -142,7 +148,7 @@ class GraphEngine:
         return False
 
     def update_node_metadata(self, node_id: str, metadata: Dict[str, Any]) -> None:
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         conn.execute("UPDATE nodes SET metadata = ? WHERE id = ?", (json.dumps(metadata), node_id))
         conn.commit()
         conn.close()

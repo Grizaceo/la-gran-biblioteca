@@ -3,6 +3,12 @@ import { PALETTE } from '../palette.js'
 
 const DEBOUNCE_MS = 120
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  )
+}
+
 export function initSearch(forceGraph) {
   const searchInput        = document.getElementById('search-input')
   const searchBtn          = document.getElementById('search-btn')
@@ -40,9 +46,9 @@ export function initSearch(forceGraph) {
 
     for (const t of types) {
       const color = PALETTE[t] || PALETTE.default
-      html += `<div class="type-filter-item" data-type="${t}">
+      html += `<div class="type-filter-item" data-type="${escapeHtml(t)}">
         <span class="type-dot" style="background:${color}"></span>
-        <span>${t}</span>
+        <span>${escapeHtml(t)}</span>
         <span class="type-count">${typeCounts[t]}</span>
       </div>`
     }
@@ -124,10 +130,10 @@ export function initSearch(forceGraph) {
       const color = PALETTE[n.type] || PALETTE.default
       const name = n.name || n.id
       const displayName = name.length > 40 ? name.slice(0, 37) + '...' : name
-      return `<div class="search-result-item" data-node-id="${n.id}">
+      return `<div class="search-result-item" data-node-id="${escapeHtml(n.id)}">
         <div class="search-result-dot" style="background:${color}"></div>
-        <span class="search-result-name">${displayName}</span>
-        <span class="search-result-type">${n.type}</span>
+        <span class="search-result-name">${escapeHtml(displayName)}</span>
+        <span class="search-result-type">${escapeHtml(n.type)}</span>
       </div>`
     }).join('')
 

@@ -1,4 +1,5 @@
 import io
+import os
 import zipfile
 import urllib.request
 import urllib.error
@@ -9,6 +10,26 @@ import xml.etree.ElementTree as ET
 import logging
 
 logger = logging.getLogger(__name__)
+
+DOWNLOAD_TIMEOUT = int(os.environ.get("LGB_DOWNLOAD_TIMEOUT", "120"))
+MAX_ZIP_BYTES = int(os.environ.get("LGB_MAX_ZIP_BYTES", str(100 * 1024 * 1024)))
+
+
+def _urlopen(req: urllib.request.Request) -> bytes:
+    with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as response:
+        data = response.read()
+        if len(data) > MAX_ZIP_BYTES:
+            raise RuntimeError(f"Download exceeds limit ({MAX_ZIP_BYTES} bytes)")
+        return data
+
+
+def _safe_extract_zip(zip_ref: zipfile.ZipFile, dest_dir: Path) -> None:
+    dest = dest_dir.resolve()
+    for member in zip_ref.namelist():
+        target = (dest / member).resolve()
+        if not (str(target) == str(dest) or str(target).startswith(str(dest) + os.sep)):
+            raise RuntimeError("Zip path traversal detected")
+    zip_ref.extractall(dest)
 
 def download_and_extract_github(repo_input: str, workspace_root: Path) -> Path:
     """
@@ -45,8 +66,7 @@ def download_and_extract_github(repo_input: str, workspace_root: Path) -> Path:
     )
     
     try:
-        with urllib.request.urlopen(req) as response:
-            zip_data = response.read()
+        zip_data = _urlopen(req)
     except urllib.error.HTTPError as e:
         logger.error(f"Error descargando zipball de GitHub: {e.code} {e.reason}")
         raise RuntimeError(f"No se pudo descargar el repositorio desde GitHub: {e.code} {e.reason}")
@@ -58,7 +78,7 @@ def download_and_extract_github(repo_input: str, workspace_root: Path) -> Path:
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
-            zip_ref.extractall(temp_path)
+            _safe_extract_zip(zip_ref, temp_path)
             
         # GitHub zipballs pack everything in a single root folder: owner-repo-hash
         extracted_dirs = [p for p in temp_path.iterdir() if p.is_dir()]
@@ -94,8 +114,7 @@ def import_arxiv(arxiv_id: str, workspace_root: Path) -> Path:
     )
     
     try:
-        with urllib.request.urlopen(req) as response:
-            xml_data = response.read()
+        xml_data = _urlopen(req)
     except Exception as e:
         logger.error(f"Error al conectar con la API de arXiv: {e}")
         raise RuntimeError(f"Error al consultar la API de arXiv: {e}")
@@ -215,8 +234,7 @@ def import_pubmed(pmid: str, workspace_root: Path) -> Path:
     )
     
     try:
-        with urllib.request.urlopen(req) as response:
-            xml_data = response.read()
+        xml_data = _urlopen(req)
     except Exception as e:
         logger.error(f"Error al conectar con la API de PubMed: {e}")
         raise RuntimeError(f"Error al consultar la API de PubMed: {e}")

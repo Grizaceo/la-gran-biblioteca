@@ -24,6 +24,7 @@ from .os_open import open_in_os
 from .preview import read_preview
 from .imports import download_and_extract_github, import_arxiv, import_pubmed
 from .overview import build_overview
+from .security import SecurityMiddleware, safe_error_detail
 from .os_dialog import (
     select_file_in_os,
     select_folder_in_os,
@@ -171,6 +172,7 @@ CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localh
 
 app = FastAPI(title="La Gran Biblioteca API", lifespan=lifespan)
 
+app.add_middleware(SecurityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -328,7 +330,7 @@ async def create_file(req: CreateFileRequest):
         raise
     except Exception as e:
         logger.error(f"Error creando archivo: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 @app.post("/api/create/folder")
@@ -347,7 +349,7 @@ async def create_folder(req: CreateFolderRequest):
         raise
     except Exception as e:
         logger.error(f"Error creando carpeta: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 @app.post("/api/create/system-file")
@@ -366,7 +368,7 @@ async def create_system_file():
         raise
     except Exception as e:
         logger.error(f"Error importando archivo del sistema: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 @app.post("/api/create/system-folder")
@@ -385,7 +387,7 @@ async def create_system_folder():
         raise
     except Exception as e:
         logger.error(f"Error importando carpeta del sistema: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 
@@ -401,7 +403,7 @@ async def create_github(req: ImportGithubRequest):
         return {"status": "ok", "path": str(dest_dir.relative_to(WORKSPACE_ROOT))}
     except Exception as e:
         logger.error(f"Error importando repositorio de GitHub: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 @app.post("/api/create/arxiv")
@@ -416,7 +418,7 @@ async def create_arxiv(req: ImportArxivRequest):
         return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
     except Exception as e:
         logger.error(f"Error importando de arXiv: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 @app.post("/api/create/pubmed")
@@ -431,7 +433,7 @@ async def create_pubmed(req: ImportPubmedRequest):
         return {"status": "ok", "path": str(file_path.relative_to(WORKSPACE_ROOT))}
     except Exception as e:
         logger.error(f"Error importando de PubMed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
 
 
 def _get_node_by_id(node_id: str):
@@ -503,9 +505,18 @@ async def get_overview():
 
 @app.get("/api/health")
 async def health():
-    """Health check."""
-    return {"status": "ok"}
+    """Health check with graph and workspace summary."""
+    graph = get_current_graph()
+    return {
+        "status": "ok",
+        "nodes": len(graph["nodes"]),
+        "edges": len(graph["edges"]),
+        "workspace_root": str(WORKSPACE_ROOT),
+        "db_path": str(engine.db_path),
+    }
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=3001)
+    host = os.environ.get("LGB_HOST", "127.0.0.1")
+    port = int(os.environ.get("LGB_PORT", "3001"))
+    uvicorn.run(app, host=host, port=port)

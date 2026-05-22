@@ -9,9 +9,14 @@ export function setupTooltip(
   container: HTMLElement,
   onHover?: (node: Record<string, unknown> | null) => void,
 ): void {
-  const tooltip = document.createElement('div')
-  tooltip.id = 'node-tooltip'
-  document.body.appendChild(tooltip)
+  let tooltip = document.getElementById('node-tooltip') as HTMLDivElement | null
+  if (!tooltip) {
+    tooltip = document.createElement('div')
+    tooltip.id = 'node-tooltip'
+    document.body.appendChild(tooltip)
+  }
+  tooltip.setAttribute('role', 'tooltip')
+  tooltip.setAttribute('aria-hidden', 'true')
 
   let mouseX = 0
   let mouseY = 0
@@ -69,12 +74,14 @@ export function setupTooltip(
       }
       isHovering = true
       tooltip.classList.add('active')
+      tooltip.setAttribute('aria-hidden', 'false')
       positionTooltip()
       container.style.cursor = 'pointer'
       onHover?.(node)
     } else {
       isHovering = false
       tooltip.classList.remove('active')
+      tooltip.setAttribute('aria-hidden', 'true')
       container.style.cursor = 'grab'
       onHover?.(null)
     }

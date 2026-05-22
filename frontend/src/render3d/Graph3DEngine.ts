@@ -165,11 +165,17 @@ export class Graph3DEngine {
   private _paused = false
   private _savedParticles = 2
   private _tick!: () => void
+  private _lodNodeCount = 0
+  private _progressivePump: (() => void) | null = null
 
   constructor(container: HTMLElement) {
+    const bootProfile = getRenderProfile(400)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const FG3D = ForceGraph3D as any
-    this.fg = FG3D({ controlType: 'orbit', rendererConfig: { antialias: true, alpha: false } })(container)
+    this.fg = FG3D({
+      controlType: 'orbit',
+      rendererConfig: { antialias: bootProfile.antialias, alpha: false },
+    })(container)
       .nodeThreeObject((node: Record<string, unknown>) => {
         const size = nodeSize(node.weight as number)
         const type = (node.type as string) || 'default'
@@ -277,8 +283,11 @@ export class Graph3DEngine {
     // Thresholds are normalized by node size, so compare normDist² to avoid sqrt
     const LOD_NEAR = 150
     const LOD_MID = 400
+    const stride = this._lodNodeCount >= 400
+      ? Math.max(1, Math.ceil(nodes.length / 200))
+      : 1
 
-    for (let i = 0; i < nodes.length; i++) {
+    for (let i = 0; i < nodes.length; i += stride) {
       const n = nodes[i]
       const obj = n.__threeObj as THREE.Group | undefined
       if (!obj || !obj.isGroup) continue
@@ -419,6 +428,7 @@ export class Graph3DEngine {
   }
 
   setGraph(g: Graph): void {
+    this._progressivePump = null
     const degree = computeDegree(g.edges)
     this.nodeIndex.clear()
     
@@ -430,6 +440,7 @@ export class Graph3DEngine {
     const processedLinks = g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
 
     const nodeCount = processedNodes.length
+    this._lodNodeCount = nodeCount
     const profile = getRenderProfile(nodeCount)
 
     // Apply adaptive render profile settings
@@ -478,6 +489,10 @@ export class Graph3DEngine {
   }
 
   applyUpdate(g: Graph): void {
+    if (this._progressivePump) {
+      this._progressivePump = null
+    }
+
     const degree = computeDegree(g.edges)
     const nodes = g.nodes.map(n => {
       const fresh = this.hydrate(n, degree.get(n.id) || 0)
@@ -495,10 +510,40 @@ export class Graph3DEngine {
       if (!newIds.has(id)) this.nodeIndex.delete(id)
     }
 
-    this.fg.graphData({
-      nodes,
-      links: g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type })),
-    })
+    const links = g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
+    this._lodNodeCount = nodes.length
+
+    const profile = getRenderProfile(nodes.length)
+    this.fg.warmupTicks(profile.warmupTicks).cooldownTicks(profile.cooldownTicks)
+    if (nodes.length >= 800) {
+      this.fg.linkResolution(0)
+    } else {
+      this.fg.linkResolution(6)
+    }
+
+    if (nodes.length < 150) {
+      this.fg.graphData({ nodes, links })
+      return
+    }
+
+    const loader = createProgressiveLoader({ nodes, links })
+    let result = loader.append(profile.initialBatchSize)
+    this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+
+    const pump = () => {
+      if (this._paused) return
+      if (result.done) {
+        this._progressivePump = null
+        return
+      }
+      result = loader.append(profile.batchSize)
+      this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
+      setTimeout(pump, profile.chunkDelay)
+    }
+    this._progressivePump = pump
+    if (!result.done) {
+      setTimeout(pump, profile.chunkDelay)
+    }
   }
 
   onNodeClick(handler: (node: Record<string, unknown>) => void): void {

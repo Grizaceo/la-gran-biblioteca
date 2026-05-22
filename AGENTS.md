@@ -4,7 +4,7 @@
 
 Visualizador y gestor de un **grafo de conocimiento** sobre `~/.hermes/workspaces/`.
 Cada archivo/carpeta escaneado es un **nodo**; cada wikilink o dependencia es una **arista**.
-Backend: FastAPI + SQLite (`backend/library.db`). Frontend: Canvas 2D + d3-force.
+Backend: FastAPI + SQLite (`backend/library.db`) + watchdog (SSE event-driven). Frontend: WebGL 3D (`three` + `3d-force-graph`).
 
 ## Cómo navegar rápido (MCP preferred)
 
@@ -89,10 +89,16 @@ backend/
   preview.py          # read_preview() para contenido de archivos
   constants.py        # WORKSPACE_ROOT, extensiones, límites
 frontend/src/
-  lib/bridge.ts       # API client + SSE
-  lib/graphEngine.ts  # d3-force layout
-  lib/renderer.ts     # Canvas 2D render
+  lib/bridge.ts              # API client + SSE
+  render3d/Graph3DEngine.ts  # WebGL 3D + d3-force
+  render3d/renderOptimizations.ts  # perfiles adaptativos, carga progresiva
+  render3d/ui/               # search, minimap, focus, visibility
+  ui/                        # detailPanel, menuBar, tooltip, contextMenu
 ```
+
+## Variables de entorno
+
+Ver [`.env.example`](.env.example). Para exposición en red: `LGB_API_KEY` (header `X-API-Key` en POST mutadores) y `LGB_RATE_LIMIT_PER_MIN`.
 
 ## Endpoints HTTP (si el bridge está corriendo en :3001)
 

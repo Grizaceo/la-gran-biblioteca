@@ -1,0 +1,43 @@
+:root {
+  --color-bg-deep: #000011;
+  --color-accent: #4fc3f7;
+  --color-error: #e57373;
+  --panel-bg: rgba(0, 0, 17, 0.92);
+  --panel-bg-strong: rgba(0, 0, 17, 0.97);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --text-primary: rgba(255, 255, 255, 0.85);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --detail-panel-width: min(480px, 100vw);
+  --font-ui: 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Courier New', monospace;
+  --transition-fast: 0.15s ease;
+  --transition-panel: 0.25s ease;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --detail-panel-width: 100vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  #loading .spinner {
+    animation: none;
+    border-top-color: var(--color-accent);
+  }
+  #notif-toast.active {
+    animation: none;
+  }
+}

@@ -3,9 +3,11 @@ import io
 import zipfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+
+import pytest
 from fastapi.testclient import TestClient
 
-from backend.imports import import_arxiv, import_pubmed, download_and_extract_github
+from backend.imports import import_arxiv, import_pubmed, download_and_extract_github, _safe_extract_zip
 import backend.library_bridge as bridge
 
 # Mock XML content for arXiv
@@ -127,6 +129,18 @@ def test_import_pubmed(mock_urlopen):
         assert 'journal: "Journal of Medicine"' in content
         assert "#pubmed" in content
         assert "#pm_medicine" in content
+
+
+def test_safe_extract_zip_rejects_traversal():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        dest = Path(tmp_dir)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("../evil.txt", "bad")
+        buf.seek(0)
+        with zipfile.ZipFile(buf) as zf:
+            with pytest.raises(RuntimeError, match="traversal"):
+                _safe_extract_zip(zf, dest)
 
 
 @patch("urllib.request.urlopen")

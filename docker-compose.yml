@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -8,11 +6,16 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./backend:/app
-      - /home/gris/.hermes/workspaces:/workspaces:ro
+      - ${WORKSPACE_ROOT:-${HOME}/.hermes/workspaces}:/workspaces
+      - lgb-data:/data
     environment:
       - PYTHONPATH=/app
       - WORKSPACE_ROOT=/workspaces
+      - DB_PATH=/data/library.db
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    env_file:
+      - path: .env
+        required: false
 
   frontend:
     build:
@@ -22,3 +25,6 @@ services:
       - "3000:80"
     depends_on:
       - backend
+
+volumes:
+  lgb-data:

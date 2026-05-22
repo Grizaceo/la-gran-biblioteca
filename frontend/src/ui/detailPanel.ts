@@ -2,8 +2,19 @@ import type { Node, Graph } from '../lib/bridge'
 import { fetchNodeContent, openNode, studyNode, fetchNode } from '../lib/bridge'
 import { PALETTE } from '../render3d/palette.js'
 import { marked } from 'marked'
-import hljs from 'highlight.js'
 import DOMPurify from 'dompurify'
+
+let hljsPromise: Promise<typeof import('highlight.js').default> | null = null
+
+async function getHljs() {
+  if (!hljsPromise) {
+    hljsPromise = Promise.all([
+      import('highlight.js'),
+      import('highlight.js/styles/github-dark.css'),
+    ]).then(([mod]) => mod.default)
+  }
+  return hljsPromise
+}
 
 const ESC_RE = /[&<>"']/g
 const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
@@ -127,6 +138,7 @@ export function setupDetailPanel(
       if (lang === 'markdown') {
         html = DOMPurify.sanitize(await Promise.resolve(marked.parse(content)))
       } else {
+        const hljs = await getHljs()
         const highlighted = lang
           ? hljs.highlight(content, { language: lang, ignoreIllegals: true }).value
           : hljs.highlightAuto(content).value
@@ -210,7 +222,7 @@ export function setupDetailPanel(
     renderNeighbors(node.id)
 
     detailPanel.classList.add('active')
-    container.style.right = '480px'
+    container.style.right = 'var(--detail-panel-width, 480px)'
     setTimeout(() => {
       const { width, height } = container.getBoundingClientRect()
       engine.fg.width(width).height(height)

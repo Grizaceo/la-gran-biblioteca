@@ -44,11 +44,10 @@ export function initMenuBar(engine: Graph3DEngine): void {
 
   menuItems.forEach((item) => {
     const trigger = item.querySelector('.menu-trigger') as HTMLElement
-    
+
     trigger.addEventListener('click', (e) => {
       e.stopPropagation()
-      
-      // If it's a direct action button like Licences, don't toggle dropdown
+
       const action = trigger.getAttribute('data-action')
       if (action) {
         handleMenuAction(action)
@@ -58,9 +57,12 @@ export function initMenuBar(engine: Graph3DEngine): void {
 
       const isActive = item.classList.contains('active')
       closeAllMenus()
-      
+
       if (!isActive) {
         item.classList.add('active')
+        trigger.setAttribute('aria-expanded', 'true')
+      } else {
+        trigger.setAttribute('aria-expanded', 'false')
       }
     })
   })
@@ -73,6 +75,8 @@ export function initMenuBar(engine: Graph3DEngine): void {
   function closeAllMenus(): void {
     menuItems.forEach((item) => {
       item.classList.remove('active')
+      const trigger = item.querySelector('.menu-trigger') as HTMLElement | null
+      trigger?.setAttribute('aria-expanded', 'false')
     })
   }
 
