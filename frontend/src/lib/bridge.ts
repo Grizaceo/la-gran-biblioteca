@@ -108,7 +108,7 @@ export async function fetchGraph(): Promise<Graph> {
 }
 
 export async function fetchNode(id: string): Promise<Node> {
-  const res = await apiFetch(`/node/${id}`)
+  const res = await apiFetch(`/node/${encodeURIComponent(id)}`)
   if (!res.ok) throw new Error(`Failed to fetch node ${id}: ${res.status} ${res.statusText}`)
   return res.json()
 }
@@ -208,7 +208,7 @@ export async function createFolder(path: string): Promise<{ status: string; path
   return res.json()
 }
 
-export async function importGithub(url: string): Promise<{ status: string; path: string }> {
+export async function importGithub(url: string): Promise<ImportNoteResponse> {
   const res = await apiFetch('/create/github', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),

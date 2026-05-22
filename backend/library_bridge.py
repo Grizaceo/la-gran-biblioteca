@@ -21,6 +21,7 @@ from .scan_workspaces import (
     scan_import_paths,
     merge_scan_graphs,
     node_id_for_import_path,
+    node_id_for_import_dir,
 )
 from .graph_engine import GraphEngine
 from .workspace_watcher import start_watcher
@@ -90,6 +91,12 @@ def _path_matches_recent(node_path_str: str, recent: str) -> bool:
     )
 
 
+def _is_vault_import_node(n: dict) -> bool:
+    """Nodes under imports/{github,arxiv,pubmed} must stay visible in the 1000-node cap."""
+    blob = f"{n.get('id', '')} {n.get('path', '')}".replace("\\", "/").lower()
+    return "/imports/github/" in blob or "/imports/arxiv/" in blob or "/imports/pubmed/" in blob
+
+
 def _node_priority_key(n: dict, degree: int, root: Path) -> tuple:
     """Higher sort key = higher priority for the 1000-node cap."""
     node_path_str = n.get("path", "")
@@ -125,6 +132,10 @@ def get_limited_graph():
         for n in nodes:
             if n["id"] in selected_ids:
                 continue
+            if _is_vault_import_node(n):
+                selected_nodes.append(n)
+                selected_ids.add(n["id"])
+                continue
             for recent in recently_imported_paths:
                 if _path_matches_recent(n.get("path", ""), recent):
                     selected_nodes.append(n)
@@ -137,13 +148,42 @@ def get_limited_graph():
     return {**graph, "total": total}
 
 
+def _import_ensure_paths(extra: list[Path | str] | None = None) -> list[Path]:
+    """Paths that must appear in the graph even when the global scan truncates."""
+    paths: list[Path] = []
+    seen: set[str] = set()
+
+    def add(p: Path) -> None:
+        try:
+            resolved = str(p.resolve())
+        except OSError:
+            return
+        if resolved in seen or not p.exists():
+            return
+        seen.add(resolved)
+        paths.append(p.resolve())
+
+    for recent in recently_imported_paths:
+        add(Path(recent))
+    github_root = WORKSPACE_ROOT / "imports" / "github"
+    if github_root.is_dir():
+        for child in sorted(github_root.iterdir()):
+            if child.is_dir():
+                add(child)
+    if extra:
+        for item in extra:
+            add(Path(item))
+    return paths
+
+
 async def force_graph_update(ensure_paths: list[Path | str] | None = None):
     try:
         raw = await asyncio.to_thread(
             scan_workspaces, max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN
         )
-        if ensure_paths:
-            patch = await asyncio.to_thread(scan_import_paths, ensure_paths, WORKSPACE_ROOT)
+        merged_ensure = _import_ensure_paths(ensure_paths)
+        if merged_ensure:
+            patch = await asyncio.to_thread(scan_import_paths, merged_ensure, WORKSPACE_ROOT)
             raw = merge_scan_graphs(raw, patch)
         new_graph = await asyncio.to_thread(engine.build_graph, raw)
         set_current_graph(new_graph)
@@ -246,7 +286,26 @@ async def get_graph():
     return get_limited_graph()
 
 
-@app.get("/api/node/{node_id}")
+@app.get("/api/node/{node_id:path}/content")
+async def get_node_content(node_id: str):
+    """Retorna el contenido textual de un nodo archivo."""
+    node = _get_node_by_id(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    path_str = node.get("path", "")
+    if not path_str:
+        raise HTTPException(status_code=422, detail="Node has no path")
+
+    p = _validate_path(node_id, path_str)
+
+    if not p.is_file():
+        raise HTTPException(status_code=422, detail="Path is not a file")
+
+    return read_preview(p)
+
+
+@app.get("/api/node/{node_id:path}")
 async def get_node(node_id: str):
     """Retorna un nodo específico por ID."""
     node = _get_node_by_id(node_id)
@@ -309,6 +368,10 @@ async def stream_graph():
 async def trigger_rescan():
     """Fuerza un re-escaneo atómico del workspace con backup."""
     raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
+    merged_ensure = _import_ensure_paths()
+    if merged_ensure:
+        patch = scan_import_paths(merged_ensure, WORKSPACE_ROOT)
+        raw = merge_scan_graphs(raw, patch)
     try:
         new_graph = engine.rebuild_graph(raw)
     except Exception as e:
@@ -445,8 +508,14 @@ async def create_system_folder():
             
         dest_path = await asyncio.to_thread(import_selected_folder, selected_path, WORKSPACE_ROOT)
         register_recently_imported(dest_path)
-        asyncio.create_task(force_graph_update())
-        return {"status": "ok", "path": str(dest_path.relative_to(WORKSPACE_ROOT))}
+        asyncio.create_task(force_graph_update(ensure_paths=[dest_path]))
+        rel_path = str(dest_path.relative_to(WORKSPACE_ROOT))
+        return {
+            "status": "ok",
+            "path": rel_path,
+            "node_id": node_id_for_import_dir(dest_path, WORKSPACE_ROOT),
+            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -463,8 +532,15 @@ async def create_github(req: ImportGithubRequest):
             download_and_extract_github, req.url, WORKSPACE_ROOT
         )
         register_recently_imported(dest_dir)
-        asyncio.create_task(force_graph_update())
-        return {"status": "ok", "path": str(dest_dir.relative_to(WORKSPACE_ROOT))}
+        rel_path = str(dest_dir.relative_to(WORKSPACE_ROOT))
+        node_id = node_id_for_import_dir(dest_dir, WORKSPACE_ROOT)
+        asyncio.create_task(force_graph_update(ensure_paths=[dest_dir]))
+        return {
+            "status": "ok",
+            "path": rel_path,
+            "node_id": node_id,
+            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+        }
     except Exception as e:
         logger.error(f"Error importando repositorio de GitHub: {e}")
         raise HTTPException(status_code=500, detail=safe_error_detail(e))
@@ -573,25 +649,6 @@ def _validate_path(node_id: str, path_str: str) -> Path:
         return p
 
     raise HTTPException(status_code=403, detail="Path outside workspace")
-
-
-@app.get("/api/node/{node_id}/content")
-async def get_node_content(node_id: str):
-    """Retorna el contenido textual de un nodo archivo."""
-    node = _get_node_by_id(node_id)
-    if not node:
-        raise HTTPException(status_code=404, detail="Node not found")
-
-    path_str = node.get("path", "")
-    if not path_str:
-        raise HTTPException(status_code=422, detail="Node has no path")
-
-    p = _validate_path(node_id, path_str)
-
-    if not p.is_file():
-        raise HTTPException(status_code=422, detail="Path is not a file")
-
-    return read_preview(p)
 
 
 class OpenRequest(BaseModel):

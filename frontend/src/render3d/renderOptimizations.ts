@@ -126,9 +126,21 @@ export function getRenderProfile(nodeCount: number): RenderProfile {
   }
 }
 
+function isVaultImportNode(node: { id?: string; path?: string }): boolean {
+  const blob = `${node.id || ''} ${node.path || ''}`.toLowerCase()
+  return (
+    blob.includes('/imports/github/')
+    || blob.includes('/imports/arxiv/')
+    || blob.includes('/imports/pubmed/')
+  )
+}
+
 export function buildRenderOrder(nodes: any[], links: any[]): any[] {
   const degree = countDegrees(nodes, links)
   return [...(nodes || [])].sort((a, b) => {
+    const importDelta = (isVaultImportNode(a) ? 0 : 1) - (isVaultImportNode(b) ? 0 : 1)
+    if (importDelta !== 0) return importDelta
+
     const typeDelta = getTypePriority(a.type) - getTypePriority(b.type)
     if (typeDelta !== 0) return typeDelta
 

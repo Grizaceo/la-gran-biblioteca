@@ -313,12 +313,20 @@ def merge_scan_graphs(base: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, 
     return {"nodes": list(nodes_by_id.values()), "edges": edges}
 
 
+def _import_island_origin(subroot: Path) -> tuple[float, float]:
+    """Separate imported repos from the main vault cluster at (0,0)."""
+    slot = abs(hash(subroot.name)) % 48
+    return (4200.0 + slot * 220.0, 4200.0 + (slot % 9) * 180.0)
+
+
 def _append_folder_node(
     graph: Dict[str, Any],
     node_map: Dict[str, str],
     folder: Path,
     root: Path,
     depth: int,
+    *,
+    position: Optional[Dict[str, float]] = None,
 ) -> str:
     rel = _posix_rel(folder, root)
     node_id = _folder_node_id(rel)
@@ -326,13 +334,14 @@ def _append_folder_node(
     if folder_key in node_map:
         return node_map[folder_key]
     stored_path = str(folder.resolve())
+    pos = position if position is not None else {"x": 0, "y": depth * 150}
     graph["nodes"].append({
         "id": node_id,
         "type": "folder",
         "label": folder.name if rel != "." else root.name,
         "path": stored_path,
         "metadata": {"depth": depth},
-        "position": {"x": 0, "y": depth * 150},
+        "position": pos,
     })
     node_map[str(folder.resolve())] = node_id
     if folder.parent != folder:
@@ -352,6 +361,8 @@ def _append_file_node(
     filepath: Path,
     root: Path,
     depth: int,
+    *,
+    position: Optional[Dict[str, float]] = None,
 ) -> str:
     rel_posix = _posix_rel(filepath, root)
     node_id = _file_node_id(rel_posix)
@@ -383,13 +394,14 @@ def _append_file_node(
     if frontmatter.get("title"):
         label = frontmatter["title"]
 
+    pos = position if position is not None else {"x": 0, "y": depth * 150}
     graph["nodes"].append({
         "id": node_id,
         "type": get_node_type(filepath),
         "label": label,
         "path": str(filepath.resolve()),
         "metadata": metadata,
-        "position": {"x": 0, "y": depth * 150},
+        "position": pos,
     })
     node_map[str(filepath.resolve())] = node_id
 
@@ -420,6 +432,50 @@ def _append_file_node(
         })
 
     return node_id
+
+
+def _scan_subdirectory(
+    graph: Dict[str, Any],
+    node_map: Dict[str, str],
+    subroot: Path,
+    workspace_root: Path,
+    base_depth: int,
+    *,
+    max_files: int = 500,
+    max_children: int = 50,
+) -> None:
+    """BFS under a single imported folder so global SCAN_MAX_FILES does not skip it."""
+    island_x, island_y = _import_island_origin(subroot)
+    queue: deque = deque()
+    queue.append((subroot.resolve(), base_depth, 0))
+    file_count = 0
+
+    while queue and file_count < max_files:
+        current_path, depth, sibling_idx = queue.popleft()
+        if not current_path.exists():
+            continue
+        rel_depth = depth - base_depth
+        pos = {
+            "x": island_x + sibling_idx * 120,
+            "y": island_y + rel_depth * 90,
+        }
+        if current_path.is_dir():
+            if current_path.name in EXCLUDE_DIRS:
+                continue
+            _append_folder_node(
+                graph, node_map, current_path, workspace_root, depth, position=pos
+            )
+            try:
+                children = [p for p in current_path.iterdir() if should_scan(p)]
+                for idx, child in enumerate(sorted(children, key=lambda p: p.name)[:max_children]):
+                    queue.append((child, depth + 1, idx))
+            except (PermissionError, OSError) as e:
+                logger.warning("No se pudo escanear import %s: %s", current_path, e)
+        else:
+            file_count += 1
+            _append_file_node(
+                graph, node_map, current_path, workspace_root, depth, position=pos
+            )
 
 
 def scan_import_paths(
@@ -453,6 +509,7 @@ def scan_import_paths(
             for i, part in enumerate(parts):
                 accum = accum / part
                 _append_folder_node(graph, node_map, accum, root, i + 1)
+            _scan_subdirectory(graph, node_map, filepath, root, len(parts))
             continue
 
         parts = filepath.relative_to(root).parts
@@ -463,6 +520,12 @@ def scan_import_paths(
         _append_file_node(graph, node_map, filepath, root, len(parts))
 
     return graph
+
+
+def node_id_for_import_dir(path: Path, root: Path = WORKSPACE_ROOT) -> str:
+    """Graph node id for an imported folder under workspace root."""
+    rel = _posix_rel(Path(path), root)
+    return _folder_node_id(rel)
 
 
 def node_id_for_import_path(path: Path, root: Path = WORKSPACE_ROOT) -> str:

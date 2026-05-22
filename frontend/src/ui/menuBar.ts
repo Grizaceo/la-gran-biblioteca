@@ -484,11 +484,24 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
           (window as any).addActivityLog(`Descargando repositorio GitHub: ${url}...`, 'info')
         }
         const res = await bridge.importGithub(url)
-        showNotification(`Repositorio importado con éxito en: ${res.path}`, 'success')
+        engine.ensureImportsWorkspaceVisible()
+        const vaultHint = res.workspace_root
+          ? `${res.workspace_root}/${res.path}`
+          : res.path
+        const repoStem = res.path.split('/').pop() || res.path
+        showNotification(
+          `Repositorio importado: ${res.path} — Ctrl+K «${repoStem}» (workspace imports)`,
+          'success',
+        )
         if ((window as any).addActivityLog) {
-          (window as any).addActivityLog(`GitHub importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
+          ;(window as any).addActivityLog(
+            `GitHub importado en: ${vaultHint}${res.node_id ? ` (nodo ${res.node_id})` : ''}. Esperando actualización del grafo…`,
+            'success',
+          )
         }
-        ((engine as any)._pendingFocusQueue ??= []).push(res.path)
+        const queue = (engine as any)._pendingFocusQueue ??= []
+        queue.push(res.path)
+        if (res.node_id) queue.push(res.node_id)
       }
     )
   }

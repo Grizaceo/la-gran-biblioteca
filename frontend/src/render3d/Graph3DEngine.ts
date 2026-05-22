@@ -412,6 +412,11 @@ export class Graph3DEngine {
 
   getNodeWorkspace(node: Record<string, unknown>): string {
     const path = String(node.path || '').replace(/\\/g, '/')
+    const nodeId = String(node.id || '').replace(/\\/g, '/')
+    const blob = `${path} ${nodeId}`.toLowerCase()
+    if (blob.includes('/imports/github/') || blob.includes('imports/github/')) {
+      return 'imports'
+    }
     if (!path || !this.workspaceRoot) return ''
     const root = this.workspaceRoot.replace(/\\/g, '/')
     if (path.startsWith(root + '/')) {
@@ -420,6 +425,18 @@ export class Graph3DEngine {
     }
     const parts = path.split('/').filter(Boolean)
     return parts.length >= 2 ? parts[parts.length - 2] : ''
+  }
+
+  /** Show vault imports when workspace filters hide everything except e.g. lexo. */
+  ensureImportsWorkspaceVisible(): void {
+    const filters = this.getGraphFilters()
+    if (filters.workspaces === null) return
+    const workspaces = this.getWorkspaceList()
+    if (!workspaces.includes('imports')) return
+    const selected = [...new Set([...(filters.workspaces || []), 'imports'])]
+    this.setGraphFilters({
+      workspaces: selected.length >= workspaces.length ? null : selected,
+    })
   }
 
   private passesGraphFilters(node: Record<string, unknown>): boolean {

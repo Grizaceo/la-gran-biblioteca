@@ -234,6 +234,10 @@ async function init(): Promise<void> {
           )
         })
         if (matchedNode) {
+          if (rawPath.toLowerCase().includes('imports/')) {
+            engine.ensureImportsWorkspaceVisible()
+            engine.refreshVisibility()
+          }
           if ((window as any).addActivityLog) {
             ;(window as any).addActivityLog(
               `Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`,

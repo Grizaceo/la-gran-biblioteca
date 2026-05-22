@@ -176,6 +176,22 @@ def test_api_arxiv_search_endpoint(mock_urlopen):
     assert data["results"][0]["arxiv_id"] == "1706.03762"
 
 
+def test_scan_import_paths_adds_github_tree():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        root = Path(tmp_dir)
+        repo = root / "imports" / "github" / "owner-repo"
+        docs = repo / "docs"
+        docs.mkdir(parents=True)
+        (repo / "README.md").write_text("# Demo\n", encoding="utf-8")
+        (docs / "guide.md").write_text("# Guide\n", encoding="utf-8")
+
+        patch = scan_import_paths([repo], root)
+        ids = {n["id"] for n in patch["nodes"]}
+        assert "folder_imports/github/owner-repo" in ids
+        assert "file_imports/github/owner-repo/README.md" in ids
+        assert "file_imports/github/owner-repo/docs/guide.md" in ids
+
+
 def test_scan_import_paths_adds_file_node():
     with tempfile.TemporaryDirectory() as tmp_dir:
         root = Path(tmp_dir)
