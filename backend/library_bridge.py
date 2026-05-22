@@ -31,6 +31,7 @@ from .path_utils import is_windows_path, resolve_node_path
 from .preview import read_preview
 from .imports import download_and_extract_github, import_arxiv, import_pubmed, search_arxiv
 from .overview import build_overview
+from .constellation_layout import apply_constellation_layout, load_catalog
 from .security import SecurityMiddleware, safe_error_detail, PRODUCTION
 from .os_dialog import (
     select_file_in_os,
@@ -185,14 +186,10 @@ async def force_graph_update(ensure_paths: list[Path | str] | None = None):
         if merged_ensure:
             patch = await asyncio.to_thread(scan_import_paths, merged_ensure, WORKSPACE_ROOT)
             raw = merge_scan_graphs(raw, patch)
+        raw = await asyncio.to_thread(_finalize_raw_graph, raw)
         new_graph = await asyncio.to_thread(engine.build_graph, raw)
         set_current_graph(new_graph)
-        
-        # Notify clients creando un nuevo evento para evitar condiciones de carrera
-        global graph_update_event
-        old_event = graph_update_event
-        graph_update_event = asyncio.Event()
-        old_event.set()
+        await _notify_graph_clients()
         logger.info("Forced graph update and notified SSE clients successfully.")
     except Exception as e:
         logger.error(f"Error in force_graph_update: {e}")
@@ -202,6 +199,23 @@ def set_current_graph(g):
     global _node_index
     _graph_state["graph"] = g
     _node_index = {n["id"]: n for n in g["nodes"]}
+
+
+def _finalize_raw_graph(raw: dict) -> dict:
+    """Sugerencias en DB; layout astral solo si hay asignaciones confirmadas."""
+    engine.sync_folder_constellation_suggestions(raw)
+    prefs = engine.list_constellation_prefs()
+    confirmed = [p for p in prefs if p.get("status") == "confirmed"]
+    if not confirmed:
+        return raw
+    return apply_constellation_layout(raw, prefs, only_confirmed=True)
+
+
+async def _notify_graph_clients():
+    global graph_update_event
+    old_event = graph_update_event
+    graph_update_event = asyncio.Event()
+    old_event.set()
 
 
 async def process_fs_events():
@@ -231,6 +245,7 @@ async def lifespan(app: FastAPI):
         set_current_graph(engine.load_from_db())
     else:
         raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
+        raw = _finalize_raw_graph(raw)
         set_current_graph(engine.build_graph(raw))
         
     observer = None
@@ -372,19 +387,85 @@ async def trigger_rescan():
     if merged_ensure:
         patch = scan_import_paths(merged_ensure, WORKSPACE_ROOT)
         raw = merge_scan_graphs(raw, patch)
+    raw = _finalize_raw_graph(raw)
     try:
         new_graph = engine.rebuild_graph(raw)
     except Exception as e:
         raise HTTPException(status_code=500, detail=safe_error_detail(e))
     set_current_graph(new_graph)
-
-    # Notify clients
-    global graph_update_event
-    old_event = graph_update_event
-    graph_update_event = asyncio.Event()
-    old_event.set()
-
+    await _notify_graph_clients()
     return {"status": "ok", "nodes": len(new_graph["nodes"]), "edges": len(new_graph["edges"])}
+
+
+@app.get("/api/constellation/catalog")
+async def get_constellation_catalog():
+    """Catálogo IAU para selector de constelaciones."""
+    catalog = load_catalog()
+    return {
+        "constellations": [
+            {
+                "id": c["id"],
+                "name": c.get("name"),
+                "name_es": c.get("name_es"),
+                "star_count": len(c.get("stars") or []),
+            }
+            for c in catalog
+        ]
+    }
+
+
+@app.get("/api/constellation/prefs")
+async def get_constellation_prefs():
+    """Preferencias y sugerencias por carpeta."""
+    prefs = engine.list_constellation_prefs()
+    pending = [p for p in prefs if p.get("status") == "suggested"]
+    return {"prefs": prefs, "pending": pending}
+
+
+class ConstellationPrefRequest(BaseModel):
+    folder_path: str
+    constellation_id: str
+    status: str = "confirmed"
+
+
+@app.post("/api/constellation/prefs")
+async def save_constellation_pref(req: ConstellationPrefRequest):
+    """Confirmar o cambiar asignación carpeta → constelación."""
+    if req.status not in ("confirmed", "suggested"):
+        raise HTTPException(status_code=422, detail="status must be confirmed or suggested")
+    catalog_ids = {c["id"] for c in load_catalog()}
+    if req.constellation_id not in catalog_ids:
+        raise HTTPException(status_code=422, detail="Unknown constellation_id")
+    folder = Path(req.folder_path)
+    try:
+        folder = folder.resolve()
+    except OSError:
+        raise HTTPException(status_code=422, detail="Invalid folder_path")
+    if not folder.is_dir():
+        raise HTTPException(status_code=422, detail="folder_path is not a directory")
+    suggested_from = "manual" if req.status == "confirmed" else "name_match"
+    pref = engine.upsert_constellation_pref(
+        str(folder), req.constellation_id, req.status, suggested_from
+    )
+    asyncio.create_task(force_graph_update())
+    return {"status": "ok", "pref": pref}
+
+
+@app.delete("/api/constellation/prefs")
+async def delete_constellation_pref(folder_path: str):
+    """Quitar asignación; la rama vuelve al layout de árbol en el próximo escaneo."""
+    if not engine.delete_constellation_pref(folder_path):
+        raise HTTPException(status_code=404, detail="Pref not found")
+    asyncio.create_task(force_graph_update())
+    return {"status": "ok"}
+
+
+@app.post("/api/constellation/relayout")
+async def constellation_relayout():
+    """Recalcula posiciones de constelación sin cambiar nodos/aristas."""
+    await force_graph_update()
+    g = get_current_graph()
+    return {"status": "ok", "nodes": len(g["nodes"]), "edges": len(g["edges"])}
 
 
 @app.post("/api/rollback")

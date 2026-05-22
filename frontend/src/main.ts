@@ -10,6 +10,7 @@ import { setupDetailPanel } from './ui/detailPanel'
 import { setupTooltip } from './ui/tooltip'
 import { setupContextMenu } from './ui/contextMenu'
 import { initMenuBar } from './ui/menuBar'
+import { initConstellationSettings } from './ui/constellationSettings'
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,7 @@ async function init(): Promise<void> {
     const focus = initFocus(engine.fg, engine)
     initVisibility(engine)
     viewOptions = initViewOptions(engine)
+    const constellationSettings = initConstellationSettings(engine, showToast)
 
     panel = setupDetailPanel(container, engine, () => currentGraph, showToast)
 
@@ -105,6 +107,7 @@ async function init(): Promise<void> {
 
     initMenuBar(engine, {
       openViewOptions: () => viewOptions.openPanel(),
+      constellationSettings,
       onRescanComplete: () => {
         statusEl.textContent = 'Sincronizando tras escaneo…'
       },

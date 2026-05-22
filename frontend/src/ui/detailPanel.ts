@@ -1,5 +1,14 @@
 import type { Node, Graph } from '../lib/bridge'
-import { fetchNodeContent, openNode, studyNode, fetchNode } from '../lib/bridge'
+import {
+  fetchNodeContent,
+  openNode,
+  studyNode,
+  fetchNode,
+  fetchConstellationPrefs,
+  fetchConstellationCatalog,
+  saveConstellationPref,
+  deleteConstellationPref,
+} from '../lib/bridge'
 import { PALETTE } from '../render3d/palette.js'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -197,11 +206,96 @@ export function setupDetailPanel(
     }
   }
 
-  function renderActions(node: Node): void {
+  let catalogCache: Array<{ id: string; name: string; name_es?: string }> | null = null
+
+  async function getCatalog() {
+    if (!catalogCache) {
+      const data = await fetchConstellationCatalog()
+      catalogCache = data.constellations
+    }
+    return catalogCache
+  }
+
+  function labelForConstellation(id: string, catalog: Array<{ id: string; name: string; name_es?: string }>) {
+    const c = catalog.find((x) => x.id === id)
+    return c ? (c.name_es || c.name) : id
+  }
+
+  async function renderFolderConstellation(node: Node): Promise<string> {
+    if (!node.path) return ''
+    const catalog = await getCatalog()
+    let pref = null
+    const norm = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '')
+    try {
+      const { prefs } = await fetchConstellationPrefs()
+      const np = norm(node.path!)
+      pref = prefs.find((p) => norm(p.folder_path) === np) ?? null
+    } catch {
+      pref = null
+    }
+    const meta = node.metadata || {}
+    const cid = pref?.constellation_id || (meta.constellation_id as string | undefined)
+    const status = pref?.status || (meta.constellation_status as string | undefined)
+    if (!cid && !pref) {
+      return `<div class="detail-section-title">Constelación</div>
+        <div class="detail-meta-row"><span>Sin asignar</span></div>`
+    }
+    const statusLabel = status === 'confirmed' ? 'Confirmada' : 'Sugerida'
+    const options = catalog
+      .map((c) => `<option value="${escapeAttr(c.id)}" ${c.id === cid ? 'selected' : ''}>${escapeHtml(c.name_es || c.name)}</option>`)
+      .join('')
+    return `<div class="detail-section-title">Constelación</div>
+      <div class="detail-meta-row"><span>Estado</span><span>${escapeHtml(statusLabel)}</span></div>
+      <div class="detail-meta-row"><span>Patrón</span><span>${escapeHtml(labelForConstellation(cid || '', catalog))}</span></div>
+      <label class="detail-constellation-picker">
+        <span>Cambiar</span>
+        <select id="detail-constellation-select">${options}</select>
+      </label>
+      <div class="detail-constellation-btns">
+        ${status === 'suggested' ? '<button class="detail-btn" id="btn-confirm-constellation">Confirmar sugerencia</button>' : ''}
+        <button class="detail-btn" id="btn-save-constellation">Guardar</button>
+        <button class="detail-btn detail-btn-muted" id="btn-clear-constellation">Quitar</button>
+      </div>`
+  }
+
+  function bindFolderConstellationHandlers(node: Node): void {
+    const confirmBtn = document.getElementById('btn-confirm-constellation')
+    const saveBtn = document.getElementById('btn-save-constellation')
+    const clearBtn = document.getElementById('btn-clear-constellation')
+    const select = document.getElementById('detail-constellation-select') as HTMLSelectElement | null
+
+    const save = async (status: 'confirmed' | 'suggested') => {
+      if (!node.path || !select?.value) return
+      try {
+        await saveConstellationPref(node.path, select.value, status)
+        showToast('Constelación guardada')
+        await renderDetailPanel(await fetchNode(node.id))
+      } catch (err) {
+        showToast(`Error: ${(err as Error).message}`, true)
+      }
+    }
+
+    confirmBtn?.addEventListener('click', () => save('confirmed'))
+    saveBtn?.addEventListener('click', () => save('confirmed'))
+    clearBtn?.addEventListener('click', async () => {
+      if (!node.path) return
+      try {
+        await deleteConstellationPref(node.path)
+        showToast('Asignación eliminada')
+        await renderDetailPanel(await fetchNode(node.id))
+      } catch (err) {
+        showToast(`Error: ${(err as Error).message}`, true)
+      }
+    })
+  }
+
+  async function renderActions(node: Node): Promise<void> {
     if (!node.path) { detailActions.innerHTML = ''; return }
 
     if (node.type === 'folder') {
-      detailActions.innerHTML = `<button class="detail-btn" id="btn-open-folder">Abrir carpeta</button>`
+      const constellationHtml = await renderFolderConstellation(node)
+      detailActions.innerHTML = `${constellationHtml}
+        <button class="detail-btn" id="btn-open-folder">Abrir carpeta</button>`
       document.getElementById('btn-open-folder')!.addEventListener('click', async () => {
         try {
           await openNode(node.id, false)
@@ -209,6 +303,7 @@ export function setupDetailPanel(
           showToast(`No se pudo abrir la carpeta: ${(err as Error).message}`, true)
         }
       })
+      bindFolderConstellationHandlers(node)
       return
     }
 
@@ -248,10 +343,10 @@ export function setupDetailPanel(
       .map(([k, v]) => `<div class="detail-meta-row"><span>${escapeHtml(k)}</span><span>${formatMetaValue(k, v)}</span></div>`)
       .join('')
     detailMeta.innerHTML = rows
-    applyExternalLinks(detailMeta)
       || '<div class="detail-meta-row"><span style="opacity:.4">sin metadatos</span></div>'
+    applyExternalLinks(detailMeta)
 
-    renderActions(node)
+    await renderActions(node)
     renderNeighbors(node.id)
 
     detailPanel.classList.add('active')

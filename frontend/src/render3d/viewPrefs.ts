@@ -3,6 +3,7 @@ export const GRAPH_FILTERS_KEY = 'lgb.graphFilters'
 
 export type QualityPreset = 'auto' | 'high' | 'low'
 export type StudyFilter = 'all' | 'studied' | 'unstudied'
+export type LayoutMode = 'tree' | 'constellation'
 
 export interface ViewPrefs {
   starfield?: boolean
@@ -10,6 +11,7 @@ export interface ViewPrefs {
   minimap?: boolean
   labels?: boolean
   quality?: QualityPreset
+  layoutMode?: LayoutMode
 }
 
 export interface GraphFiltersState {
@@ -52,4 +54,8 @@ export function loadGraphFilters(): GraphFiltersState {
 
 export function saveGraphFilters(filters: GraphFiltersState): void {
   localStorage.setItem(GRAPH_FILTERS_KEY, JSON.stringify(filters))
+}
+
+export function getLayoutMode(): LayoutMode {
+  return loadViewPrefs().layoutMode === 'constellation' ? 'constellation' : 'tree'
 }

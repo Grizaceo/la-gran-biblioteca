@@ -7,10 +7,12 @@ import shutil
 import json
 import sqlite3
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 
 import os
+
+from .constellation_layout import now_iso, suggest_constellation
 
 WORKSPACE_ROOT = Path.home() / ".hermes" / "workspaces"
 _DB_DEFAULT = str(Path(__file__).parent / "library.db")
@@ -50,6 +52,13 @@ class GraphEngine:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute('CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, type TEXT, label TEXT, path TEXT, metadata TEXT, position TEXT)')
         conn.execute('CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, type TEXT, PRIMARY KEY (source, target, type))')
+        conn.execute('''CREATE TABLE IF NOT EXISTS constellation_prefs (
+            folder_path TEXT PRIMARY KEY,
+            constellation_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            suggested_from TEXT,
+            updated_at TEXT NOT NULL
+        )''')
         conn.commit()
         conn.close()
 
@@ -169,6 +178,102 @@ class GraphEngine:
         conn.close()
         if node_id in self.nodes:
             self.nodes[node_id].metadata = metadata
+
+    def list_constellation_prefs(self) -> List[Dict[str, Any]]:
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT folder_path, constellation_id, status, suggested_from, updated_at "
+            "FROM constellation_prefs ORDER BY folder_path"
+        ).fetchall()
+        conn.close()
+        return [
+            {
+                "folder_path": r[0],
+                "constellation_id": r[1],
+                "status": r[2],
+                "suggested_from": r[3],
+                "updated_at": r[4],
+            }
+            for r in rows
+        ]
+
+    def get_constellation_pref(self, folder_path: str) -> Optional[Dict[str, Any]]:
+        fp = str(Path(folder_path).resolve())
+        conn = self._connect()
+        row = conn.execute(
+            "SELECT folder_path, constellation_id, status, suggested_from, updated_at "
+            "FROM constellation_prefs WHERE folder_path = ?",
+            (fp,),
+        ).fetchone()
+        conn.close()
+        if not row:
+            return None
+        return {
+            "folder_path": row[0],
+            "constellation_id": row[1],
+            "status": row[2],
+            "suggested_from": row[3],
+            "updated_at": row[4],
+        }
+
+    def upsert_constellation_pref(
+        self,
+        folder_path: str,
+        constellation_id: str,
+        status: str,
+        suggested_from: str = "manual",
+    ) -> Dict[str, Any]:
+        fp = str(Path(folder_path).resolve())
+        ts = now_iso()
+        conn = self._connect()
+        conn.execute(
+            """INSERT INTO constellation_prefs (folder_path, constellation_id, status, suggested_from, updated_at)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(folder_path) DO UPDATE SET
+                 constellation_id = excluded.constellation_id,
+                 status = excluded.status,
+                 suggested_from = excluded.suggested_from,
+                 updated_at = excluded.updated_at""",
+            (fp, constellation_id, status, suggested_from, ts),
+        )
+        conn.commit()
+        conn.close()
+        return {
+            "folder_path": fp,
+            "constellation_id": constellation_id,
+            "status": status,
+            "suggested_from": suggested_from,
+            "updated_at": ts,
+        }
+
+    def delete_constellation_pref(self, folder_path: str) -> bool:
+        fp = str(Path(folder_path).resolve())
+        conn = self._connect()
+        cur = conn.execute("DELETE FROM constellation_prefs WHERE folder_path = ?", (fp,))
+        conn.commit()
+        conn.close()
+        return cur.rowcount > 0
+
+    def sync_folder_constellation_suggestions(self, graph: Dict[str, Any]) -> int:
+        """Insert suggested prefs for new folder nodes without existing pref."""
+        existing = {p["folder_path"] for p in self.list_constellation_prefs()}
+        added = 0
+        for n in graph.get("nodes", []):
+            if n.get("type") != "folder":
+                continue
+            path = n.get("path")
+            if not path:
+                continue
+            fp = str(Path(path).resolve())
+            if fp in existing:
+                continue
+            cid = suggest_constellation(n.get("label") or Path(path).name)
+            if not cid:
+                continue
+            self.upsert_constellation_pref(fp, cid, "suggested", "name_match")
+            existing.add(fp)
+            added += 1
+        return added
 
 
 if __name__ == "__main__":

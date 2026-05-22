@@ -126,6 +126,110 @@ export function getRenderProfile(nodeCount: number): RenderProfile {
   }
 }
 
+export interface GraphBounds3D {
+  center: { x: number; y: number; z: number }
+  radius: number
+}
+
+type NodeWithCoords = {
+  x?: number
+  y?: number
+  z?: number
+  position?: { x?: number; y?: number; z?: number }
+}
+
+function nodeCoords(n: NodeWithCoords): { x: number; y: number; z: number } {
+  const pos = n.position
+  return {
+    x: typeof n.x === 'number' ? n.x : (typeof pos?.x === 'number' ? pos.x : 0),
+    y: typeof n.y === 'number' ? n.y : (typeof pos?.y === 'number' ? pos.y : 0),
+    z: typeof n.z === 'number' ? n.z : (typeof pos?.z === 'number' ? pos.z : 0),
+  }
+}
+
+/** Axis-aligned bounds + bounding-sphere radius from node coordinates. */
+export function computeGraphBounds3D(
+  nodes: NodeWithCoords[],
+  fallbackRadius = 800,
+): GraphBounds3D {
+  if (!nodes?.length) {
+    return { center: { x: 0, y: 0, z: 0 }, radius: fallbackRadius }
+  }
+
+  let minX = Infinity
+  let minY = Infinity
+  let minZ = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let maxZ = -Infinity
+
+  for (const n of nodes) {
+    const { x, y, z } = nodeCoords(n)
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxY = Math.max(maxY, y)
+    minZ = Math.min(minZ, z)
+    maxX = Math.max(maxX, x)
+    maxZ = Math.max(maxZ, z)
+  }
+
+  if (!Number.isFinite(minX)) {
+    return { center: { x: 0, y: 0, z: 0 }, radius: fallbackRadius }
+  }
+
+  const center = {
+    x: (minX + maxX) / 2,
+    y: (minY + maxY) / 2,
+    z: (minZ + maxZ) / 2,
+  }
+
+  const halfDiag = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2
+  let maxDist = halfDiag
+  for (const n of nodes) {
+    const { x, y, z } = nodeCoords(n)
+    const d = Math.hypot(x - center.x, y - center.y, z - center.z)
+    if (d > maxDist) maxDist = d
+  }
+
+  const radius = Math.max(120, maxDist || fallbackRadius)
+  return { center, radius }
+}
+
+export interface StarfieldConfig {
+  count: number
+  center: { x: number; y: number; z: number }
+  outerRadius: number
+  pointSize: number
+}
+
+const STARFIELD_MIN_OUTER_RADIUS = 650
+const STARFIELD_RADIUS_MARGIN = 1.5
+
+/** Star count and point size scale with graph extent so the backdrop fills the scene. */
+export function buildStarfieldConfig(
+  bounds: GraphBounds3D,
+  baseStarCount: number,
+): StarfieldConfig {
+  const outerRadius = Math.max(
+    STARFIELD_MIN_OUTER_RADIUS,
+    bounds.radius * STARFIELD_RADIUS_MARGIN,
+  )
+  const extentScale = outerRadius / 800
+  const count = Math.min(
+    2800,
+    Math.round(baseStarCount * Math.max(1, Math.min(2.2, extentScale ** 0.65))),
+  )
+  // Screen-space px; gentle growth so large graphs stay subtle (was /220, too bold)
+  const pointSize = Math.min(3.2, Math.max(1.1, outerRadius / 520))
+
+  return {
+    count,
+    center: bounds.center,
+    outerRadius,
+    pointSize,
+  }
+}
+
 function isVaultImportNode(node: { id?: string; path?: string }): boolean {
   const blob = `${node.id || ''} ${node.path || ''}`.toLowerCase()
   return (

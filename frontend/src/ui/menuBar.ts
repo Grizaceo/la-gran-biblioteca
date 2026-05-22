@@ -7,8 +7,11 @@ import {
   type ViewPrefs,
 } from '../render3d/viewPrefs'
 
+import type { ConstellationSettingsAPI } from './constellationSettings'
+
 export interface MenuBarOptions {
   openViewOptions?: () => void
+  constellationSettings?: ConstellationSettingsAPI
   onRescanComplete?: () => void
 }
 
@@ -134,6 +137,15 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
       case 'toggle-view-options':
         opts.openViewOptions?.()
         break
+      case 'toggle-constellation-layout':
+        toggleConstellationLayout()
+        break
+      case 'open-constellation-settings':
+        opts.constellationSettings?.openPanel()
+        break
+      case 'constellation-relayout':
+        runConstellationRelayout()
+        break
       case 'toggle-labels':
         toggleLabels()
         break
@@ -172,6 +184,30 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
 
   function persistViewPrefs(): void {
     saveViewPrefs(viewPrefs)
+  }
+
+  function toggleConstellationLayout(): void {
+    const cs = opts.constellationSettings
+    if (!cs) return
+    const next = !cs.isLayoutEnabled()
+    cs.setLayoutEnabled(next)
+    showNotification(
+      next ? 'Disposición en constelaciones activada' : 'Layout de árbol (predeterminado)',
+      'info',
+    )
+  }
+
+  async function runConstellationRelayout(): Promise<void> {
+    if (!opts.constellationSettings?.isLayoutEnabled()) {
+      showNotification('Activa primero la disposición en constelaciones', 'info')
+      return
+    }
+    try {
+      await bridge.triggerConstellationRelayout()
+      showNotification('Layout astral recalculado', 'success')
+    } catch (err) {
+      showNotification(`Error: ${(err as Error).message}`, 'error')
+    }
   }
 
   function applyViewPrefs(): void {

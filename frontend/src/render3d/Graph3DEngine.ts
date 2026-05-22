@@ -3,12 +3,21 @@ import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { Node, Edge, Graph } from '../lib/bridge'
 import { PALETTE } from './palette.js'
-import { getRenderProfile, createProgressiveLoader, type RenderProfile } from './renderOptimizations'
+import {
+  getRenderProfile,
+  createProgressiveLoader,
+  computeGraphBounds3D,
+  buildStarfieldConfig,
+  type RenderProfile,
+  type StarfieldConfig,
+} from './renderOptimizations'
 import {
   type GraphFiltersState,
   type QualityPreset,
+  type LayoutMode,
   DEFAULT_GRAPH_FILTERS,
   loadGraphFilters,
+  getLayoutMode,
 } from './viewPrefs'
 
 export type { GraphFiltersState }
@@ -109,23 +118,24 @@ function computeDegree(edges: Edge[]): Map<string, number> {
   return deg
 }
 
-// Starfield background generator - adapted from Graphium/SAIR
-function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
+// Starfield background — fills the graph bounding volume (adapted from Graphium/SAIR)
+function createStarfield(scene: THREE.Scene, config: StarfieldConfig): THREE.Points {
+  const { count, center, outerRadius, pointSize } = config
   const starsGeo = new THREE.BufferGeometry()
-  const starCount = count
-  const positions = new Float32Array(starCount * 3)
-  const colors = new Float32Array(starCount * 3)
+  const positions = new Float32Array(count * 3)
+  const colors = new Float32Array(count * 3)
 
-  for (let i = 0; i < starCount; i++) {
+  for (let i = 0; i < count; i++) {
     const theta = Math.random() * Math.PI * 2
     const phi = Math.acos(2 * Math.random() - 1)
-    const r = 700 + Math.random() * 100
+    // Uniform volume distribution inside the sphere that wraps the graph
+    const r = outerRadius * Math.cbrt(Math.random())
 
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
-    positions[i * 3 + 2] = r * Math.cos(phi)
+    positions[i * 3] = center.x + r * Math.sin(phi) * Math.cos(theta)
+    positions[i * 3 + 1] = center.y + r * Math.sin(phi) * Math.sin(theta)
+    positions[i * 3 + 2] = center.z + r * Math.cos(phi)
 
-    const brightness = 0.5 + Math.random() * 0.5
+    const brightness = 0.45 + Math.random() * 0.55
     colors[i * 3] = 0.8 * brightness
     colors[i * 3 + 1] = 0.9 * brightness
     colors[i * 3 + 2] = 1.0 * brightness
@@ -135,12 +145,13 @@ function createStarfield(scene: THREE.Scene, count = 800): THREE.Points {
   starsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
   const starsMat = new THREE.PointsMaterial({
-    size: 1.5,
+    size: pointSize,
+    sizeAttenuation: false,
     vertexColors: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.62,
   })
 
   const starfield = new THREE.Points(starsGeo, starsMat)
@@ -167,8 +178,11 @@ export class Graph3DEngine {
   public showLabels = false
   public minimapStride = 1
   public qualityPreset: QualityPreset = 'auto'
+  public layoutMode: LayoutMode = getLayoutMode()
 
   onLoadProgress?: (p: LoadProgress) => void
+  private _savedLinkStrength = 1
+  private _savedChargeStrength = -60
 
   private nodeIndex = new Map<string, Record<string, unknown>>()
   private workspaceRoot = ''
@@ -194,6 +208,7 @@ export class Graph3DEngine {
   private _tick!: () => void
   private _lodNodeCount = 0
   private _progressivePump: (() => void) | null = null
+  private _apiGraph: Graph | null = null
 
   constructor(container: HTMLElement) {
     const bootProfile = getRenderProfile(400)
@@ -255,7 +270,11 @@ export class Graph3DEngine {
       .linkOpacity(0.7)
 
     const scene = this.fg.scene()
-    this.starfield = createStarfield(scene)
+    const bootConfig = buildStarfieldConfig(
+      computeGraphBounds3D([]),
+      bootProfile.starCount,
+    )
+    this.starfield = createStarfield(scene, bootConfig)
     scene.add(new THREE.AmbientLight(0x404060, 0.6))
     scene.add(new THREE.PointLight(0xffffff, 0.9, 1200))
 
@@ -263,6 +282,10 @@ export class Graph3DEngine {
       if (this._zoomOnStop) {
         this.fg.zoomToFit(1000, 40)
         this._zoomOnStop = false
+        const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
+        if (nodes?.length) {
+          this._rebuildStarfield(nodes, this.getEffectiveProfile(nodes.length))
+        }
       }
       try { this.onStop?.() } catch (_) { /* */ }
       setTimeout(() => {
@@ -506,6 +529,83 @@ export class Graph3DEngine {
     this.updateParticleVisibility()
   }
 
+  setLayoutMode(mode: LayoutMode): void {
+    this.layoutMode = mode
+    if (this._apiGraph) this.setGraph(this._apiGraph)
+  }
+
+  private getCurrentGraphSnapshot(): Graph | null {
+    const { nodes, links } = this.fg.graphData() as {
+      nodes: Record<string, unknown>[]
+      links: Array<{ source: string; target: string; type?: string }>
+    }
+    if (!nodes?.length) return null
+    const edges = links.map((l) => {
+      const src = typeof l.source === 'object' ? (l.source as { id: string }).id : l.source
+      const tgt = typeof l.target === 'object' ? (l.target as { id: string }).id : l.target
+      return { source: src as string, target: tgt as string, type: (l.type as string) || 'default' }
+    })
+    const apiNodes = nodes.map((n) => {
+      const meta = { ...(n.metadata as Record<string, unknown> || {}) }
+      return {
+        id: n.id as string,
+        type: (n.type as string) || 'default',
+        label: (n.label as string) || (n.name as string) || '',
+        path: (n.path as string) || '',
+        metadata: meta,
+        position: {
+          x: (n.x as number) || 0,
+          y: (n.y as number) || 0,
+          z: (n.z as number) || 0,
+        },
+      }
+    }) as Node[]
+    return { nodes: apiNodes, edges }
+  }
+
+  private _rebuildStarfield(
+    nodes: Record<string, unknown>[],
+    profile: RenderProfile,
+  ): void {
+    const config = buildStarfieldConfig(
+      computeGraphBounds3D(nodes),
+      profile.starCount,
+    )
+    const scene = this.fg.scene()
+    if (this.starfield) {
+      scene.remove(this.starfield)
+      this.starfield.geometry.dispose()
+      if (Array.isArray(this.starfield.material)) {
+        this.starfield.material.forEach(m => m.dispose())
+      } else {
+        this.starfield.material.dispose()
+      }
+    }
+    this.starfield = createStarfield(scene, config)
+  }
+
+  private _applyLayoutForces(profile: RenderProfile): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fg = this.fg as any
+    const link = fg.d3Force?.('link')
+    const charge = fg.d3Force?.('charge')
+    if (this.layoutMode === 'constellation') {
+      if (link?.strength) {
+        this._savedLinkStrength = link.strength()
+        link.strength(0)
+      }
+      if (charge?.strength) {
+        this._savedChargeStrength = charge.strength()
+        charge.strength(0)
+      }
+      fg.warmupTicks(0).cooldownTicks(0)
+    } else {
+      if (link?.strength) link.strength(this._savedLinkStrength)
+      if (charge?.strength) charge.strength(this._savedChargeStrength)
+      fg.warmupTicks(profile.warmupTicks).cooldownTicks(profile.cooldownTicks)
+    }
+  }
+
   setQualityPreset(preset: QualityPreset): void {
     this.qualityPreset = preset
     const nodeCount = this._lodNodeCount || 400
@@ -602,6 +702,7 @@ export class Graph3DEngine {
   }
 
   setGraph(g: Graph): void {
+    this._apiGraph = g
     this._progressivePump = null
     const degree = computeDegree(g.edges)
     this.nodeIndex.clear()
@@ -622,23 +723,8 @@ export class Graph3DEngine {
     this._lodSegMid = Math.max(3, profile.nodeSegments)
     this._lodSegLow = Math.max(2, Math.floor(profile.nodeSegments * 0.6))
 
-    // Apply adaptive render profile settings
-    this.fg
-      .warmupTicks(profile.warmupTicks)
-      .cooldownTicks(profile.cooldownTicks)
-
-    // Update adaptive starfield stars
-    const scene = this.fg.scene()
-    if (this.starfield) {
-      scene.remove(this.starfield)
-      this.starfield.geometry.dispose()
-      if (Array.isArray(this.starfield.material)) {
-        this.starfield.material.forEach(m => m.dispose())
-      } else {
-        this.starfield.material.dispose()
-      }
-    }
-    this.starfield = createStarfield(scene, profile.starCount)
+    this._applyLayoutForces(profile)
+    this._rebuildStarfield(processedNodes, profile)
 
     // Optimize link geometry (Tube vs Simple Line) based on graph scale
     if (nodeCount >= 800) {
@@ -677,6 +763,7 @@ export class Graph3DEngine {
   }
 
   applyUpdate(g: Graph): void {
+    this._apiGraph = g
     if (this._progressivePump) {
       this._progressivePump = null
     }
@@ -703,7 +790,8 @@ export class Graph3DEngine {
 
     const profile = this.getEffectiveProfile(nodes.length)
     this.minimapStride = profile.minimapStride
-    this.fg.warmupTicks(profile.warmupTicks).cooldownTicks(profile.cooldownTicks)
+    this._applyLayoutForces(profile)
+    this._rebuildStarfield(nodes, profile)
     if (nodes.length >= 800) {
       this.fg.linkResolution(0)
     } else {
@@ -767,7 +855,31 @@ export class Graph3DEngine {
   private hydrate(n: Node, degree = 0): Record<string, unknown> {
     const studyCount = (n.metadata?.study_count as number | undefined) ?? 0
     const weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
-    return { ...n, name: n.label, weight, degree }
+    const h: Record<string, unknown> = { ...n, name: n.label, weight, degree }
+
+    // Modo árbol (predeterminado): sin posiciones del backend — el force graph 3D
+    // organiza el espacio como antes de constelaciones.
+    if (this.layoutMode !== 'constellation') {
+      return h
+    }
+
+    const meta = n.metadata || {}
+    const p = n.position
+    const hasConstellationMeta = Boolean(meta.constellation_id)
+    const hasValid3D =
+      p != null &&
+      typeof p.x === 'number' &&
+      typeof p.y === 'number' &&
+      typeof p.z === 'number'
+    if (hasConstellationMeta || hasValid3D) {
+      h.x = p!.x
+      h.y = p!.y
+      h.z = p!.z
+      h.fx = h.x
+      h.fy = h.y
+      h.fz = h.z
+    }
+    return h
   }
 
   destroy(): void {
