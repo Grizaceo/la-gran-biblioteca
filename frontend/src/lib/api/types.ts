@@ -77,3 +77,23 @@ export interface ConstellationPref {
   suggested_from?: string
   updated_at?: string
 }
+
+export interface ConstellationStar {
+  name?: string
+  ra?: number
+  dec?: number
+  mag?: number
+}
+
+export interface ConstellationDetail {
+  id: string
+  name: string
+  name_es?: string
+  summary_es?: string
+  season?: string
+  hemisphere?: string
+  center_ra?: number
+  center_dec?: number
+  star_count: number
+  stars: ConstellationStar[]
+}

@@ -1,5 +1,6 @@
 import type { Graph } from '../lib/bridge'
 import type { Graph3DEngine } from '../render3d/Graph3DEngine'
+import { loadViewPrefs } from '../render3d/viewPrefs'
 
 export interface SyncGraphContext {
   engine: Graph3DEngine
@@ -45,4 +46,8 @@ export function processGraphUpdate(
     addActivityLog: ctx.addActivityLog,
   })
   ctx.engine.setPendingFocusQueue(remaining)
+
+  if (loadViewPrefs().layoutMode === 'constellation') {
+    ctx.engine.setLayoutMode('constellation')
+  }
 }

@@ -562,6 +562,149 @@
       color: rgba(255, 255, 255, 0.55);
     }
     .constellation-actions { margin-top: 12px; }
+    .constellation-banner {
+      margin: 12px 0;
+      padding: 10px 12px;
+      background: rgba(255, 193, 7, 0.12);
+      border: 1px solid rgba(255, 193, 7, 0.35);
+      border-radius: 6px;
+      color: rgba(255, 224, 130, 0.95);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .constellation-confirmed-list button.cs-fly-confirmed {
+      background: none;
+      border: none;
+      color: #4fc3f7;
+      padding: 4px 0;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: left;
+      width: 100%;
+    }
+    .constellation-confirmed-list button.cs-fly-confirmed:hover {
+      text-decoration: underline;
+    }
+    .constellation-picker-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(0, 0, 8, 0.65);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .constellation-picker-overlay.active { display: flex; }
+    .constellation-picker-dialog {
+      width: min(440px, 100%);
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: rgba(0, 0, 17, 0.98);
+      border: 1px solid rgba(79, 195, 247, 0.35);
+      border-radius: 10px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+    }
+    .constellation-picker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .constellation-picker-header h3 {
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .constellation-picker-close {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 22px;
+      cursor: pointer;
+    }
+    .constellation-picker-sub {
+      padding: 8px 16px 0;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .constellation-picker-search {
+      margin: 10px 16px;
+      padding: 8px 10px;
+      background: rgba(0, 0, 17, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: #cfd8dc;
+      font-size: 12px;
+    }
+    .constellation-picker-preview {
+      padding: 0 16px 8px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      font-family: 'Courier New', monospace;
+    }
+    .constellation-picker-list {
+      list-style: none;
+      margin: 0;
+      padding: 0 8px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 120px;
+      max-height: 50vh;
+    }
+    .constellation-picker-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+      padding: 8px 10px;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.75);
+      text-align: left;
+    }
+    .constellation-picker-item:hover,
+    .constellation-picker-item.selected {
+      background: rgba(79, 195, 247, 0.15);
+      color: #4fc3f7;
+    }
+    .cp-item-id { font-size: 10px; opacity: 0.55; font-family: 'Courier New', monospace; }
+    .constellation-picker-actions {
+      padding: 10px 16px 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .constellation-picker-cancel {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.6);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .detail-constellation-card {
+      margin: 10px 0 12px;
+      padding: 10px 12px;
+      background: rgba(79, 195, 247, 0.08);
+      border: 1px solid rgba(79, 195, 247, 0.2);
+      border-radius: 6px;
+    }
+    .detail-constellation-lead {
+      margin-bottom: 8px;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.75);
+    }
+    .detail-constellation-summary {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 8px;
+      line-height: 1.45;
+    }
     .detail-constellation-picker {
       display: flex; flex-direction: column; gap: 6px;
       margin: 10px 0;
@@ -1156,12 +1299,12 @@
       </div>
       <!-- Constelaciones (opcional; carga por defecto sin este modo) -->
       <div class="menu-item" id="menu-constellations">
-        <button type="button" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Constelaciones</button>
+        <button type="button" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Constelaciones (experimental)</button>
         <div class="menu-dropdown" role="menu">
-          <div class="menu-option" data-action="toggle-constellation-layout" id="menu-opt-constellation-layout">Disposición en constelaciones (OFF)</div>
-          <div class="menu-option" data-action="open-constellation-settings">Configuración de constelaciones…</div>
+          <div class="menu-option" data-action="toggle-constellation-layout" id="menu-opt-constellation-layout">Disposición en constelaciones (experimental) (OFF)</div>
+          <div class="menu-option" data-action="open-constellation-settings">Configuración de constelaciones (experimental)…</div>
           <div class="menu-divider"></div>
-          <div class="menu-option" data-action="constellation-relayout">Recalcular layout astral</div>
+          <div class="menu-option" data-action="constellation-relayout">Recalcular layout astral (experimental)</div>
         </div>
       </div>
       <!-- Licences -->
@@ -1201,7 +1344,7 @@
   <div id="constellation-panel" role="dialog" aria-labelledby="constellation-panel-title" aria-hidden="true">
     <div class="constellation-panel-inner">
       <div class="constellation-panel-header">
-        <h2 id="constellation-panel-title">Constelaciones</h2>
+        <h2 id="constellation-panel-title">Constelaciones (experimental)</h2>
         <button type="button" id="constellation-panel-close" aria-label="Cerrar">&times;</button>
       </div>
       <div id="constellation-panel-body"></div>

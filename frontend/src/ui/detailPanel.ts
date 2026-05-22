@@ -9,7 +9,11 @@ import {
   saveConstellationPref,
   deleteConstellationPref,
 } from '../lib/bridge'
+import { loadConstellationDetail } from '../services/constellationService'
 import { PALETTE } from '../render3d/palette.js'
+import { CONSTELLATION_DETAIL_SECTION } from './constellationCopy'
+import { findFolderNodeId, flyCameraToNode } from './constellationFlyTo'
+import type { ConstellationSettingsAPI } from './constellationSettings'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -88,6 +92,7 @@ export function setupDetailPanel(
   engine: Engine,
   getCurrentGraph: () => Graph | null,
   showToast: (msg: string, isError?: boolean) => void,
+  constellationSettings?: ConstellationSettingsAPI,
 ): DetailPanelAPI {
   const detailPanel     = document.getElementById('node-detail')!
   const detailName      = document.getElementById('node-detail-name')!
@@ -221,6 +226,41 @@ export function setupDetailPanel(
     return c ? (c.name_es || c.name) : id
   }
 
+  async function renderConstellationCard(
+    cid: string,
+    folderLabel: string,
+    status: string | undefined,
+  ): Promise<string> {
+    if (status !== 'confirmed') return ''
+    try {
+      const detail = await loadConstellationDetail(cid)
+      const cname = detail.name_es || detail.name
+      const summary = detail.summary_es
+        ? `<p class="detail-constellation-summary">${escapeHtml(detail.summary_es)}</p>`
+        : ''
+      const season = detail.season
+        ? `<div class="detail-meta-row"><span>Época</span><span>${escapeHtml(detail.season)}</span></div>`
+        : ''
+      const namedStars = (detail.stars || [])
+        .filter((s) => s.name && !String(s.name).includes('_'))
+        .slice(0, 5)
+        .map((s) => s.name)
+        .join(', ')
+      const starsRow = namedStars
+        ? `<div class="detail-meta-row"><span>Estrellas</span><span>${escapeHtml(namedStars)}</span></div>`
+        : ''
+      return `<div class="detail-constellation-card">
+        <p class="detail-constellation-lead">Tu carpeta <strong>${escapeHtml(folderLabel)}</strong> está mapeada a <strong>${escapeHtml(cname)}</strong> en el cielo.</p>
+        ${summary}
+        ${season}
+        ${starsRow}
+        <button type="button" class="detail-btn" id="btn-fly-constellation">Ver en el grafo</button>
+      </div>`
+    } catch {
+      return ''
+    }
+  }
+
   async function renderFolderConstellation(node: Node): Promise<string> {
     if (!node.path) return ''
     const catalog = await getCatalog()
@@ -236,17 +276,20 @@ export function setupDetailPanel(
     const meta = node.metadata || {}
     const cid = pref?.constellation_id || (meta.constellation_id as string | undefined)
     const status = pref?.status || (meta.constellation_status as string | undefined)
+    const folderLabel = node.label || node.path.split(/[/\\]/).pop() || node.path
     if (!cid && !pref) {
-      return `<div class="detail-section-title">Constelación</div>
+      return `<div class="detail-section-title">${escapeHtml(CONSTELLATION_DETAIL_SECTION)}</div>
         <div class="detail-meta-row"><span>Sin asignar</span></div>`
     }
     const statusLabel = status === 'confirmed' ? 'Confirmada' : 'Sugerida'
     const options = catalog
       .map((c) => `<option value="${escapeAttr(c.id)}" ${c.id === cid ? 'selected' : ''}>${escapeHtml(c.name_es || c.name)}</option>`)
       .join('')
-    return `<div class="detail-section-title">Constelación</div>
+    const card = cid ? await renderConstellationCard(cid, folderLabel, status) : ''
+    return `<div class="detail-section-title">${escapeHtml(CONSTELLATION_DETAIL_SECTION)}</div>
       <div class="detail-meta-row"><span>Estado</span><span>${escapeHtml(statusLabel)}</span></div>
       <div class="detail-meta-row"><span>Patrón</span><span>${escapeHtml(labelForConstellation(cid || '', catalog))}</span></div>
+      ${card}
       <label class="detail-constellation-picker">
         <span>Cambiar</span>
         <select id="detail-constellation-select">${options}</select>
@@ -268,12 +311,23 @@ export function setupDetailPanel(
       if (!node.path || !select?.value) return
       try {
         await saveConstellationPref(node.path, select.value, status)
+        if (status === 'confirmed') {
+          constellationSettings?.notifyConfirmedWithoutLayout()
+        }
         showToast('Constelación guardada')
         await renderDetailPanel(await fetchNode(node.id))
       } catch (err) {
         showToast(`Error: ${(err as Error).message}`, true)
       }
     }
+
+    document.getElementById('btn-fly-constellation')?.addEventListener('click', () => {
+      if (!node.path) return
+      const nodeId = findFolderNodeId(getCurrentGraph(), node.path)
+      if (!nodeId || !flyCameraToNode(engine.fg, nodeId)) {
+        showToast('No se pudo centrar la cámara en esta carpeta', true)
+      }
+    })
 
     confirmBtn?.addEventListener('click', () => save('confirmed'))
     saveBtn?.addEventListener('click', () => save('confirmed'))

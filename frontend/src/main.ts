@@ -98,9 +98,15 @@ async function init(): Promise<void> {
     const focus = initFocus(engine.fg, engine)
     initVisibility(engine)
     viewOptions = initViewOptions(engine)
-    const constellationSettings = initConstellationSettings(engine, showToast)
+    const constellationSettings = initConstellationSettings(engine, showToast, () => currentGraph)
 
-    panel = setupDetailPanel(container, engine, () => currentGraph, showToast)
+    panel = setupDetailPanel(
+      container,
+      engine,
+      () => currentGraph,
+      showToast,
+      constellationSettings,
+    )
 
     setupTooltip(engine, container, (node) => focus.setHoveredNode(node))
 

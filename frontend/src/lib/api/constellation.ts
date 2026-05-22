@@ -1,11 +1,21 @@
 import { apiFetch, apiHeaders, handleResponseError } from './client'
-import type { ConstellationCatalogEntry, ConstellationPref } from './types'
+import type {
+  ConstellationCatalogEntry,
+  ConstellationDetail,
+  ConstellationPref,
+} from './types'
 
 export async function fetchConstellationCatalog(): Promise<{
   constellations: ConstellationCatalogEntry[]
 }> {
   const res = await apiFetch('/constellation/catalog')
   if (!res.ok) throw new Error(`Failed to fetch constellation catalog: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchConstellationDetail(id: string): Promise<ConstellationDetail> {
+  const res = await apiFetch(`/constellation/${encodeURIComponent(id)}`)
+  if (!res.ok) throw new Error(`Failed to fetch constellation: ${res.status}`)
   return res.json()
 }
 

@@ -1,11 +1,16 @@
 import {
   deleteConstellationPref,
   fetchConstellationCatalog,
+  fetchConstellationDetail,
   fetchConstellationPrefs,
   saveConstellationPref,
   triggerConstellationRelayout,
 } from '../lib/api/constellation'
-import type { ConstellationCatalogEntry, ConstellationPref } from '../lib/api/types'
+import type {
+  ConstellationCatalogEntry,
+  ConstellationDetail,
+  ConstellationPref,
+} from '../lib/api/types'
 
 let catalogCache: ConstellationCatalogEntry[] | null = null
 
@@ -33,6 +38,16 @@ export async function loadPrefs(): Promise<{
   pending: ConstellationPref[]
 }> {
   return fetchConstellationPrefs()
+}
+
+const detailCache = new Map<string, ConstellationDetail>()
+
+export async function loadConstellationDetail(id: string): Promise<ConstellationDetail> {
+  const cached = detailCache.get(id)
+  if (cached) return cached
+  const detail = await fetchConstellationDetail(id)
+  detailCache.set(id, detail)
+  return detail
 }
 
 export async function confirmPref(

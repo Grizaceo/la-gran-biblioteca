@@ -8,6 +8,12 @@ import {
 } from '../render3d/viewPrefs'
 
 import type { ConstellationSettingsAPI } from './constellationSettings'
+import {
+  TOAST_ENABLE_LAYOUT_FIRST,
+  TOAST_LAYOUT_ON_ACTIVATED,
+  TOAST_RELAYOUT_OK,
+  TOAST_TREE_LAYOUT,
+} from './constellationCopy'
 import { createModalShell } from './modals/modalShell'
 
 export interface MenuBarOptions {
@@ -192,20 +198,17 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
     if (!cs) return
     const next = !cs.isLayoutEnabled()
     cs.setLayoutEnabled(next)
-    showNotification(
-      next ? 'Disposición en constelaciones activada' : 'Layout de árbol (predeterminado)',
-      'info',
-    )
+    showNotification(next ? TOAST_LAYOUT_ON_ACTIVATED : TOAST_TREE_LAYOUT, 'info')
   }
 
   async function runConstellationRelayout(): Promise<void> {
     if (!opts.constellationSettings?.isLayoutEnabled()) {
-      showNotification('Activa primero la disposición en constelaciones', 'info')
+      showNotification(TOAST_ENABLE_LAYOUT_FIRST, 'info')
       return
     }
     try {
       await bridge.triggerConstellationRelayout()
-      showNotification('Layout astral recalculado', 'success')
+      showNotification(TOAST_RELAYOUT_OK, 'success')
     } catch (err) {
       showNotification(`Error: ${(err as Error).message}`, 'error')
     }

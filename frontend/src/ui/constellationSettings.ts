@@ -1,3 +1,4 @@
+import type { Graph } from '../lib/bridge'
 import type { Graph3DEngine } from '../render3d/Graph3DEngine'
 import {
   loadViewPrefs,
@@ -8,9 +9,19 @@ import {
   confirmPref,
   loadCatalog,
   loadPrefs,
-  constellationLabel,
   triggerConstellationRelayout,
 } from '../services/constellationService'
+import {
+  BANNER_LAYOUT_ON_NO_CONFIRMED,
+  CONSTELLATION_INTRO_NOTE,
+  CONSTELLATION_LAYOUT_TOGGLE,
+  CONSTELLATION_PANEL_TITLE,
+  CONSTELLATION_RECALC_BTN,
+  TOAST_CONFIRM_WITHOUT_LAYOUT,
+  constellationLayoutMenuLabel,
+} from './constellationCopy'
+import { findFolderNodeId, flyCameraToNode } from './constellationFlyTo'
+import { openConstellationPickerModal } from './constellationPicker'
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -33,15 +44,20 @@ export interface ConstellationSettingsAPI {
   setLayoutEnabled: (enabled: boolean) => void
   syncMenuLabel: () => void
   renderPanel: () => Promise<void>
+  notifyConfirmedWithoutLayout: () => void
 }
 
 export function initConstellationSettings(
   engine: Graph3DEngine,
   showToast?: (msg: string, isError?: boolean) => void,
+  getCurrentGraph?: () => Graph | null,
 ): ConstellationSettingsAPI {
   const panel = document.getElementById('constellation-panel')
   const body = document.getElementById('constellation-panel-body')
   const closeBtn = document.getElementById('constellation-panel-close')
+  const titleEl = document.getElementById('constellation-panel-title')
+
+  if (titleEl) titleEl.textContent = CONSTELLATION_PANEL_TITLE
 
   if (!panel || !body) {
     return {
@@ -51,10 +67,12 @@ export function initConstellationSettings(
       setLayoutEnabled: () => {},
       syncMenuLabel: () => {},
       renderPanel: async () => {},
+      notifyConfirmedWithoutLayout: () => {},
     }
   }
 
-  let catalogCache: Array<{ id: string; name: string; name_es?: string }> | null = null
+  let catalogCache: Array<{ id: string; name: string; name_es?: string; star_count?: number }> | null =
+    null
 
   async function getCatalog() {
     if (!catalogCache) catalogCache = await loadCatalog()
@@ -75,29 +93,43 @@ export function initConstellationSettings(
   function syncMenuLabel(): void {
     const el = document.getElementById('menu-opt-constellation-layout')
     if (!el) return
-    const on = isLayoutEnabled()
-    el.textContent = `Disposición en constelaciones (${on ? 'ON' : 'OFF'})`
+    el.textContent = constellationLayoutMenuLabel(isLayoutEnabled())
+  }
+
+  function notifyConfirmedWithoutLayout(): void {
+    if (!isLayoutEnabled()) {
+      showToast?.(TOAST_CONFIRM_WITHOUT_LAYOUT)
+    }
   }
 
   function closePanel(): void {
     panel!.classList.remove('active')
   }
 
-  async function openConstellationPicker(folderPath: string, currentId?: string): Promise<void> {
-    const catalog = await getCatalog()
-    const picked = window.prompt(
-      `Constelación para ${folderLabelFromPath(folderPath)}:\n(id, p. ej. orion, ursa_major)`,
-      currentId || 'orion',
-    )
-    if (!picked) return
-    const cid = picked.trim().toLowerCase().replace(/\s+/g, '_')
-    if (!catalog.some((c) => c.id === cid)) {
-      window.alert('Constelación no reconocida en el catálogo.')
+  function flyToFolder(folderPath: string): void {
+    const nodeId = findFolderNodeId(getCurrentGraph?.() ?? null, folderPath)
+    if (!nodeId) {
+      showToast?.('No se encontró la carpeta en el grafo actual', true)
       return
     }
-    await confirmPref(folderPath, cid)
-    showToast?.('Constelación guardada')
-    await renderPanel()
+    if (!flyCameraToNode(engine.fg, nodeId)) {
+      showToast?.('No se pudo centrar la cámara', true)
+    }
+  }
+
+  async function openConstellationPicker(folderPath: string, currentId?: string): Promise<void> {
+    const catalog = await getCatalog()
+    openConstellationPickerModal(
+      catalog,
+      folderLabelFromPath(folderPath),
+      currentId,
+      async (cid) => {
+        await confirmPref(folderPath, cid)
+        notifyConfirmedWithoutLayout()
+        showToast?.('Constelación guardada')
+        await renderPanel()
+      },
+    )
   }
 
   async function renderPanel(): Promise<void> {
@@ -119,15 +151,21 @@ export function initConstellationSettings(
     }
 
     await getCatalog()
+    const confirmed = allPrefs.filter((p) => p.status === 'confirmed')
 
     let html = `<p class="constellation-intro">
       Opcional. Por defecto el grafo usa el layout de árbol. Activa las constelaciones para colocar
       subárboles de carpetas según patrones astronómicos reales (IAU).
+      <br><em>${escapeHtml(CONSTELLATION_INTRO_NOTE)}</em>
     </p>
     <label class="constellation-toggle-row">
       <input type="checkbox" class="cs-layout-enable" ${layoutOn ? 'checked' : ''}>
-      <span>Usar disposición en constelaciones</span>
+      <span>${escapeHtml(CONSTELLATION_LAYOUT_TOGGLE)}</span>
     </label>`
+
+    if (layoutOn && confirmed.length === 0) {
+      html += `<div class="constellation-banner">${escapeHtml(BANNER_LAYOUT_ON_NO_CONFIRMED)}</div>`
+    }
 
     if (layoutOn) {
       html += `<div class="constellation-section-title">Sugerencias pendientes</div>`
@@ -147,7 +185,6 @@ export function initConstellationSettings(
         }
       }
 
-      const confirmed = allPrefs.filter((p) => p.status === 'confirmed')
       html += `<div class="constellation-section-title">Asignaciones confirmadas (${confirmed.length})</div>`
       if (!confirmed.length) {
         html += `<p class="constellation-hint">Ninguna carpeta confirmada aún.</p>`
@@ -156,7 +193,7 @@ export function initConstellationSettings(
         for (const p of confirmed.slice(0, 20)) {
           const cn = (catalogCache || []).find((x) => x.id === p.constellation_id)
           const cname = cn ? (cn.name_es || cn.name) : p.constellation_id
-          html += `<li>${escapeHtml(folderLabelFromPath(p.folder_path))} — ${escapeHtml(cname)}</li>`
+          html += `<li><button type="button" class="cs-fly-confirmed" data-folder="${escapeHtml(p.folder_path)}">${escapeHtml(folderLabelFromPath(p.folder_path))} — ${escapeHtml(cname)}</button></li>`
         }
         html += `</ul>`
         if (confirmed.length > 20) {
@@ -165,7 +202,7 @@ export function initConstellationSettings(
       }
 
       html += `<div class="constellation-actions">
-        <button type="button" class="constellation-btn" id="cs-relayout">Recalcular layout</button>
+        <button type="button" class="constellation-btn" id="cs-relayout">${escapeHtml(CONSTELLATION_RECALC_BTN)}</button>
       </div>`
     }
 
@@ -188,6 +225,7 @@ export function initConstellationSettings(
         if (!folder || !cid) return
         try {
           await confirmPref(folder, cid)
+          notifyConfirmedWithoutLayout()
           showToast?.('Sugerencia confirmada')
           await renderPanel()
         } catch (err) {
@@ -201,6 +239,13 @@ export function initConstellationSettings(
         const el = btn as HTMLButtonElement
         if (!el.dataset.folder) return
         await openConstellationPicker(el.dataset.folder, el.dataset.cid)
+      })
+    })
+
+    body!.querySelectorAll('.cs-fly-confirmed').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const folder = (btn as HTMLButtonElement).dataset.folder
+        if (folder) flyToFolder(folder)
       })
     })
 
@@ -223,6 +268,7 @@ export function initConstellationSettings(
       !t.closest('#constellation-panel')
       && !t.closest('#menu-constellations')
       && !t.closest('[data-action="open-constellation-settings"]')
+      && !t.closest('.constellation-picker-overlay')
     ) {
       closePanel()
     }
@@ -239,5 +285,6 @@ export function initConstellationSettings(
     setLayoutEnabled,
     syncMenuLabel,
     renderPanel,
+    notifyConfirmedWithoutLayout,
   }
 }
