@@ -18,7 +18,7 @@ Run the app with both processes: `python -m backend.library_bridge` (port 3001) 
 
 - `.env` is **gitignored** and may contain machine-specific paths and secrets.
 - **Do not** run `cp .env.example .env` if you already have a working `.env` — you will wipe `WORKSPACE_ROOT`, API keys, and custom settings.
-- For a **new** clone, copy once: `cp .env.example .env`, then edit `WORKSPACE_ROOT` (default `~/knowledge`; Hermes users uncomment `~/.hermes/workspaces` in `.env.example` as reference).
+- For a **new** clone, copy once: `cp .env.example .env`, then edit `WORKSPACE_ROOT` to point at your local vault (e.g. `~/knowledge`).
 - When `.env.example` gains new variables, merge them into your existing `.env` by hand.
 
 ## Constellation catalog
@@ -72,5 +72,4 @@ CI uses a temporary `WORKSPACE_ROOT` the same way.
 ## Architecture
 
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — technical architecture
-- [`docs/ecosystem-hermes.md`](docs/ecosystem-hermes.md) — optional Hermes/RepoCiv context
 - [`AGENTS.md`](AGENTS.md) — agent/MCP guide and skill routing

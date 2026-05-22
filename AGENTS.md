@@ -2,7 +2,7 @@
 
 ## Qué es
 
-Visualizador y gestor de un **grafo de conocimiento** sobre `WORKSPACE_ROOT` (por defecto `~/.hermes/workspaces` si no hay `.env`; ver `.env.example` para vault genérico `~/knowledge`).
+Visualizador y gestor de un **grafo de conocimiento** sobre `WORKSPACE_ROOT` (configurado en `.env`; por defecto `~/knowledge`).
 Cada archivo/carpeta escaneado es un **nodo**; cada wikilink o dependencia es una **arista**.
 Backend: FastAPI + SQLite (`backend/library.db`) + watchdog (SSE event-driven). Frontend: WebGL 3D (`three` + `3d-force-graph`).
 
