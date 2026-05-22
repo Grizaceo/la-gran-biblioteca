@@ -188,6 +188,9 @@ export class Graph3DEngine {
   private _lodNodePos = new THREE.Vector3()
   private _paused = false
   private _savedParticles = 2
+  private _savedStarfieldRotation = true
+  private _savedPhotonsEnabled = true
+  private _savedCooldownTicks = 0
   private _tick!: () => void
   private _lodNodeCount = 0
   private _progressivePump: (() => void) | null = null
@@ -534,21 +537,35 @@ export class Graph3DEngine {
       show ? String(node.name || node.label || node.id || '') : '')
   }
 
+  /**
+   * Low-power mode while the detail panel is open: keeps the graph visible and
+   * interactive but stops starfield rotation, link particles, and force simulation.
+   */
   pause(): void {
     if (this._paused) return
     this._paused = true
+    this._savedStarfieldRotation = this.starfieldRotationEnabled
+    this._savedPhotonsEnabled = this.photonsEnabled
+    this._savedParticles = this.photonsEnabled ? 2 : 0
+    this._savedCooldownTicks = this.fg.cooldownTicks()
+
+    this.starfieldRotationEnabled = false
     cancelAnimationFrame(this._rafId)
     this._rafId = 0
-    this.fg.pauseAnimation()
     this.fg.linkDirectionalParticles(0)
+    this.fg.cooldownTicks(0)
   }
 
   resume(): void {
     if (!this._paused) return
     this._paused = false
-    this.fg.resumeAnimation()
-    this.fg.linkDirectionalParticles(this._savedParticles)
-    this._rafId = requestAnimationFrame(this._tick)
+    this.starfieldRotationEnabled = this._savedStarfieldRotation
+    this.photonsEnabled = this._savedPhotonsEnabled
+    this.fg.cooldownTicks(this._savedCooldownTicks)
+    this.fg.linkDirectionalParticles(this.photonsEnabled ? this._savedParticles : 0)
+    if (!this._rafId) {
+      this._rafId = requestAnimationFrame(this._tick)
+    }
   }
 
   setPhotonsEnabled(enabled: boolean): void {

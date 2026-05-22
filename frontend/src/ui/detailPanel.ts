@@ -62,6 +62,7 @@ interface Engine {
     width(w: number): any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     height(h: number): any
+    refresh?(): void
   }
   pause(): void
   resume(): void
@@ -98,6 +99,7 @@ export function setupDetailPanel(
     setTimeout(() => {
       const { width, height } = container.getBoundingClientRect()
       engine.fg.width(width).height(height)
+      engine.fg.refresh?.()
     }, 320)
     currentNodeId = null
   }
@@ -257,6 +259,7 @@ export function setupDetailPanel(
     setTimeout(() => {
       const { width, height } = container.getBoundingClientRect()
       engine.fg.width(width).height(height)
+      engine.fg.refresh?.()
     }, 50)
     engine.pause()
 
