@@ -8,6 +8,17 @@
 > Scans a local directory (`WORKSPACE_ROOT`), builds a SQLite graph of files and links,
 > and renders it as an interactive WebGL constellation in the browser.
 
+## Screenshots
+
+![Graph view](docs/images/graph-hero.png)
+*6,711 nodes, 4,037 edges — full vault rendered as a 3D constellation*
+
+![Search](docs/images/search.png)
+*Instant full-text search across all nodes (Ctrl+K)*
+
+![Detail panel](docs/images/detail-panel.png)
+*Node detail: type, path, metadata, neighbors, and inline markdown preview*
+
 ## Stack
 
 - **Backend:** Python + FastAPI + SQLite + watchdog (port 3001)
