@@ -6,7 +6,7 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ${WORKSPACE_ROOT:-${HOME}/.hermes/workspaces}:/workspaces
+      - ${WORKSPACE_ROOT:-./vault}:/workspaces
       - lgb-data:/data
     environment:
       - PYTHONPATH=/app

@@ -3,17 +3,25 @@
 ## Unreleased
 
 ### Added
-- Open-source readiness: LICENSE (MIT), CONTRIBUTING.md, SECURITY.md
-- Stricter path containment in `path_from_node_id` and `path_from_node_id_fuzzy`
-- DOMPurify sanitization on highlight.js code preview output
-- HTML escaping on breadcrumb node names in focus, search, and visibility panels
-- Production-safe error messages (stack traces hidden from UI)
+- Open-source readiness: GitHub templates, Dependabot, CI (pytest, tsc, ruff)
+- Generic vault profile (`WORKSPACE_ROOT=~/knowledge`) in `.env.example`; Hermes path documented as commented alternative
+- Docker Compose `${WORKSPACE_ROOT:-./vault}` volume (no hardcoded `~/.hermes`)
+- `docs/ecosystem-hermes.md` for RepoCiv/Hermes context; technical architecture in `docs/ARQUITECTURA.md`
+- Constellation layout (IA88 catalog), API prefs, frontend UX (experimental labels)
+- `pyproject.toml` ruff configuration
+
+### Changed
+- `SECURITY.md` — report via GitHub Security Advisories
+- `CONTRIBUTING.md` — `main` branch, `health.sh`, local `.env` guard
+- `README.md` — dual setup profiles, publish checklist, CI badge placeholder
+- `frontend/package.json` — MIT license and repository metadata placeholder
 
 ### Fixed
-- Path traversal via node IDs that resolved outside `WORKSPACE_ROOT`
-- Stack traces and internal file paths exposed in browser error overlay (`main.ts` and `index.html`)
-- Unescaped user content in `innerHTML` assignments (focus.js breadcrumb, visibility panel)
-- Raw exception details leaked in `/api/rescan`, `/api/open`, and `read_preview` endpoints
+- `test_study_node_persists` — patch `app_deps.engine` so `/api/study` persists to the test database
+- Ruff lint across `backend/` (unused imports, preview helper)
+
+### Security
+- arXiv `LGB_ARXIV_USER_AGENT` placeholder uses generic `github.com/TU_USUARIO/la-gran-biblioteca`
 
 ## 0.1.0 — 2026-05-21
 

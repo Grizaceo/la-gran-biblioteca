@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest an improvement
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Area
+      options:
+        - label: Backend / scan / API
+        - label: Frontend / 3D UI
+        - label: MCP / agents
+        - label: Docs / DX

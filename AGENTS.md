@@ -2,7 +2,7 @@
 
 ## Qué es
 
-Visualizador y gestor de un **grafo de conocimiento** sobre `~/.hermes/workspaces/`.
+Visualizador y gestor de un **grafo de conocimiento** sobre `WORKSPACE_ROOT` (por defecto `~/.hermes/workspaces` si no hay `.env`; ver `.env.example` para vault genérico `~/knowledge`).
 Cada archivo/carpeta escaneado es un **nodo**; cada wikilink o dependencia es una **arista**.
 Backend: FastAPI + SQLite (`backend/library.db`) + watchdog (SSE event-driven). Frontend: WebGL 3D (`three` + `3d-force-graph`).
 
@@ -153,7 +153,9 @@ Ejecutar todo: `./scripts/health.sh` (desde la raíz del repo, en WSL/Linux).
 
 ## Skill routing
 
-When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+When the user's request matches an available Cursor skill (listed in the agent session), read and follow that skill file immediately. When in doubt, invoke the skill rather than improvising.
+
+Open-source contributors: upstream skills may live outside this repo; only use skills present in your Cursor environment.
 
 Key routing rules:
 - Product ideas/brainstorming → invoke /office-hours

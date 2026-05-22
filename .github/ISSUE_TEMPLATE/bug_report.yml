@@ -1,0 +1,34 @@
+name: Bug report
+description: Something is broken or incorrect
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, expected vs actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      placeholder: e.g. main @ abc1234
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Environment
+      options:
+        - Linux / WSL
+        - macOS
+        - Windows
+        - Docker
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Redact paths and secrets

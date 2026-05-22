@@ -1,65 +1,106 @@
-# Visión Arquitectónica: "La Gran Biblioteca" y el Ecosistema RepoCiv
+# Arquitectura técnica — La Gran Biblioteca
 
-Este documento consolida la arquitectura estratégica diseñada para separar el dominio de conocimiento de las herramientas operativas UI, integrándolos orgánicamente dentro del "Agent OS" (RepoCiv).
+La Gran Biblioteca es un visualizador y gestor de **grafo de conocimiento** sobre un vault local (`WORKSPACE_ROOT`). Cada archivo/carpeta escaneado es un **nodo**; wikilinks, jerarquía y dependencias son **aristas**.
+
+Para el contexto RepoCiv / Hermes (plano de conocimiento vs workshop), ver [`ecosystem-hermes.md`](ecosystem-hermes.md).
 
 ---
 
-## 1. El Paradigma de "Game-like UI" para Agentes
+## Vista general
 
-Inspirados en herramientas pioneras como AgentCraft, el ecosistema RepoCiv adopta el diseño de un juego de estrategia en tiempo real (RTS) para solucionar el principal cuello de botella de la orquestación de agentes IA: la **Fatiga de Observabilidad**.
+```mermaid
+flowchart LR
+  Vault[WORKSPACE_ROOT] --> Scanner[scan_workspaces BFS]
+  Scanner --> Pipeline[graph_pipeline]
+  Pipeline --> Engine[GraphEngine SQLite]
+  Engine --> API[FastAPI REST + SSE]
+  Engine --> MCP[MCP stdio]
+  API --> UI[WebGL 3D frontend]
+  Watcher[watchdog] --> Pipeline
+```
 
-Los dashboards estáticos tradicionales (listas, tablas de logs) no pueden representar intuitivamente la asincronía espacial y temporal de los agentes. En RepoCiv:
-- Los repositorios son **Ciudades**.
-- Los procesos en segundo plano son **Edificios**.
-- Los agentes (DAVI, LexO, Workers) son **Unidades** tangibles con barras de energía (Fatiga estilo XCOM) y estados de movimiento.
+| Capa | Tecnología | Rol |
+|------|------------|-----|
+| Escaneo | Python BFS | Nodos/aristas desde el filesystem |
+| Persistencia | SQLite (`DB_PATH`) | Grafo + prefs de constelaciones |
+| API | FastAPI :3001 | REST, SSE, imports |
+| Agentes | MCP (`backend/mcp_server.py`) | Mismas operaciones sin HTTP |
+| UI | Vite + Three.js + 3d-force-graph :5173 | Grafo 3D, panel de detalle |
 
-## 2. La Separación de Planos (Ortogonalidad)
+**No** usa React ni Neo4j.
 
-Para garantizar un escalado sin fricciones y evitar el "Spaghetti de Contexto", la arquitectura divide radicalmente el sistema en dos planos ortogonales.
+---
 
-### A. El Plano del Conocimiento (La Biblioteca de Alejandría)
-- **Mapeo Físico:** `~/.hermes/workspaces` (El "Vault").
-- **Propósito:** Es la base de datos documental. Contiene datos puros, papers, jurisprudencia, planes de ejecución y el contexto de fondo que alimenta a agentes especialistas (como LexO).
-- **El Concepto In-Game:** La "Biblioteca de Alejandría" es una **Maravilla** construible en RepoCiv. Cuando un agente entra aquí, su objetivo es **leer y estudiar** el conocimiento del dominio. No hay métricas ni herramientas operativas aquí, solo relaciones semánticas.
+## Backend
 
-### B. El Plano de Herramientas / Skills (LabHub / El Workshop)
-- **Mapeo Físico:** `~/.hermes/workspace/repos/labhub`.
-- **Propósito:** Es un registro de herramientas operativas (UI Skills) agnósticas al dominio. Aquí se desarrollan y testean visualizadores de tensores, monitores de SSE, dashboards de memoria y paneles de telemetría.
-- **El Concepto In-Game:** Se materializa como **"El Workshop"** o el gremio. Si envías a un Worker aquí, está ensamblando una nueva interfaz visual. Mañana, si creas un `hardware-ai-lab`, este lab simplemente reutiliza el visualizador de hardware que fue creado en el Workshop de LabHub.
+### Pipeline de grafo
 
-## 3. Arquitectura Técnica de la Biblioteca
+`backend/services/graph_pipeline.py` unifica el flujo para HTTP y MCP:
 
-Para representar "La Gran Biblioteca", el diseño técnico aísla completamente los datos de la presentación, habilitando una evolución fluida en dos fases.
+1. `scan_workspaces` — recorrido BFS con límites (`SCAN_MAX_FILES`, `SCAN_MAX_CHILDREN`)
+2. Merge de imports recientes (`graph_state`)
+3. Layout de constelaciones (`constellation_layout.py`) según prefs en SQLite
+4. `GraphEngine.build_graph` / `rebuild_graph` — persistencia transaccional
 
-### El Backend Unificado (El Grafo Agnóstico)
-En lugar de renderizar carpetas, el backend de la Biblioteca (un script Python) recorre recursivamente `~/.hermes/workspaces` y expone una API estandarizada que emite un JSON topológico:
-- **Nodos:** Archivos, documentos, papers y subcarpetas.
-- **Aristas (Edges):** Relaciones jerárquicas, referencias bibliográficas o dependencias semánticas.
+### GraphEngine
 
-Esta API nunca cambia, sin importar qué UI se construya encima.
+- Tablas: `nodes`, `edges`, `constellation_prefs`
+- WAL SQLite; backup `.db.bak` en rebuild
+- `update_node_metadata` para contadores (`study_count`) vía API `/api/study`
 
-### Vault hygiene (archives y exclusiones)
+### API (`backend/api/`)
 
-El escáner (`backend/scan/walker.py`) comparte el pipeline HTTP y MCP (`backend/services/graph_pipeline.py`).
+Routers modulares montados en `library_bridge.py`: `graph`, `nodes`, `constellation`, `create`, `imports_api`, `overview`.
 
-- **Exclusiones técnicas:** `.git`, `node_modules`, `.hermes`, etc., más `LGB_EXTRA_EXCLUDE_DIRS`.
-- **Carpetas archive:** nombres exactos `archive`, `backups`, `snapshots` gobernados por `LGB_ARCHIVE_POLICY` (`exclude` | `shadow` | `include`). Ver `.env.example` y `AGENTS.md`.
-- **Overview:** `GET /api/overview` incluye `skipped_archive_dirs` del último escaneo.
-- **UI:** Opciones de vista → “Mostrar carpetas archive (bóveda)” cuando el backend emite nodos `archived`.
+Estado en memoria: `graph_state` (grafo actual, cap de respuesta, imports recientes). Singleton `app_deps.engine`.
 
-### Fase 1: El MVP Físico (Opción B - 2D Grid)
-- Se aprovecha la "Vista Local" de RepoCiv (estilo RimWorld) ya existente en `src/types.ts`.
-- El frontend consume el JSON del Grafo y utiliza un layout de grilla para asignar coordenadas `(x, y)` a los nodos.
-- **Visualización:** Pasillos generados proceduralmente (las ramas del conocimiento) y estanterías o `workbenches` (los documentos y papers). Los agentes caminan físicamente a las estanterías para interactuar.
+### Vault hygiene
 
-### Fase 2: El Mind Palace Inmersivo (Opción A - 3D)
-- Una vez consolidada la mecánica 2D, se introduce un renderizador `Three.js` (como `react-force-graph-3d`).
-- El frontend consume el **mismo JSON del Grafo** y proyecta los nodos en el espacio `(x, y, z)`.
-- **Visualización:** El "Grafo de Conocimiento Astral". Los directorios son constelaciones y los archivos son planetas de información conectados por láseres (Edges). El usuario viaja por la bóveda para explorar sus conexiones jurídicas y técnicas.
+En `backend/scan/walker.py`:
 
-## 4. Integración Técnica en RepoCiv (Workshop de Maravillas)
+- Exclusiones técnicas: `.git`, `node_modules`, `.hermes`, etc. + `LGB_EXTRA_EXCLUDE_DIRS`
+- Carpetas `archive`, `backups`, `snapshots` según `LGB_ARCHIVE_POLICY` (`exclude` | `shadow` | `include`)
+- Overview: `skipped_archive_dirs` en el último escaneo
 
-La orquestación de estas UIs especializadas (La Biblioteca, LabHub, Herramientas de 3ros) en el gran mapa de RepoCiv se logra mediante el patrón de **Micro-Frontends Basados en Capacidad**.
+### Seguridad
 
-- **Iframes como Aislantes:** Las Maravillas, como la Biblioteca de Alejandría, se integran en RepoCiv a través de un panel modal de cristal (glassmorphism) que envuelve un `<iframe src="...">`.
-- **Escalabilidad:** Esto permite que la Biblioteca se construya en Vue o en Three.js puro, y LabHub en React/Vite, sin que el motor Canvas principal de RepoCiv sufra por conflictos de dependencias o estados sobrecargados. RepoCiv se convierte, así, en un verdadero "Sistema Operativo" agéntico.
+- `WORKSPACE_ROOT` como frontera; validación en `path_utils`
+- `LGB_API_KEY` opcional en mutaciones
+- `LGB_PRODUCTION` enmascara errores 500
+- Previews Markdown/código vía DOMPurify en frontend
+
+### Eventos
+
+`workspace_watcher` (watchdog) → cola asyncio con coalescencia ~500 ms → `force_graph_update` → SSE `/api/stream`.
+
+---
+
+## Frontend
+
+- `Graph3DEngine.ts` — escena WebGL, fuerzas 3D, LOD, carga progresiva
+- `lib/bridge.ts` / `lib/api/*` — cliente HTTP + SSE
+- `constellationService.ts` + UI de prefs — islas por constelación IA88
+- Sin framework de componentes; módulos TS planos
+
+---
+
+## MCP
+
+`python -m backend.mcp_server` expone tools alineadas con la API (`overview`, `search`, `get_node`, `read_node`, imports, etc.). No requiere que el bridge HTTP esté activo.
+
+---
+
+## Despliegue local
+
+- Desarrollo: backend + `npm run dev` (proxy `/api` → `127.0.0.1:3001` en WSL)
+- Docker: `WORKSPACE_ROOT` montado en `/workspaces`; DB en volumen `lgb-data`
+- Export estático: `backend/export_html.py`
+
+---
+
+## Evolución (fases históricas)
+
+1. **Grafo 2D / grilla** — layout plano para exploración rápida
+2. **Grafo 3D actual** — mismo JSON de grafo, proyección `(x,y,z)` y constelaciones
+
+La API de grafo permanece estable entre fases de UI.

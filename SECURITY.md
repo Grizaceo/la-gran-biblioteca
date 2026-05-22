@@ -4,8 +4,7 @@
 
 Please **do not** open a public issue for security vulnerabilities.
 
-Email the maintainer directly. You should receive a response within 48 hours.
-If the issue is confirmed, we will release a fix as soon as possible.
+Use [GitHub Security Advisories](https://github.com/TU_USUARIO/la-gran-biblioteca/security/advisories/new) (preferred) or email the maintainer privately. You should receive a response within 48 hours. If the issue is confirmed, we will release a fix as soon as possible.
 
 ## Scope
 
@@ -47,4 +46,4 @@ Run `npm audit` in `frontend/` periodically. Known vulnerabilities in dev depend
 
 ## Supported versions
 
-Only the latest `master` branch receives security fixes.
+Only the latest `main` branch receives security fixes.
