@@ -38,9 +38,9 @@ def read_node_content(path: Path, max_chars: int | None = None) -> dict:
 
 def read_preview(path: Path) -> dict:
     """Read file content for preview. Returns content, lang, size, truncated."""
-    ext = path.suffix.lstrip(".").lower()
+    path.suffix.lstrip(".").lower()
     if path.name.lower() == "dockerfile":
-        ext = "dockerfile"
+        pass
 
     try:
         return read_node_content(path)

@@ -18,7 +18,7 @@ from ..os_dialog import (
     select_file_in_os,
     select_folder_in_os,
 )
-from ..scan_workspaces import node_id_for_import_dir, node_id_for_import_path
+from ..scan_workspaces import node_id_for_import_dir
 from ..security import safe_error_detail
 
 logger = logging.getLogger(__name__)

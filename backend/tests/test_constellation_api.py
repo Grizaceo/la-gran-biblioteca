@@ -1,7 +1,5 @@
 """Tests for constellation prefs persistence in GraphEngine."""
 
-import tempfile
-from pathlib import Path
 
 import pytest
 

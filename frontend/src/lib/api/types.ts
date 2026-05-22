@@ -67,7 +67,7 @@ export interface ConstellationCatalogEntry {
   id: string
   name: string
   name_es?: string
-  star_count: number
+  star_count?: number
 }
 
 export interface ConstellationPref {

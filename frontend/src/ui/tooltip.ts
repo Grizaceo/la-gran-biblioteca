@@ -9,12 +9,13 @@ export function setupTooltip(
   container: HTMLElement,
   onHover?: (node: Record<string, unknown> | null) => void,
 ): void {
-  let tooltip = document.getElementById('node-tooltip') as HTMLDivElement | null
-  if (!tooltip) {
-    tooltip = document.createElement('div')
-    tooltip.id = 'node-tooltip'
-    document.body.appendChild(tooltip)
+  let el = document.getElementById('node-tooltip') as HTMLDivElement | null
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'node-tooltip'
+    document.body.appendChild(el)
   }
+  const tooltip = el
   tooltip.setAttribute('role', 'tooltip')
   tooltip.setAttribute('aria-hidden', 'true')
 

@@ -4,13 +4,21 @@ from fastapi.testclient import TestClient
 from backend.graph_engine import GraphEngine
 
 # We need to import the app after setting up a temporary DB
+import backend.app_deps as app_deps
 import backend.library_bridge as bridge
+
+
+def _use_engine(db: Path) -> GraphEngine:
+    ge = GraphEngine(db_path=db)
+    bridge.engine = ge
+    app_deps.engine = ge
+    return ge
 
 
 def test_health():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "library.db"
-        bridge.engine = GraphEngine(db_path=db)
+        _use_engine(db)
         bridge.set_current_graph({"nodes": [], "edges": []})
         client = TestClient(bridge.app)
         response = client.get("/api/health")
@@ -21,8 +29,8 @@ def test_health():
 def test_get_graph():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "library.db"
-        bridge.engine = GraphEngine(db_path=db)
-        bridge.engine.build_graph({
+        ge = _use_engine(db)
+        ge.build_graph({
             "nodes": [
                 {"id": "n1", "type": "folder", "label": "Root", "path": "/", "metadata": {}, "position": None}
             ],
@@ -39,8 +47,8 @@ def test_get_graph():
 def test_study_node_persists():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "library.db"
-        bridge.engine = GraphEngine(db_path=db)
-        bridge.engine.build_graph({
+        ge = _use_engine(db)
+        ge.build_graph({
             "nodes": [
                 {"id": "n1", "type": "document", "label": "Doc", "path": "/doc", "metadata": {}, "position": None}
             ],

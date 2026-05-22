@@ -1,6 +1,5 @@
 """Tests for constellation catalog and layout."""
 
-import pytest
 
 import math
 

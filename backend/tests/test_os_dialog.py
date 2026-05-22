@@ -1,6 +1,5 @@
 import pytest
 import tempfile
-import shutil
 from pathlib import Path
 from backend.os_dialog import import_selected_file, import_selected_folder
 

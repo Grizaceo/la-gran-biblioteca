@@ -1,22 +1,20 @@
 """Tests for workspace_watcher.py - watchdog event handling."""
 import asyncio
 import tempfile
-from pathlib import Path
-import pytest
 
 
 def test_excluded_dirs_are_filtered():
     """Test that excluded directories are properly filtered."""
-    from backend.workspace_watcher import is_valid_path, EXCLUDE_DIRS
+    from backend.workspace_watcher import is_valid_path
     
     # .hermes is in EXCLUDE_DIRS, so any path containing it should be excluded
-    assert is_valid_path("/home/user/.hermes/workspaces/test.md") == False  # .hermes excluded
-    assert is_valid_path("/home/user/project/__pycache__/test.py") == False  # __pycache__ excluded
-    assert is_valid_path("/home/user/project/node_modules/test.js") == False  # node_modules excluded
+    assert not is_valid_path("/home/user/.hermes/workspaces/test.md")  # .hermes excluded
+    assert not is_valid_path("/home/user/project/__pycache__/test.py")  # __pycache__ excluded
+    assert not is_valid_path("/home/user/project/node_modules/test.js")  # node_modules excluded
     
     # Normal paths should pass
-    assert is_valid_path("/home/user/project/test.md") == True
-    assert is_valid_path("/home/user/project/data.json") == True
+    assert is_valid_path("/home/user/project/test.md")
+    assert is_valid_path("/home/user/project/data.json")
 
 
 def test_valid_extensions():
@@ -25,10 +23,10 @@ def test_valid_extensions():
     
     # Valid extensions should pass
     for ext in SCAN_EXTENSIONS:
-        assert is_valid_path(f"/workspace/file{ext}") == True, f"Extension {ext} should be valid"
+        assert is_valid_path(f"/workspace/file{ext}"), f"Extension {ext} should be valid"
     
     # Hidden files in workspace should be excluded
-    assert is_valid_path("/workspace/.hidden.md") == False
+    assert not is_valid_path("/workspace/.hidden.md")
 
 
 def test_directory_handling():
@@ -37,9 +35,9 @@ def test_directory_handling():
     
     # Directories don't have suffixes, so they pass the suffix check
     # but are filtered by EXCLUDE_DIRS
-    assert is_valid_path("/workspace/.hermes") == False  # hidden dir excluded
-    assert is_valid_path("/workspace/.git") == False  # hidden dir excluded  
-    assert is_valid_path("/workspace/src") == True  # regular dir passes
+    assert not is_valid_path("/workspace/.hermes")  # hidden dir excluded
+    assert not is_valid_path("/workspace/.git")  # hidden dir excluded  
+    assert is_valid_path("/workspace/src")  # regular dir passes
 
 
 def test_on_created_modified_deleted():

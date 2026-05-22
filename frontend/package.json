@@ -1,6 +1,11 @@
 {
   "name": "la-gran-biblioteca",
   "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TU_USUARIO/la-gran-biblioteca.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from .. import graph_state
-from ..app_deps import engine
+from .. import app_deps
 from ..constants import WORKSPACE_ROOT
 from ..os_open import open_in_os
 from ..path_utils import is_windows_path, resolve_node_path
@@ -77,7 +77,7 @@ async def study_node(req: StudyRequest):
     if "study_count" not in node["metadata"]:
         node["metadata"]["study_count"] = 0
     node["metadata"]["study_count"] += 1
-    engine.update_node_metadata(req.node_id, node["metadata"])
+    app_deps.engine.update_node_metadata(req.node_id, node["metadata"])
     return {
         "status": "ok",
         "node": req.node_id,

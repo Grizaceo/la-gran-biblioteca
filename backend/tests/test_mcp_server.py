@@ -1,10 +1,5 @@
 """Tests for the MCP server tools using a fixture graph."""
 
-import json
-import os
-import tempfile
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
