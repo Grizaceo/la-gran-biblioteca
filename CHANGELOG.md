@@ -21,7 +21,7 @@
 - Ruff lint across `backend/` (unused imports, preview helper)
 
 ### Security
-- arXiv `LGB_ARXIV_USER_AGENT` placeholder uses generic `github.com/TU_USUARIO/la-gran-biblioteca`
+- arXiv `LGB_ARXIV_USER_AGENT` placeholder uses generic `github.com/Grizaceo/la-gran-biblioteca`
 
 ## 0.1.0 — 2026-05-21
 

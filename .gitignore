@@ -20,4 +20,20 @@ export/
 
 # Claude local config
 .claude/settings.local.json
-backend/library.db.bak
+
+# IDE / debug artifacts
+.cursor/
+debug-*.log
+bridge.log
+backend/bridge.log
+frontend/preview.log
+frontend/test-tooltip.cjs
+
+# Generated export
+export/
+
+# gstack local artifacts (security reports, health history)
+.gstack/
+
+# Test/scratch files
+TEST_NODE.md

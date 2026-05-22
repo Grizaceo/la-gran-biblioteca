@@ -13,6 +13,9 @@ COPY backend/ backend/
 
 ENV PYTHONPATH=/app
 
+RUN useradd -r -u 1001 -g root lgb && chown -R lgb /app
+USER lgb
+
 EXPOSE 3001
 
 CMD ["uvicorn", "backend.library_bridge:app", "--host", "0.0.0.0", "--port", "3001"]

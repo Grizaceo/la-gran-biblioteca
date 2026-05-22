@@ -1,30 +1,29 @@
 # La Gran Biblioteca
 
-Visualizador 3D de grafo de conocimiento sobre un vault local de Markdown, código y notas.
+3D knowledge-graph visualizer for a local vault of Markdown, code, and notes.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/TU_USUARIO/la-gran-biblioteca/actions/workflows/ci.yml/badge.svg)](https://github.com/TU_USUARIO/la-gran-biblioteca/actions/workflows/ci.yml)
-[![Security](SECURITY.md)](SECURITY.md)
-[![Contributing](CONTRIBUTING.md)](CONTRIBUTING.md)
+[![CI](https://github.com/Grizaceo/la-gran-biblioteca/actions/workflows/ci.yml/badge.svg)](https://github.com/Grizaceo/la-gran-biblioteca/actions/workflows/ci.yml)
 
-> **Screenshot:** add `docs/images/graph-hero.png` after your first public release and link it here.
+> Scans a local directory (`WORKSPACE_ROOT`), builds a SQLite graph of files and links,
+> and renders it as an interactive WebGL constellation in the browser.
 
 ## Stack
 
-- **Backend:** Python + FastAPI + SQLite + watchdog (puerto 3001)
-- **Frontend:** TypeScript + Vite + Three.js + 3d-force-graph (puerto 5173 en dev)
-- **Agentes:** MCP stdio server (`backend/mcp_server.py`)
-- **Sin:** React, Neo4j
+- **Backend:** Python + FastAPI + SQLite + watchdog (port 3001)
+- **Frontend:** TypeScript + Vite + Three.js + 3d-force-graph (port 5173 in dev)
+- **Agents:** MCP stdio server (`backend/mcp_server.py`)
+- **No:** React, Neo4j
 
-## Quick start (new users)
+## Quick start
 
 ```bash
-git clone https://github.com/TU_USUARIO/la-gran-biblioteca.git
+git clone https://github.com/Grizaceo/la-gran-biblioteca.git
 cd la-gran-biblioteca
 mkdir -p ~/knowledge    # or any vault path you prefer
 
-cp .env.example .env    # first-time setup only — see warning below
-# Edit .env: set WORKSPACE_ROOT=~/knowledge (default in .env.example)
+cp .env.example .env
+# Edit .env: set WORKSPACE_ROOT=~/knowledge
 
 python -m venv backend/venv && source backend/venv/bin/activate
 pip install -r backend/requirements.txt
@@ -33,19 +32,19 @@ python -m backend.library_bridge   # http://127.0.0.1:3001/api/health
 cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
-Abre **http://localhost:5173** (no solo :3001 — ahí está solo la API).
+Open **http://localhost:5173** — the graph renders there, not at :3001 (that is the API only).
 
 ### Existing Hermes / `.env` users
 
 If you already have a working `.env` pointing at `~/.hermes/workspaces`, **keep it**. Do not overwrite `.env` with `.env.example`.
 
-For reference only, `.env.example` documents the Hermes profile as a commented line:
+`.env.example` documents the Hermes profile as a commented reference line:
 
 ```bash
 # WORKSPACE_ROOT=~/.hermes/workspaces
 ```
 
-The backend still defaults to `~/.hermes/workspaces` when `WORKSPACE_ROOT` is unset (`backend/constants.py`).
+The backend defaults to `~/.hermes/workspaces` when `WORKSPACE_ROOT` is unset (`backend/constants.py`).
 
 ## Configuration profiles
 
@@ -56,97 +55,104 @@ The backend still defaults to `~/.hermes/workspaces` when `WORKSPACE_ROOT` is un
 
 **Important:** `.env` is gitignored and local. Never run `cp .env.example .env` on top of an existing `.env` — merge new variables by hand. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-If constellation features fail at runtime, generate the catalog once: `python -m backend.scripts.generate_constellation_catalog`.
+If constellation features fail at runtime, regenerate the catalog once:
 
-## Estructura
+```bash
+python -m backend.scripts.generate_constellation_catalog
+```
+
+## Structure
 
 ```
 la-gran-biblioteca/
 ├── backend/          # FastAPI, scan, GraphEngine, MCP
 ├── frontend/         # Vite + WebGL 3D
-├── docs/             # ARQUITECTURA.md, ecosystem-hermes.md, images/
+├── docs/             # ARQUITECTURA.md, ecosystem-hermes.md
 ├── scripts/health.sh # ruff + pytest + tsc
 └── docker-compose.yml
 ```
 
-## Uso
+## Usage
 
-### Backend (solo API)
+### Backend (API only)
+
 ```bash
-# Desde la raíz del repo
 source backend/venv/bin/activate
 python -m backend.library_bridge   # http://127.0.0.1:3001/api/health
 ```
 
-### Frontend (visualizador 3D)
+### Frontend (3D visualizer)
+
 ```bash
 cd frontend
 npm run dev   # proxy /api → :3001
 ```
 
-**WSL:** el proxy de Vite debe apuntar a `127.0.0.1:3001` (ver `.env.example` → `VITE_API_TARGET`). Comprueba:
+**WSL:** Vite proxy must point to `127.0.0.1:3001` (see `.env.example` → `VITE_API_TARGET`). Verify:
 
 ```bash
 curl -s http://127.0.0.1:5173/api/health
 ```
 
 ### Docker
+
 ```bash
 mkdir -p vault          # or set WORKSPACE_ROOT in .env
 cp .env.example .env    # first time only
 docker compose up --build
 ```
 
-Compose mounts `${WORKSPACE_ROOT:-./vault}` — no hardcoded `~/.hermes` paths.
+Compose mounts `${WORKSPACE_ROOT:-./vault}` — no hardcoded paths.
 
 ### Health checks
+
 ```bash
 bash scripts/health.sh
 ```
 
-### Export estático
+### Static export
+
 ```bash
-cd backend && python export_html.py   # export/library.html
+cd backend && python export_html.py   # generates export/library.html
 ```
 
-## Variables de entorno
+## Environment variables
 
-Ver [`.env.example`](.env.example). Principales: `WORKSPACE_ROOT`, `DB_PATH`, `CORS_ORIGINS`, `LGB_API_KEY`, `LGB_ARXIV_USER_AGENT` (contact URL for arXiv ToU).
+See [`.env.example`](.env.example). Key variables: `WORKSPACE_ROOT`, `DB_PATH`, `CORS_ORIGINS`, `LGB_API_KEY`, `LGB_ARXIV_USER_AGENT` (contact URL for arXiv ToU).
 
-## Endpoints API
+## API endpoints
 
-- `GET /api/overview` — resumen compacto
-- `GET /api/graph` — grafo (cap en respuesta)
-- `GET /api/node/{id}` — nodo
-- `GET /api/node/{id}/content` — contenido
-- `POST /api/study` — registrar estudio
-- `GET /api/stream` — SSE (watchdog)
-- `POST /api/rescan` — re-escaneo
-- `GET /api/health` — health check
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Health check |
+| `GET` | `/api/overview` | Compact summary |
+| `GET` | `/api/graph` | Full graph (capped response) |
+| `GET` | `/api/node/{id}` | Node metadata |
+| `GET` | `/api/node/{id}/content` | Node file content |
+| `POST` | `/api/study` | Record a study event |
+| `GET` | `/api/stream` | SSE event stream (watchdog) |
+| `POST` | `/api/rescan` | Trigger a re-scan |
 
-## Uso desde agentes (MCP)
+## Agent usage (MCP)
 
 ```bash
 claude mcp add la-gran-biblioteca -- python -m backend.mcp_server
 ```
 
-Ver [`AGENTS.md`](AGENTS.md) para tools y flujos.
+See [`AGENTS.md`](AGENTS.md) for available tools and agent workflows.
 
-## Publicar en GitHub (manual)
+## Security
 
-1. Replace `TU_USUARIO` in README, `SECURITY.md`, `.env.example`, and `frontend/package.json` `repository.url`.
-2. Create the repo on GitHub (empty, no README) and push: `git remote add origin …`, `git push -u origin main`.
-3. Add `docs/images/graph-hero.png` and update the screenshot line in this README.
-4. Tag first release: `git tag v0.1.0 && git push origin v0.1.0` (see [CHANGELOG.md](CHANGELOG.md)).
+[`SECURITY.md`](SECURITY.md) — local-first model, report via GitHub Security Advisories.
 
-## Seguridad
+## Contributing
 
-[`SECURITY.md`](SECURITY.md) — modelo local-first, reporte vía GitHub Security Advisories.
-
-## Desarrollo
-
-[`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, `scripts/health.sh`, PRs a `main`.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, `scripts/health.sh`, PRs to `main`.
 
 ## Changelog
 
 [`CHANGELOG.md`](CHANGELOG.md)
+
+## License
+
+[MIT](LICENSE)

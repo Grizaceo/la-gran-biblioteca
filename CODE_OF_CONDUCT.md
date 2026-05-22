@@ -25,7 +25,7 @@ Examples of unacceptable behavior:
 
 Project maintainers are responsible for clarifying standards and may take appropriate corrective action in response to unacceptable behavior.
 
-Report conduct concerns to the maintainers privately (email or GitHub private contact). For security vulnerabilities, use [GitHub Security Advisories](https://github.com/TU_USUARIO/la-gran-biblioteca/security/advisories/new) — not public issues.
+Report conduct concerns to the maintainers privately (email or GitHub private contact). For security vulnerabilities, use [GitHub Security Advisories](https://github.com/Grizaceo/la-gran-biblioteca/security/advisories/new) — not public issues.
 
 ## Attribution
 

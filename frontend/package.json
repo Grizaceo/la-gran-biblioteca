@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TU_USUARIO/la-gran-biblioteca.git"
+    "url": "https://github.com/Grizaceo/la-gran-biblioteca.git"
   },
   "type": "module",
   "scripts": {
@@ -24,6 +24,6 @@
   },
   "devDependencies": {
     "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "vite": "^8.0.14"
   }
 }
