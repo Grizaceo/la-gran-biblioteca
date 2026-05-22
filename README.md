@@ -52,8 +52,25 @@ python export_html.py  # genera export/library.html
 
 ## Endpoints API
 
+- `GET /api/overview` - Resumen compacto (nodos por tipo, top workspaces)
 - `GET /api/graph` - Grafo completo con posiciones
 - `GET /api/node/{id}` - Nodo específico
 - `POST /api/study` - Registrar estudio de nodo
 - `GET /api/stream` - SSE para actualizaciones en vivo
 - `POST /api/rescan` - Forzar re-escaneo
+
+## Uso desde agentes (MCP)
+
+El MCP server expone todas las operaciones de la biblioteca como tools nativas para agentes (Claude Code, etc.). No requiere que el bridge HTTP esté corriendo.
+
+```bash
+# Registrar en Claude Code
+claude mcp add la-gran-biblioteca -- python -m backend.mcp_server
+
+# Smoke test
+python -m backend.mcp_server  # debe arrancar sin errores
+```
+
+Tools principales: `overview`, `search`, `get_node`, `read_node`, `neighbors`, `mark_studied`, `rescan`, `create_file`, `create_folder`, `import_github`, `import_arxiv`, `import_pubmed`.
+
+Ver [`AGENTS.md`](AGENTS.md) para guía completa de uso desde agentes.

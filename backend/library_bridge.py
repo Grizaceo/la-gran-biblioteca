@@ -23,6 +23,7 @@ from .constants import WORKSPACE_ROOT
 from .os_open import open_in_os
 from .preview import read_preview
 from .imports import download_and_extract_github, import_arxiv, import_pubmed
+from .overview import build_overview
 from .os_dialog import (
     select_file_in_os,
     select_folder_in_os,
@@ -491,6 +492,13 @@ async def open_node(req: OpenRequest):
         raise HTTPException(status_code=500, detail=f"Could not open file: {e}")
 
     return {"ok": True}
+
+
+@app.get("/api/overview")
+async def get_overview():
+    """Compact knowledge-graph summary: counts by type, top workspaces, recent imports."""
+    graph = get_current_graph()
+    return build_overview(graph["nodes"], graph["edges"], recently_imported_paths, WORKSPACE_ROOT)
 
 
 @app.get("/api/health")
