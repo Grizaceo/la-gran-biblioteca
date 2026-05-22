@@ -1,8 +1,48 @@
 // src/lib/bridge.ts - Fetch al backend + SSE para actualizaciones
 
-const API_BASE = '/api'
+/** Proxy Vite en dev (`/api`). Override: VITE_API_BASE=http://127.0.0.1:3001/api */
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') || '/api'
+
+/** Fallback directo si el proxy falla (p. ej. localhost→::1 en WSL). */
+const API_DIRECT =
+  (import.meta.env.VITE_API_DIRECT as string | undefined)?.replace(/\/$/, '') ||
+  'http://127.0.0.1:3001/api'
 
 const API_KEY = import.meta.env.VITE_LGB_API_KEY as string | undefined
+
+const GRAPH_FETCH_MS = 120_000
+
+function joinApi(path: string, base: string): string {
+  const p = path.startsWith('/') ? path : `/${path}`
+  return `${base}${p}`
+}
+
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const bases = API_BASE === '/api' && import.meta.env.DEV
+    ? [API_BASE, API_DIRECT]
+    : [API_BASE]
+
+  let lastErr: unknown
+  for (const base of bases) {
+    try {
+      const res = await fetch(joinApi(path, base), init)
+      return res
+    } catch (err) {
+      lastErr = err
+      if (base !== bases[bases.length - 1]) continue
+    }
+  }
+  const hint =
+    lastErr instanceof TypeError
+      ? ' (¿proxy caído? Reinicia: npm run dev en frontend/; backend en :3001)'
+      : ''
+  throw new Error(`${lastErr instanceof Error ? lastErr.message : String(lastErr)}${hint}`)
+}
+
+function streamUrl(): string {
+  if (API_BASE !== '/api') return joinApi('/stream', API_BASE)
+  return joinApi('/stream', API_BASE)
+}
 
 function apiHeaders(extra: Record<string, string> = {}): Record<string, string> {
   const headers: Record<string, string> = { ...extra }
@@ -34,19 +74,30 @@ export interface Graph {
 }
 
 export async function fetchGraph(): Promise<Graph> {
-  const res = await fetch(`${API_BASE}/graph`)
-  if (!res.ok) throw new Error(`Failed to fetch graph: ${res.status} ${res.statusText}`)
-  return res.json()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), GRAPH_FETCH_MS)
+  try {
+    const res = await apiFetch('/graph', { signal: controller.signal })
+    if (!res.ok) throw new Error(`Failed to fetch graph: ${res.status} ${res.statusText}`)
+    return res.json()
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`Timeout cargando el grafo (>${GRAPH_FETCH_MS / 1000}s)`)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function fetchNode(id: string): Promise<Node> {
-  const res = await fetch(`${API_BASE}/node/${id}`)
+  const res = await apiFetch(`/node/${id}`)
   if (!res.ok) throw new Error(`Failed to fetch node ${id}: ${res.status} ${res.statusText}`)
   return res.json()
 }
 
 export async function studyNode(id: string): Promise<any> {
-  const res = await fetch(`${API_BASE}/study`, {
+  const res = await apiFetch('/study', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ node_id: id }),
@@ -63,13 +114,13 @@ export interface NodeContent {
 }
 
 export async function fetchNodeContent(id: string): Promise<NodeContent> {
-  const res = await fetch(`${API_BASE}/node/${encodeURIComponent(id)}/content`)
+  const res = await apiFetch(`/node/${encodeURIComponent(id)}/content`)
   if (!res.ok) throw new Error(`${res.status}`)
   return res.json()
 }
 
 export async function openNode(id: string, reveal: boolean): Promise<void> {
-  const res = await fetch(`${API_BASE}/open`, {
+  const res = await apiFetch('/open', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ node_id: id, reveal }),
@@ -81,7 +132,7 @@ export function subscribeToUpdates(
   onUpdate: (graph: Graph) => void,
   onError?: (err: Error) => void
 ): () => void {
-  const evtSource = new EventSource(`${API_BASE}/stream`)
+  const evtSource = new EventSource(streamUrl())
 
   evtSource.addEventListener('init', (e: MessageEvent) => {
     onUpdate(JSON.parse(e.data))
@@ -108,7 +159,7 @@ async function handleResponseError(res: Response, fallbackMsg: string): Promise<
 }
 
 export async function createFile(path: string, content: string = ''): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/file`, {
+  const res = await apiFetch('/create/file', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ path, content })
@@ -120,7 +171,7 @@ export async function createFile(path: string, content: string = ''): Promise<{ 
 }
 
 export async function createFolder(path: string): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/folder`, {
+  const res = await apiFetch('/create/folder', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ path })
@@ -132,7 +183,7 @@ export async function createFolder(path: string): Promise<{ status: string; path
 }
 
 export async function importGithub(url: string): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/github`, {
+  const res = await apiFetch('/create/github', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ url })
@@ -144,7 +195,7 @@ export async function importGithub(url: string): Promise<{ status: string; path:
 }
 
 export async function importArxiv(id: string): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/arxiv`, {
+  const res = await apiFetch('/create/arxiv', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ id })
@@ -156,7 +207,7 @@ export async function importArxiv(id: string): Promise<{ status: string; path: s
 }
 
 export async function importPubmed(id: string): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/pubmed`, {
+  const res = await apiFetch('/create/pubmed', {
     method: 'POST',
     headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ id })
@@ -168,9 +219,9 @@ export async function importPubmed(id: string): Promise<{ status: string; path: 
 }
 
 export async function createSystemFile(): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/system-file`, {
+  const res = await apiFetch('/create/system-file', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
   })
   if (!res.ok) {
     await handleResponseError(res, `No se pudo seleccionar o importar el archivo del sistema`)
@@ -179,9 +230,9 @@ export async function createSystemFile(): Promise<{ status: string; path: string
 }
 
 export async function createSystemFolder(): Promise<{ status: string; path: string }> {
-  const res = await fetch(`${API_BASE}/create/system-folder`, {
+  const res = await apiFetch('/create/system-folder', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
   })
   if (!res.ok) {
     await handleResponseError(res, `No se pudo seleccionar o importar la carpeta del sistema`)

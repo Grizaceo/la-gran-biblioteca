@@ -123,9 +123,10 @@ def scan_workspaces(
             rel = current_path.relative_to(root)
             node_id = f"folder_{rel}" if str(rel) != "." else "folder_dot"
             
+            stored_path = str((root / rel).resolve())
             graph["nodes"].append({
                 "id": node_id, "type": "folder", "label": current_path.name,
-                "path": str(current_path), "metadata": {"depth": depth},
+                "path": stored_path, "metadata": {"depth": depth},
                 "position": {"x": x, "y": y}
             })
             node_map[str(current_path)] = node_id
@@ -189,7 +190,7 @@ def scan_workspaces(
             
             graph["nodes"].append({
                 "id": node_id, "type": get_node_type(current_path),
-                "label": label, "path": str(current_path),
+                "label": label, "path": str((root / rel).resolve()),
                 "metadata": metadata,
                 "position": {"x": x, "y": y}
             })

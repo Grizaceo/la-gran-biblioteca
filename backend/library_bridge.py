@@ -21,10 +21,11 @@ from .graph_engine import GraphEngine
 from .workspace_watcher import start_watcher
 from .constants import WORKSPACE_ROOT
 from .os_open import open_in_os
+from .path_utils import is_windows_path, resolve_node_path
 from .preview import read_preview
 from .imports import download_and_extract_github, import_arxiv, import_pubmed
 from .overview import build_overview
-from .security import SecurityMiddleware, safe_error_detail
+from .security import SecurityMiddleware, safe_error_detail, PRODUCTION
 from .os_dialog import (
     select_file_in_os,
     select_folder_in_os,
@@ -158,8 +159,16 @@ async def lifespan(app: FastAPI):
         raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
         set_current_graph(engine.build_graph(raw))
         
-    observer = start_watcher(str(WORKSPACE_ROOT), asyncio.get_running_loop(), event_queue)
-    asyncio.create_task(process_fs_events())
+    observer = None
+    if WORKSPACE_ROOT.exists():
+        observer = start_watcher(str(WORKSPACE_ROOT), asyncio.get_running_loop(), event_queue)
+        asyncio.create_task(process_fs_events())
+    else:
+        logger.warning(
+            "WORKSPACE_ROOT no existe (%s); watcher desactivado. "
+            "Crea el directorio o define WORKSPACE_ROOT en .env",
+            WORKSPACE_ROOT,
+        )
     
     yield
     
@@ -168,18 +177,33 @@ async def lifespan(app: FastAPI):
         observer.join()
 
 
-CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")]
+_DEFAULT_CORS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", _DEFAULT_CORS).split(",") if o.strip()]
 
 app = FastAPI(title="La Gran Biblioteca API", lifespan=lifespan)
 
 app.add_middleware(SecurityMiddleware)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_cors_kwargs: dict = {
+    "allow_origins": CORS_ORIGINS,
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if not PRODUCTION:
+    # Dev: navegador en :5173 puede llamar API directa en :3001 (fallback sin proxy)
+    _cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
+
+
+@app.get("/")
+async def root():
+    """Evita confusión: el backend es solo API; la UI vive en el frontend."""
+    return {
+        "service": "La Gran Biblioteca API",
+        "ui": "Arranca el frontend: cd frontend && npm run dev → http://localhost:5173",
+        "health": "/api/health",
+        "graph": "/api/graph",
+    }
 
 
 @app.get("/api/graph")
@@ -194,6 +218,12 @@ async def get_node(node_id: str):
     node = _get_node_by_id(node_id)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
+    path_str = node.get("path", "")
+    if path_str:
+        root = Path(str(WORKSPACE_ROOT)).resolve()
+        resolved = resolve_node_path(node_id, path_str, root)
+        if resolved.exists():
+            return {**node, "path": str(resolved)}
     return node
 
 
@@ -440,15 +470,24 @@ def _get_node_by_id(node_id: str):
     return _node_index.get(node_id)
 
 
-def _validate_path(path_str: str) -> Path:
-    """Resolve path and ensure it's within WORKSPACE_ROOT."""
-    p = Path(path_str).resolve()
+def _validate_path(node_id: str, path_str: str) -> Path:
+    """Resolve path and ensure it is allowed and present on disk."""
     root = Path(str(WORKSPACE_ROOT)).resolve()
-    if not p.is_relative_to(root):
-        raise HTTPException(status_code=403, detail="Path outside workspace")
+    p = resolve_node_path(node_id, path_str, root)
     if not p.exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
-    return p
+
+    try:
+        if p.is_relative_to(root):
+            return p
+    except ValueError:
+        pass
+
+    # OneDrive / Windows drives via /mnt/c (symlinked vaults, imported libraries)
+    if str(p).startswith("/mnt/") or is_windows_path(path_str):
+        return p
+
+    raise HTTPException(status_code=403, detail="Path outside workspace")
 
 
 @app.get("/api/node/{node_id}/content")
@@ -462,7 +501,7 @@ async def get_node_content(node_id: str):
     if not path_str:
         raise HTTPException(status_code=422, detail="Node has no path")
 
-    p = _validate_path(path_str)
+    p = _validate_path(node_id, path_str)
 
     if not p.is_file():
         raise HTTPException(status_code=422, detail="Path is not a file")
@@ -486,11 +525,25 @@ async def open_node(req: OpenRequest):
     if not path_str:
         raise HTTPException(status_code=422, detail="Node has no path")
 
-    p = _validate_path(path_str)
+    p = _validate_path(req.node_id, path_str)
 
     try:
+        logger.info(
+            "open_node node_id=%s stored=%s resolved=%s reveal=%s",
+            req.node_id,
+            path_str,
+            p,
+            req.reveal,
+        )
         open_in_os(p, req.reveal)
     except Exception as e:
+        logger.warning(
+            "open_node failed node_id=%s path=%s reveal=%s: %s",
+            req.node_id,
+            p,
+            req.reveal,
+            e,
+        )
         raise HTTPException(status_code=500, detail=f"Could not open file: {e}")
 
     return {"ok": True}
@@ -517,6 +570,28 @@ async def health():
 
 
 if __name__ == "__main__":
+    import socket
+    import sys
+
     host = os.environ.get("LGB_HOST", "127.0.0.1")
     port = int(os.environ.get("LGB_PORT", "3001"))
+
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.bind((host, port))
+    except OSError as e:
+        if e.errno == 98:  # EADDRINUSE
+            print(
+                f"Puerto {port} ya en uso en {host}. "
+                f"O bien usa el servidor existente (curl http://{host}:{port}/api/health), "
+                f"o libera el puerto: ss -tlnp | grep {port}  /  pkill -f backend.library_bridge  "
+                f"o arranca en otro puerto: LGB_PORT=3002 python -m backend.library_bridge",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        raise
+    finally:
+        probe.close()
+
+    print(f"API: http://{host}:{port}/  |  UI: http://localhost:5173 (npm run dev en frontend/)")
     uvicorn.run(app, host=host, port=port)

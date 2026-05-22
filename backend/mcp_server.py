@@ -523,11 +523,14 @@ def open_in_os(node_id: str, reveal: bool = False) -> dict:
     path_str = n.get("path", "")
     if not path_str:
         return {"error": "Node has no path"}
-    p = Path(path_str)
-    if not p.exists():
-        return {"error": f"File not found: {path_str}"}
     try:
+        from .constants import WORKSPACE_ROOT
+        from .path_utils import resolve_node_path
         from .os_open import open_in_os as _open
+
+        p = resolve_node_path(node_id, path_str, WORKSPACE_ROOT.resolve())
+        if not p.exists():
+            return {"error": f"File not found: {path_str}"}
         _open(p, reveal)
         return {"status": "ok", "path": path_str}
     except Exception as e:

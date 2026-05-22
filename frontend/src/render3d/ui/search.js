@@ -93,8 +93,10 @@ export function initSearch(forceGraph) {
       highlightMesh.material = highlightMat
       originalObj.parent.add(highlightMesh)
       setTimeout(() => {
-        if (originalObj.parent) originalObj.parent.remove(highlightMesh)
-        highlightMesh.geometry.dispose()
+        if (highlightMesh.parent) highlightMesh.parent.remove(highlightMesh)
+        highlightMesh.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose()
+        })
         highlightMat.dispose()
       }, 2000)
     }

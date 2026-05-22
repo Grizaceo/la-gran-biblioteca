@@ -5,7 +5,7 @@ Visualizador 3D de grafo de conocimiento que escanea `~/.hermes/workspaces/`.
 ## Stack
 
 - **Backend:** Python + FastAPI + SQLite + watchdog (puerto 3001)
-- **Frontend:** TypeScript + Vite + Three.js + 3d-force-graph (puerto 3000)
+- **Frontend:** TypeScript + Vite + Three.js + 3d-force-graph (puerto 5173 en dev)
 - **Agentes:** MCP stdio server (`backend/mcp_server.py`)
 - **Sin:** React, Neo4j
 
@@ -34,18 +34,26 @@ la-gran-biblioteca/
 
 ## Uso
 
-### Backend
+### Backend (solo API — no sirve la UI)
 ```bash
-cd backend
-pip install -r requirements.txt
-python -m backend.library_bridge  # http://localhost:3001
+# Desde la raíz del repo (no desde backend/)
+pip install -r backend/requirements.txt
+python -m backend.library_bridge   # http://localhost:3001/api/health
 ```
 
-### Frontend
+### Frontend (visualizador 3D)
 ```bash
 cd frontend
 npm install
-npm run dev  # http://localhost:3000
+npm run dev   # http://localhost:5173  (proxy /api → :3001)
+```
+
+Necesitas **ambos** procesos. Abrir solo `http://localhost:3001` en el navegador muestra la API, no el grafo.
+
+**WSL:** el proxy de Vite debe apuntar a `127.0.0.1:3001` (no `localhost`), porque Node puede usar IPv6 (`::1`) y el backend escucha en IPv4. Tras cambiar config, reinicia `npm run dev`. Comprueba el proxy:
+
+```bash
+curl -s http://127.0.0.1:5173/api/health
 ```
 
 ### Docker

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 
-const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:3001'
+// 127.0.0.1 evita que el proxy use ::1 mientras uvicorn escucha solo en IPv4 (típico en WSL).
+const apiTarget = process.env.VITE_API_TARGET || 'http://127.0.0.1:3001'
 
 export default defineConfig({
   server: {
@@ -10,6 +11,15 @@ export default defineConfig({
       '/api': {
         target: apiTarget,
         changeOrigin: true,
+        timeout: 120_000,
+        proxyTimeout: 120_000,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            if (req.url?.includes('/stream')) {
+              proxyReq.setHeader('Accept', 'text/event-stream')
+            }
+          })
+        },
       },
     },
   },
