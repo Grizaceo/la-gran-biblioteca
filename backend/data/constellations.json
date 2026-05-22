@@ -1,0 +1,4573 @@
+{
+  "constellations": [
+    {
+      "id": "andromeda",
+      "name": "Andromeda",
+      "name_es": "Andrómeda",
+      "aliases": [
+        "andromeda",
+        "andrómeda"
+      ],
+      "stars": [
+        {
+          "name": "Alpheratz",
+          "ra": 2.1,
+          "dec": 29.09,
+          "mag": 2.1
+        },
+        {
+          "name": "Mirach",
+          "ra": 17.43,
+          "dec": 35.62,
+          "mag": 2.1
+        },
+        {
+          "name": "Almach",
+          "ra": 30.97,
+          "dec": 42.33,
+          "mag": 2.1
+        }
+      ],
+      "center_ra": 16.8333,
+      "center_dec": 35.68
+    },
+    {
+      "id": "antlia",
+      "name": "Antlia",
+      "name_es": "Antlia",
+      "aliases": [
+        "antlia",
+        "antlia"
+      ],
+      "stars": [
+        {
+          "name": "antlia_0",
+          "ra": 60.5994623196639,
+          "dec": -32.469844259769744,
+          "mag": 1.5
+        },
+        {
+          "name": "antlia_1",
+          "ra": 102.50134276617538,
+          "dec": -39.998508008678286,
+          "mag": 2.3
+        },
+        {
+          "name": "antlia_2",
+          "ra": 144.77872228051064,
+          "dec": -24.93768336900716,
+          "mag": 3.1
+        },
+        {
+          "name": "antlia_3",
+          "ra": 157.8549329758455,
+          "dec": 4.383603105866846,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "antlia_4",
+          "ra": 134.14238268135256,
+          "dec": 28.897906240250627,
+          "mag": 1.5
+        },
+        {
+          "name": "antlia_5",
+          "ra": 93.75616660550803,
+          "dec": 33.15753735843043,
+          "mag": 2.3
+        },
+        {
+          "name": "antlia_6",
+          "ra": 69.366990370944,
+          "dec": 16.9669889329073,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "apus",
+      "name": "Apus",
+      "name_es": "Apus",
+      "aliases": [
+        "apus",
+        "apus"
+      ],
+      "stars": [
+        {
+          "name": "apus_0",
+          "ra": 65.26708147705014,
+          "dec": 7.580194010159531,
+          "mag": 1.5
+        },
+        {
+          "name": "apus_1",
+          "ra": 53.22425438729925,
+          "dec": -12.838142620076116,
+          "mag": 2.3
+        },
+        {
+          "name": "apus_2",
+          "ra": 78.66357898408283,
+          "dec": -31.1192999698357,
+          "mag": 3.1
+        },
+        {
+          "name": "apus_3",
+          "ra": 124.68778616721852,
+          "dec": -30.48511210196979,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "apus_4",
+          "ra": 158.89877039391968,
+          "dec": -8.401053830926214,
+          "mag": 1.5
+        },
+        {
+          "name": "apus_5",
+          "ra": 157.79402395342794,
+          "dec": 21.515210117637373,
+          "mag": 2.3
+        },
+        {
+          "name": "apus_6",
+          "ra": 124.46450463700167,
+          "dec": 39.74820439501091,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "aquarius",
+      "name": "Aquarius",
+      "name_es": "Acuario",
+      "aliases": [
+        "aquarius",
+        "acuario"
+      ],
+      "stars": [
+        {
+          "name": "aquarius_0",
+          "ra": 122.69952498697734,
+          "dec": 12.730195725651033,
+          "mag": 1.5
+        },
+        {
+          "name": "aquarius_1",
+          "ra": 82.32207475167397,
+          "dec": 17.31432639976448,
+          "mag": 2.3
+        },
+        {
+          "name": "aquarius_2",
+          "ra": 57.51552398116566,
+          "dec": 1.3302121841368244,
+          "mag": 3.1
+        },
+        {
+          "name": "aquarius_3",
+          "ra": 69.21877255591095,
+          "dec": -20.17370131522459,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "aquarius_4",
+          "ra": 110.87809678520975,
+          "dec": -27.992447048275196,
+          "mag": 1.5
+        },
+        {
+          "name": "aquarius_5",
+          "ra": 153.3822370179006,
+          "dec": -13.22626841955071,
+          "mag": 2.3
+        },
+        {
+          "name": "aquarius_6",
+          "ra": 166.98376992116178,
+          "dec": 16.017682473498176,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "aquila",
+      "name": "Aquila",
+      "name_es": "Águila",
+      "aliases": [
+        "aquila",
+        "águila"
+      ],
+      "stars": [
+        {
+          "name": "Altair",
+          "ra": 297.7,
+          "dec": 8.87,
+          "mag": 0.8
+        },
+        {
+          "name": "Tarazed",
+          "ra": 296.56,
+          "dec": 10.61,
+          "mag": 2.7
+        },
+        {
+          "name": "Alshain",
+          "ra": 298.83,
+          "dec": 6.41,
+          "mag": 3.7
+        }
+      ],
+      "center_ra": 297.6967,
+      "center_dec": 8.63
+    },
+    {
+      "id": "ara",
+      "name": "Ara",
+      "name_es": "Ara",
+      "aliases": [
+        "ara",
+        "ara"
+      ],
+      "stars": [
+        {
+          "name": "ara_0",
+          "ra": 50.61558297024312,
+          "dec": -9.306966048793072,
+          "mag": 1.5
+        },
+        {
+          "name": "ara_1",
+          "ra": 66.09405012563298,
+          "dec": -30.240116377962238,
+          "mag": 2.3
+        },
+        {
+          "name": "ara_2",
+          "ra": 109.36345028060202,
+          "dec": -35.932046251393686,
+          "mag": 3.1
+        },
+        {
+          "name": "ara_3",
+          "ra": 150.1001037723955,
+          "dec": -19.084534795053564,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "ara_4",
+          "ra": 159.88754083424652,
+          "dec": 10.62797982296051,
+          "mag": 1.5
+        },
+        {
+          "name": "ara_5",
+          "ra": 133.61468292009724,
+          "dec": 33.84344965557118,
+          "mag": 2.3
+        },
+        {
+          "name": "ara_6",
+          "ra": 93.32458909678272,
+          "dec": 36.09223399467088,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "aries",
+      "name": "Aries",
+      "name_es": "Aries",
+      "aliases": [
+        "aries",
+        "aries"
+      ],
+      "stars": [
+        {
+          "name": "aries_0",
+          "ra": 125.75190374550272,
+          "dec": 11.71501902106337,
+          "mag": 1.5
+        },
+        {
+          "name": "aries_1",
+          "ra": 85.54803029221605,
+          "dec": 18.1132415632686,
+          "mag": 2.3
+        },
+        {
+          "name": "aries_2",
+          "ra": 58.485845984195635,
+          "dec": 3.341619802714728,
+          "mag": 3.1
+        },
+        {
+          "name": "aries_3",
+          "ra": 67.2027887621855,
+          "dec": -18.464432203600133,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "aries_4",
+          "ra": 107.39388410997918,
+          "dec": -27.872430947393134,
+          "mag": 1.5
+        },
+        {
+          "name": "aries_5",
+          "ra": 151.05347867059965,
+          "dec": -14.785879901257541,
+          "mag": 2.3
+        },
+        {
+          "name": "aries_6",
+          "ra": 167.56406843532125,
+          "dec": 13.952862665204117,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "auriga",
+      "name": "Auriga",
+      "name_es": "Auriga",
+      "aliases": [
+        "auriga",
+        "auriga"
+      ],
+      "stars": [
+        {
+          "name": "auriga_0",
+          "ra": 89.60441545911203,
+          "dec": 15.34442802201417,
+          "mag": 1.5
+        },
+        {
+          "name": "auriga_1",
+          "ra": 58.28112961668315,
+          "dec": 3.4193944494689745,
+          "mag": 2.3
+        },
+        {
+          "name": "auriga_2",
+          "ra": 60.63206527160676,
+          "dec": -18.610716849286966,
+          "mag": 3.1
+        },
+        {
+          "name": "auriga_3",
+          "ra": 97.14598111422512,
+          "dec": -31.144701148786027,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "auriga_4",
+          "ra": 142.5862149557503,
+          "dec": -21.732131039690238,
+          "mag": 1.5
+        },
+        {
+          "name": "auriga_5",
+          "ra": 164.99440509051368,
+          "dec": 5.551217789542093,
+          "mag": 2.3
+        },
+        {
+          "name": "auriga_6",
+          "ra": 149.75578849210893,
+          "dec": 33.172508776737985,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "bootes",
+      "name": "Bootes",
+      "name_es": "Boyero",
+      "aliases": [
+        "bootes",
+        "boyero"
+      ],
+      "stars": [
+        {
+          "name": "Arcturus",
+          "ra": 213.92,
+          "dec": 19.18,
+          "mag": -0.1
+        },
+        {
+          "name": "Izar",
+          "ra": 221.25,
+          "dec": 27.07,
+          "mag": 2.4
+        },
+        {
+          "name": "Muphrid",
+          "ra": 219.48,
+          "dec": 18.4,
+          "mag": 2.7
+        }
+      ],
+      "center_ra": 218.2167,
+      "center_dec": 21.55
+    },
+    {
+      "id": "caelum",
+      "name": "Caelum",
+      "name_es": "Caelum",
+      "aliases": [
+        "caelum",
+        "caelum"
+      ],
+      "stars": [
+        {
+          "name": "caelum_0",
+          "ra": 134.73291852294986,
+          "dec": 7.580194010159531,
+          "mag": 1.5
+        },
+        {
+          "name": "caelum_1",
+          "ra": 96.53549536299833,
+          "dec": 19.74820439501091,
+          "mag": 2.3
+        },
+        {
+          "name": "caelum_2",
+          "ra": 63.20597604657207,
+          "dec": 9.515210117637375,
+          "mag": 3.1
+        },
+        {
+          "name": "caelum_3",
+          "ra": 62.10122960608031,
+          "dec": -12.401053830926204,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "caelum_4",
+          "ra": 96.31221383278147,
+          "dec": -26.485112101969786,
+          "mag": 1.5
+        },
+        {
+          "name": "caelum_5",
+          "ra": 142.3364210159172,
+          "dec": -19.11929996983569,
+          "mag": 2.3
+        },
+        {
+          "name": "caelum_6",
+          "ra": 167.77574561270075,
+          "dec": 7.161857379923872,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "camelopardalis",
+      "name": "Camelopardalis",
+      "name_es": "Camelopardalis",
+      "aliases": [
+        "camelopardalis",
+        "camelopardalis"
+      ],
+      "stars": [
+        {
+          "name": "camelopardalis_0",
+          "ra": 75.75951898768315,
+          "dec": -40.23859121418188,
+          "mag": 1.5
+        },
+        {
+          "name": "camelopardalis_1",
+          "ra": 122.07656840809759,
+          "dec": -37.73067676054124,
+          "mag": 2.3
+        },
+        {
+          "name": "camelopardalis_2",
+          "ra": 154.0285727261355,
+          "dec": -14.340997103495024,
+          "mag": 3.1
+        },
+        {
+          "name": "camelopardalis_3",
+          "ra": 149.81408217705444,
+          "dec": 15.329623497816485,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "camelopardalis_4",
+          "ra": 114.86575529309997,
+          "dec": 31.950684145375128,
+          "mag": 1.5
+        },
+        {
+          "name": "camelopardalis_5",
+          "ra": 77.75945622268657,
+          "dec": 26.018268748850396,
+          "mag": 2.3
+        },
+        {
+          "name": "camelopardalis_6",
+          "ra": 68.69604618524278,
+          "dec": 5.01168868617615,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "cancer",
+      "name": "Cancer",
+      "name_es": "Cáncer",
+      "aliases": [
+        "cancer",
+        "cáncer"
+      ],
+      "stars": [
+        {
+          "name": "cancer_0",
+          "ra": 78.08144266054612,
+          "dec": 12.963821388975006,
+          "mag": 1.5
+        },
+        {
+          "name": "cancer_1",
+          "ra": 54.198728944818775,
+          "dec": -3.4703032517931334,
+          "mag": 2.3
+        },
+        {
+          "name": "cancer_2",
+          "ra": 67.0643676981553,
+          "dec": -24.821422725500774,
+          "mag": 3.1
+        },
+        {
+          "name": "cancer_3",
+          "ra": 109.2493317169379,
+          "dec": -31.999626999850754,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "cancer_4",
+          "ra": 151.2465438674261,
+          "dec": -16.587500262444944,
+          "mag": 1.5
+        },
+        {
+          "name": "cancer_5",
+          "ra": 163.69030800214531,
+          "dec": 12.821393288488842,
+          "mag": 2.3
+        },
+        {
+          "name": "cancer_6",
+          "ra": 139.46927710997045,
+          "dec": 37.09363856212575,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "canes_venatici",
+      "name": "Canes Venatici",
+      "name_es": "Canes Venatici",
+      "aliases": [
+        "canes_venatici",
+        "canes_venatici"
+      ],
+      "stars": [
+        {
+          "name": "canes_venatici_0",
+          "ra": 94.77357683661734,
+          "dec": -43.83565686104821,
+          "mag": 1.5
+        },
+        {
+          "name": "canes_venatici_1",
+          "ra": 138.61880484756725,
+          "dec": -31.053937086519742,
+          "mag": 2.3
+        },
+        {
+          "name": "canes_venatici_2",
+          "ra": 155.64234631709186,
+          "dec": -2.4181732637926685,
+          "mag": 3.1
+        },
+        {
+          "name": "canes_venatici_3",
+          "ra": 135.28418849052525,
+          "dec": 23.52040197062019,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "canes_venatici_4",
+          "ra": 95.13350063085846,
+          "dec": 30.241593999827085,
+          "mag": 1.5
+        },
+        {
+          "name": "canes_venatici_5",
+          "ra": 67.6836308100418,
+          "dec": 15.696289723633827,
+          "mag": 2.3
+        },
+        {
+          "name": "canes_venatici_6",
+          "ra": 75.86395206729802,
+          "dec": -6.150518482720447,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "canis_major",
+      "name": "Canis Major",
+      "name_es": "Can Mayor",
+      "aliases": [
+        "canis_major",
+        "can_mayor"
+      ],
+      "stars": [
+        {
+          "name": "Sirius",
+          "ra": 101.29,
+          "dec": -16.72,
+          "mag": -1.5
+        },
+        {
+          "name": "Adhara",
+          "ra": 104.66,
+          "dec": -28.97,
+          "mag": 1.5
+        },
+        {
+          "name": "Wezen",
+          "ra": 111.02,
+          "dec": -26.39,
+          "mag": 1.8
+        },
+        {
+          "name": "Mirzam",
+          "ra": 95.67,
+          "dec": -17.96,
+          "mag": 2.0
+        }
+      ],
+      "center_ra": 103.16,
+      "center_dec": -22.51
+    },
+    {
+      "id": "canis_minor",
+      "name": "Canis Minor",
+      "name_es": "Can Menor",
+      "aliases": [
+        "canis_minor",
+        "can_menor"
+      ],
+      "stars": [
+        {
+          "name": "canis_minor_0",
+          "ra": 51.28149676073824,
+          "dec": -7.251468369684044,
+          "mag": 1.5
+        },
+        {
+          "name": "canis_minor_1",
+          "ra": 63.83081925347811,
+          "dec": -28.646155117682238,
+          "mag": 2.3
+        },
+        {
+          "name": "canis_minor_2",
+          "ra": 105.87533375402607,
+          "dec": -35.99990674981776,
+          "mag": 3.1
+        },
+        {
+          "name": "canis_minor_3",
+          "ra": 148.01372448052035,
+          "dec": -20.763116712766493,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "canis_minor_4",
+          "ra": 160.77398493823569,
+          "dec": 8.602682906827617,
+          "mag": 1.5
+        },
+        {
+          "name": "canis_minor_5",
+          "ra": 136.80643992948245,
+          "dec": 32.9965276273945,
+          "mag": 2.3
+        },
+        {
+          "name": "canis_minor_6",
+          "ra": 96.41820088351915,
+          "dec": 37.06143641572841,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "capricornus",
+      "name": "Capricornus",
+      "name_es": "Capricornio",
+      "aliases": [
+        "capricornus",
+        "capricornio"
+      ],
+      "stars": [
+        {
+          "name": "capricornus_0",
+          "ra": 105.22642316338268,
+          "dec": 15.8356568610482,
+          "mag": 1.5
+        },
+        {
+          "name": "capricornus_1",
+          "ra": 67.38119515243275,
+          "dec": 11.053937086519738,
+          "mag": 2.3
+        },
+        {
+          "name": "capricornus_2",
+          "ra": 56.357653682908136,
+          "dec": -9.581826736207336,
+          "mag": 3.1
+        },
+        {
+          "name": "capricornus_3",
+          "ra": 82.71581150947478,
+          "dec": -27.52040197062019,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "capricornus_4",
+          "ra": 128.8664993691415,
+          "dec": -26.241593999827092,
+          "mag": 1.5
+        },
+        {
+          "name": "capricornus_5",
+          "ra": 162.3163691899582,
+          "dec": -3.6962897236337984,
+          "mag": 2.3
+        },
+        {
+          "name": "capricornus_6",
+          "ra": 160.13604793270196,
+          "dec": 26.15051848272047,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "carina",
+      "name": "Carina",
+      "name_es": "Carina",
+      "aliases": [
+        "carina",
+        "carina"
+      ],
+      "stars": [
+        {
+          "name": "carina_0",
+          "ra": 83.72159227714216,
+          "dec": 14.365557267979504,
+          "mag": 1.5
+        },
+        {
+          "name": "carina_1",
+          "ra": 55.888769311206005,
+          "dec": 0.04945269531651775,
+          "mag": 2.3
+        },
+        {
+          "name": "carina_2",
+          "ra": 63.531663947903326,
+          "dec": -21.83409472839628,
+          "mag": 3.1
+        },
+        {
+          "name": "carina_3",
+          "ra": 103.15408182801025,
+          "dec": -31.79424586495694,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "carina_4",
+          "ra": 147.1785953266242,
+          "dec": -19.318722173348505,
+          "mag": 1.5
+        },
+        {
+          "name": "carina_5",
+          "ra": 164.7129090317207,
+          "dec": 9.210234137472048,
+          "mag": 2.3
+        },
+        {
+          "name": "carina_6",
+          "ra": 144.81238827739338,
+          "dec": 35.32181866593367,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "cassiopeia",
+      "name": "Cassiopeia",
+      "name_es": "Casiopea",
+      "aliases": [
+        "cassiopeia",
+        "casiopea"
+      ],
+      "stars": [
+        {
+          "name": "Schedar",
+          "ra": 10.13,
+          "dec": 56.54,
+          "mag": 2.2
+        },
+        {
+          "name": "Caph",
+          "ra": 2.29,
+          "dec": 59.15,
+          "mag": 2.3
+        },
+        {
+          "name": "Gamma Cas",
+          "ra": 14.18,
+          "dec": 60.72,
+          "mag": 2.5
+        },
+        {
+          "name": "Ruchbah",
+          "ra": 21.45,
+          "dec": 60.24,
+          "mag": 2.7
+        },
+        {
+          "name": "Segin",
+          "ra": 28.6,
+          "dec": 63.67,
+          "mag": 3.4
+        }
+      ],
+      "center_ra": 15.33,
+      "center_dec": 60.064,
+      "summary_es": "Casiopea forma una W distintiva en el cielo norte. Es circumpolar en muchas latitudes y complementa a la Osa Mayor.",
+      "season": "Otoño e invierno (hemisferio norte)",
+      "hemisphere": "norte"
+    },
+    {
+      "id": "centaurus",
+      "name": "Centaurus",
+      "name_es": "Centaurus",
+      "aliases": [
+        "centaurus",
+        "centaurus"
+      ],
+      "stars": [
+        {
+          "name": "centaurus_0",
+          "ra": 149.8097349045873,
+          "dec": -16.61467228242975,
+          "mag": 1.5
+        },
+        {
+          "name": "centaurus_1",
+          "ra": 137.46291692419737,
+          "dec": 11.735469825778175,
+          "mag": 2.3
+        },
+        {
+          "name": "centaurus_2",
+          "ra": 99.1648195844963,
+          "dec": 23.71835983239158,
+          "mag": 3.1
+        },
+        {
+          "name": "centaurus_3",
+          "ra": 66.0137525099405,
+          "dec": 13.322718741150574,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "centaurus_4",
+          "ra": 65.23220655504832,
+          "dec": -8.611242088677486,
+          "mag": 1.5
+        },
+        {
+          "name": "centaurus_5",
+          "ra": 99.66776295333327,
+          "dec": -22.55472119583967,
+          "mag": 2.3
+        },
+        {
+          "name": "centaurus_6",
+          "ra": 145.64880656839696,
+          "dec": -14.995912832373474,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "cepheus",
+      "name": "Cepheus",
+      "name_es": "Cefeo",
+      "aliases": [
+        "cepheus",
+        "cefeo"
+      ],
+      "stars": [
+        {
+          "name": "cepheus_0",
+          "ra": 73.50403678833976,
+          "dec": 11.441442884692783,
+          "mag": 1.5
+        },
+        {
+          "name": "cepheus_1",
+          "ra": 53.32850213599722,
+          "dec": -6.5667467351370465,
+          "mag": 2.3
+        },
+        {
+          "name": "cepheus_2",
+          "ra": 70.55661848915305,
+          "dec": -27.16024608901227,
+          "mag": 3.1
+        },
+        {
+          "name": "cepheus_3",
+          "ra": 114.47432403319984,
+          "dec": -31.819648547503558,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "cepheus_4",
+          "ra": 154.2697519243875,
+          "dec": -14.024247439747871,
+          "mag": 1.5
+        },
+        {
+          "name": "cepheus_5",
+          "ra": 162.2351944707085,
+          "dec": 15.837738825216148,
+          "mag": 2.3
+        },
+        {
+          "name": "cepheus_6",
+          "ra": 134.6315721582141,
+          "dec": 38.29170710149181,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "cetus",
+      "name": "Cetus",
+      "name_es": "Cetos",
+      "aliases": [
+        "cetus",
+        "cetos"
+      ],
+      "stars": [
+        {
+          "name": "cetus_0",
+          "ra": 82.89899283371658,
+          "dec": -42.19077862357725,
+          "mag": 1.5
+        },
+        {
+          "name": "cetus_1",
+          "ra": 129.07176016897492,
+          "dec": -35.59872644896467,
+          "mag": 2.3
+        },
+        {
+          "name": "cetus_2",
+          "ra": 155.6119603300086,
+          "dec": -9.73031113942455,
+          "mag": 3.1
+        },
+        {
+          "name": "cetus_3",
+          "ra": 144.79334246298592,
+          "dec": 18.94710454258219,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "cetus_4",
+          "ra": 107.02160767020916,
+          "dec": 31.85092326096204,
+          "mag": 1.5
+        },
+        {
+          "name": "cetus_5",
+          "ra": 72.99870384246142,
+          "dec": 22.27638791597278,
+          "mag": 2.3
+        },
+        {
+          "name": "cetus_6",
+          "ra": 70.60363269164341,
+          "dec": 0.4454004924494672,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "chamaeleon",
+      "name": "Chamaeleon",
+      "name_es": "Camaleón",
+      "aliases": [
+        "chamaeleon",
+        "camaleón"
+      ],
+      "stars": [
+        {
+          "name": "chamaeleon_0",
+          "ra": 50.486596562921484,
+          "dec": -18.175193028801964,
+          "mag": 1.5
+        },
+        {
+          "name": "chamaeleon_1",
+          "ra": 77.56939349382841,
+          "dec": -35.829872840998945,
+          "mag": 2.3
+        },
+        {
+          "name": "chamaeleon_2",
+          "ra": 123.80195581371788,
+          "dec": -34.03413157053946,
+          "mag": 3.1
+        },
+        {
+          "name": "chamaeleon_3",
+          "ra": 156.6292823121573,
+          "dec": -11.128117435395692,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "chamaeleon_4",
+          "ra": 153.59078776924343,
+          "dec": 18.651555308263244,
+          "mag": 1.5
+        },
+        {
+          "name": "chamaeleon_5",
+          "ra": 119.23358173863117,
+          "dec": 35.89226727497328,
+          "mag": 2.3
+        },
+        {
+          "name": "chamaeleon_6",
+          "ra": 81.68840230950035,
+          "dec": 30.623492292499545,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "circinus",
+      "name": "Circinus",
+      "name_es": "Circinus",
+      "aliases": [
+        "circinus",
+        "circinus"
+      ],
+      "stars": [
+        {
+          "name": "circinus_0",
+          "ra": 52.724071220034155,
+          "dec": -4.232955366285303,
+          "mag": 1.5
+        },
+        {
+          "name": "circinus_1",
+          "ra": 60.796968890110534,
+          "dec": -26.08743296643603,
+          "mag": 2.3
+        },
+        {
+          "name": "circinus_2",
+          "ra": 100.64960977087999,
+          "dec": -35.82774541903242,
+          "mag": 3.1
+        },
+        {
+          "name": "circinus_3",
+          "ra": 144.53120362224752,
+          "dec": -23.107157195974505,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "circinus_4",
+          "ra": 161.6570764415949,
+          "dec": 5.507550903193842,
+          "mag": 1.5
+        },
+        {
+          "name": "circinus_5",
+          "ra": 141.39015788066047,
+          "dec": 31.481001631258007,
+          "mag": 2.3
+        },
+        {
+          "name": "circinus_6",
+          "ra": 101.25091217447252,
+          "dec": 38.26673841327641,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "columba",
+      "name": "Columba",
+      "name_es": "Columba",
+      "aliases": [
+        "columba",
+        "columba"
+      ],
+      "stars": [
+        {
+          "name": "columba_0",
+          "ra": 51.281496760738236,
+          "dec": -20.74853163031595,
+          "mag": 1.5
+        },
+        {
+          "name": "columba_1",
+          "ra": 81.41820088351913,
+          "dec": -37.06143641572841,
+          "mag": 2.3
+        },
+        {
+          "name": "columba_2",
+          "ra": 127.80643992948251,
+          "dec": -32.996527627394485,
+          "mag": 3.1
+        },
+        {
+          "name": "columba_3",
+          "ra": 157.77398493823566,
+          "dec": -8.602682906827631,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "columba_4",
+          "ra": 151.01372448052035,
+          "dec": 20.76311671276648,
+          "mag": 1.5
+        },
+        {
+          "name": "columba_5",
+          "ra": 114.87533375402602,
+          "dec": 35.99990674981776,
+          "mag": 2.3
+        },
+        {
+          "name": "columba_6",
+          "ra": 78.83081925347811,
+          "dec": 28.64615511768224,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "coma_berenices",
+      "name": "Coma Berenices",
+      "name_es": "Coma Berenices",
+      "aliases": [
+        "coma_berenices",
+        "coma_berenices"
+      ],
+      "stars": [
+        {
+          "name": "coma_berenices_0",
+          "ra": 125.75190374550272,
+          "dec": 11.71501902106337,
+          "mag": 1.5
+        },
+        {
+          "name": "coma_berenices_1",
+          "ra": 85.54803029221605,
+          "dec": 18.1132415632686,
+          "mag": 2.3
+        },
+        {
+          "name": "coma_berenices_2",
+          "ra": 58.485845984195635,
+          "dec": 3.341619802714728,
+          "mag": 3.1
+        },
+        {
+          "name": "coma_berenices_3",
+          "ra": 67.2027887621855,
+          "dec": -18.464432203600133,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "coma_berenices_4",
+          "ra": 107.39388410997918,
+          "dec": -27.872430947393134,
+          "mag": 1.5
+        },
+        {
+          "name": "coma_berenices_5",
+          "ra": 151.05347867059965,
+          "dec": -14.785879901257541,
+          "mag": 2.3
+        },
+        {
+          "name": "coma_berenices_6",
+          "ra": 167.56406843532125,
+          "dec": 13.952862665204117,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "corona_australis",
+      "name": "Corona Australis",
+      "name_es": "Corona Austral",
+      "aliases": [
+        "corona_australis",
+        "corona_austral"
+      ],
+      "stars": [
+        {
+          "name": "corona_australis_0",
+          "ra": 82.08160252273498,
+          "dec": 14.007412794916053,
+          "mag": 1.5
+        },
+        {
+          "name": "corona_australis_1",
+          "ra": 55.33293346470187,
+          "dec": -0.9431641037829444,
+          "mag": 2.3
+        },
+        {
+          "name": "corona_australis_2",
+          "ra": 64.47853773870482,
+          "dec": -22.713723158117173,
+          "mag": 3.1
+        },
+        {
+          "name": "corona_australis_3",
+          "ra": 104.8906499789385,
+          "dec": -31.898507776569463,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "corona_australis_4",
+          "ra": 148.39718660049556,
+          "dec": -18.569106220853023,
+          "mag": 1.5
+        },
+        {
+          "name": "corona_australis_5",
+          "ra": 164.49589934457813,
+          "dec": 10.249251852467673,
+          "mag": 2.3
+        },
+        {
+          "name": "corona_australis_6",
+          "ra": 143.32319034984613,
+          "dec": 35.86783661193887,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "corona_borealis",
+      "name": "Corona Borealis",
+      "name_es": "Corona Boreal",
+      "aliases": [
+        "corona_borealis",
+        "corona_boreal"
+      ],
+      "stars": [
+        {
+          "name": "corona_borealis_0",
+          "ra": 69.21692623371709,
+          "dec": 9.64032260820166,
+          "mag": 1.5
+        },
+        {
+          "name": "corona_borealis_1",
+          "ra": 53.00248665220285,
+          "dec": -9.700805659705233,
+          "mag": 2.3
+        },
+        {
+          "name": "corona_borealis_2",
+          "ra": 74.43719438498806,
+          "dec": -29.267233368306375,
+          "mag": 3.1
+        },
+        {
+          "name": "corona_borealis_3",
+          "ra": 119.63933850977809,
+          "dec": -31.31295978550728,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "corona_borealis_4",
+          "ra": 156.82984373375103,
+          "dec": -11.285429608811539,
+          "mag": 1.5
+        },
+        {
+          "name": "corona_borealis_5",
+          "ra": 160.26256226405073,
+          "dec": 18.74630003669516,
+          "mag": 2.3
+        },
+        {
+          "name": "corona_borealis_6",
+          "ra": 129.61164822151216,
+          "dec": 39.1798057774336,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "corvus",
+      "name": "Corvus",
+      "name_es": "Cuervo",
+      "aliases": [
+        "corvus",
+        "cuervo"
+      ],
+      "stars": [
+        {
+          "name": "corvus_0",
+          "ra": 111.24755271719324,
+          "dec": 15.231101943557057,
+          "mag": 1.5
+        },
+        {
+          "name": "corvus_1",
+          "ra": 71.92307480386293,
+          "dec": 13.501508447913135,
+          "mag": 2.3
+        },
+        {
+          "name": "corvus_2",
+          "ra": 56.0001554169704,
+          "dec": -5.925200252415633,
+          "mag": 3.1
+        },
+        {
+          "name": "corvus_3",
+          "ra": 77.72813881205585,
+          "dec": -25.408234688312206,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "corvus_4",
+          "ra": 123.00447151137936,
+          "dec": -27.264390962941402,
+          "mag": 1.5
+        },
+        {
+          "name": "corvus_5",
+          "ra": 159.99421271232416,
+          "dec": -7.083863957689466,
+          "mag": 2.3
+        },
+        {
+          "name": "corvus_6",
+          "ra": 163.10239402621403,
+          "dec": 22.94907946988851,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "crater",
+      "name": "Crater",
+      "name_es": "Crater",
+      "aliases": [
+        "crater",
+        "crater"
+      ],
+      "stars": [
+        {
+          "name": "crater_0",
+          "ra": 72.76804824924865,
+          "dec": -39.16011703836272,
+          "mag": 1.5
+        },
+        {
+          "name": "crater_1",
+          "ra": 118.80610847065122,
+          "dec": -38.46155471166399,
+          "mag": 2.3
+        },
+        {
+          "name": "crater_2",
+          "ra": 152.9418466277993,
+          "dec": -16.33086117717105,
+          "mag": 3.1
+        },
+        {
+          "name": "crater_3",
+          "ra": 151.72941683504808,
+          "dec": 13.579181534895069,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "crater_4",
+          "ra": 118.34086464424742,
+          "dec": 31.757782793796988,
+          "mag": 1.5
+        },
+        {
+          "name": "crater_5",
+          "ra": 80.17751204626165,
+          "dec": 27.528166660824358,
+          "mag": 2.3
+        },
+        {
+          "name": "crater_6",
+          "ra": 68.23620312674367,
+          "dec": 7.087401937681358,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "crux",
+      "name": "Crux",
+      "name_es": "Cruz del Sur",
+      "aliases": [
+        "crux",
+        "cruz_del_sur"
+      ],
+      "stars": [
+        {
+          "name": "Acrux",
+          "ra": 186.65,
+          "dec": -63.1,
+          "mag": 0.8
+        },
+        {
+          "name": "Mimosa",
+          "ra": 191.93,
+          "dec": -59.69,
+          "mag": 1.3
+        },
+        {
+          "name": "Gacrux",
+          "ra": 187.79,
+          "dec": -57.11,
+          "mag": 1.6
+        },
+        {
+          "name": "Delta Cru",
+          "ra": 183.79,
+          "dec": -58.75,
+          "mag": 2.8
+        }
+      ],
+      "center_ra": 187.54,
+      "center_dec": -59.6625,
+      "summary_es": "La Cruz del Sur es un referente del cielo austral. Sus cuatro estrellas principales orientan hacia el polo sur celeste.",
+      "season": "Todo el año (hemisferio sur)",
+      "hemisphere": "sur"
+    },
+    {
+      "id": "cygnus",
+      "name": "Cygnus",
+      "name_es": "Cisne",
+      "aliases": [
+        "cygnus",
+        "cisne"
+      ],
+      "stars": [
+        {
+          "name": "Deneb",
+          "ra": 310.36,
+          "dec": 45.28,
+          "mag": 1.3
+        },
+        {
+          "name": "Albireo",
+          "ra": 292.68,
+          "dec": 27.96,
+          "mag": 3.0
+        },
+        {
+          "name": "Sadr",
+          "ra": 305.56,
+          "dec": 40.26,
+          "mag": 2.2
+        },
+        {
+          "name": "Gienah",
+          "ra": 303.4,
+          "dec": 33.97,
+          "mag": 2.5
+        },
+        {
+          "name": "Delta Cyg",
+          "ra": 296.24,
+          "dec": 45.13,
+          "mag": 2.9
+        }
+      ],
+      "center_ra": 301.648,
+      "center_dec": 38.52,
+      "summary_es": "El Cisne cruza la Vía Láctea de verano; Deneb es una de las estrellas del Triángulo de Verano junto a Vega y Altair.",
+      "season": "Verano (hemisferio norte)",
+      "hemisphere": "norte"
+    },
+    {
+      "id": "delphinus",
+      "name": "Delphinus",
+      "name_es": "Delfín",
+      "aliases": [
+        "delphinus",
+        "delfín"
+      ],
+      "stars": [
+        {
+          "name": "delphinus_0",
+          "ra": 90.45955023117276,
+          "dec": 15.44881550342992,
+          "mag": 1.5
+        },
+        {
+          "name": "delphinus_1",
+          "ra": 58.67827506070051,
+          "dec": 3.8856217515035247,
+          "mag": 2.3
+        },
+        {
+          "name": "delphinus_2",
+          "ra": 60.27216276794499,
+          "dec": -18.133728394369395,
+          "mag": 3.1
+        },
+        {
+          "name": "delphinus_3",
+          "ra": 96.30004458881467,
+          "dec": -31.01613357632966,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "delphinus_4",
+          "ra": 141.89125186618566,
+          "dec": -22.048798354055254,
+          "mag": 1.5
+        },
+        {
+          "name": "delphinus_5",
+          "ra": 164.9737368179005,
+          "dec": 5.027772534908573,
+          "mag": 2.3
+        },
+        {
+          "name": "delphinus_6",
+          "ra": 150.42497866728093,
+          "dec": 32.83645053491229,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "dorado",
+      "name": "Dorado",
+      "name_es": "Dorado",
+      "aliases": [
+        "dorado",
+        "dorado"
+      ],
+      "stars": [
+        {
+          "name": "dorado_0",
+          "ra": 126.49596321166024,
+          "dec": -39.44144288469279,
+          "mag": 1.5
+        },
+        {
+          "name": "dorado_1",
+          "ra": 152.6714978640028,
+          "dec": -13.433253264862945,
+          "mag": 2.3
+        },
+        {
+          "name": "dorado_2",
+          "ra": 141.44338151084693,
+          "dec": 15.160246089012276,
+          "mag": 3.1
+        },
+        {
+          "name": "dorado_3",
+          "ra": 103.52567596680016,
+          "dec": 27.819648547503558,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "dorado_4",
+          "ra": 69.73024807561248,
+          "dec": 18.024247439747853,
+          "mag": 1.5
+        },
+        {
+          "name": "dorado_5",
+          "ra": 67.76480552929145,
+          "dec": -3.8377388252160927,
+          "mag": 2.3
+        },
+        {
+          "name": "dorado_6",
+          "ra": 101.36842784178592,
+          "dec": -18.291707101491816,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "draco",
+      "name": "Draco",
+      "name_es": "Dragón",
+      "aliases": [
+        "draco",
+        "dragón"
+      ],
+      "stars": [
+        {
+          "name": "draco_0",
+          "ra": 139.4005376803361,
+          "dec": 4.469844259769747,
+          "mag": 1.5
+        },
+        {
+          "name": "draco_1",
+          "ra": 103.49865723382463,
+          "dec": 19.99850800867829,
+          "mag": 2.3
+        },
+        {
+          "name": "draco_2",
+          "ra": 67.2212777194894,
+          "dec": 12.937683369007171,
+          "mag": 3.1
+        },
+        {
+          "name": "draco_3",
+          "ra": 60.145067024154535,
+          "dec": -8.383603105866863,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "draco_4",
+          "ra": 89.85761731864744,
+          "dec": -24.897906240250627,
+          "mag": 1.5
+        },
+        {
+          "name": "draco_5",
+          "ra": 136.24383339449193,
+          "dec": -21.15753735843044,
+          "mag": 2.3
+        },
+        {
+          "name": "draco_6",
+          "ra": 166.633009629056,
+          "dec": 3.033011067092705,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "equuleus",
+      "name": "Equuleus",
+      "name_es": "Equuleus",
+      "aliases": [
+        "equuleus",
+        "equuleus"
+      ],
+      "stars": [
+        {
+          "name": "equuleus_0",
+          "ra": 50.030458649045215,
+          "dec": -12.953015098924965,
+          "mag": 1.5
+        },
+        {
+          "name": "equuleus_1",
+          "ra": 70.48022430190619,
+          "dec": -32.787871947078344,
+          "mag": 2.3
+        },
+        {
+          "name": "equuleus_2",
+          "ra": 115.41804433796486,
+          "dec": -35.462996431207166,
+          "mag": 3.1
+        },
+        {
+          "name": "equuleus_3",
+          "ra": 153.26388489444275,
+          "dec": -15.95188366703751,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "equuleus_4",
+          "ra": 157.77811730670294,
+          "dec": 14.065282064972527,
+          "mag": 1.5
+        },
+        {
+          "name": "equuleus_5",
+          "ra": 127.82049368360141,
+          "dec": 34.997044315156415,
+          "mag": 2.3
+        },
+        {
+          "name": "equuleus_6",
+          "ra": 88.20877682633663,
+          "dec": 34.09344076411905,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "eridanus",
+      "name": "Eridanus",
+      "name_es": "Eridano",
+      "aliases": [
+        "eridanus",
+        "eridano"
+      ],
+      "stars": [
+        {
+          "name": "eridanus_0",
+          "ra": 57.5975951921787,
+          "dec": 1.8975779269961475,
+          "mag": 1.5
+        },
+        {
+          "name": "eridanus_1",
+          "ra": 55.84715483084698,
+          "dec": -19.97894329492847,
+          "mag": 2.3
+        },
+        {
+          "name": "eridanus_2",
+          "ra": 89.60376862463977,
+          "dec": -34.34111668242511,
+          "mag": 3.1
+        },
+        {
+          "name": "eridanus_3",
+          "ra": 135.70707906624642,
+          "dec": -27.361851154632507,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "eridanus_4",
+          "ra": 161.69941424583925,
+          "dec": -1.2845944199199142,
+          "mag": 1.5
+        },
+        {
+          "name": "eridanus_5",
+          "ra": 150.2670768150204,
+          "dec": 27.266028906508186,
+          "mag": 2.3
+        },
+        {
+          "name": "eridanus_6",
+          "ra": 112.27791122522841,
+          "dec": 39.80289871840167,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "fornax",
+      "name": "Fornax",
+      "name_es": "Fornax",
+      "aliases": [
+        "fornax",
+        "fornax"
+      ],
+      "stars": [
+        {
+          "name": "fornax_0",
+          "ra": 55.060297685041654,
+          "dec": -27.151134403672323,
+          "mag": 1.5
+        },
+        {
+          "name": "fornax_1",
+          "ra": 92.11717208632189,
+          "dec": -39.280762633108736,
+          "mag": 2.3
+        },
+        {
+          "name": "fornax_2",
+          "ra": 137.36903787583466,
+          "dec": -29.361379381106804,
+          "mag": 3.1
+        },
+        {
+          "name": "fornax_3",
+          "ra": 158.9993783330846,
+          "dec": -1.8504009698372599,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "fornax_4",
+          "ra": 142.97916710407492,
+          "dec": 25.547926320455673,
+          "mag": 1.5
+        },
+        {
+          "name": "fornax_5",
+          "ra": 103.63101118585193,
+          "dec": 35.21418480128719,
+          "mag": 2.3
+        },
+        {
+          "name": "fornax_6",
+          "ra": 72.84393572979042,
+          "dec": 22.88156626598228,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "name_es": "Géminis",
+      "aliases": [
+        "gemini",
+        "géminis"
+      ],
+      "stars": [
+        {
+          "name": "Pollux",
+          "ra": 116.33,
+          "dec": 28.03,
+          "mag": 1.2
+        },
+        {
+          "name": "Castor",
+          "ra": 113.65,
+          "dec": 31.89,
+          "mag": 1.6
+        },
+        {
+          "name": "Alhena",
+          "ra": 99.43,
+          "dec": 16.4,
+          "mag": 1.9
+        },
+        {
+          "name": "Mebsuta",
+          "ra": 100.98,
+          "dec": 25.13,
+          "mag": 3.0
+        }
+      ],
+      "center_ra": 107.5975,
+      "center_dec": 25.3625
+    },
+    {
+      "id": "grus",
+      "name": "Grus",
+      "name_es": "Grus",
+      "aliases": [
+        "grus",
+        "grus"
+      ],
+      "stars": [
+        {
+          "name": "grus_0",
+          "ra": 149.3844170297569,
+          "dec": -18.693033951206935,
+          "mag": 1.5
+        },
+        {
+          "name": "grus_1",
+          "ra": 139.90594987436702,
+          "dec": 10.240116377962227,
+          "mag": 2.3
+        },
+        {
+          "name": "grus_2",
+          "ra": 102.63654971939799,
+          "dec": 23.932046251393682,
+          "mag": 3.1
+        },
+        {
+          "name": "grus_3",
+          "ra": 67.8998962276045,
+          "dec": 15.084534795053546,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "grus_4",
+          "ra": 64.11245916575348,
+          "dec": -6.627979822960533,
+          "mag": 1.5
+        },
+        {
+          "name": "grus_5",
+          "ra": 96.38531707990268,
+          "dec": -21.843449655571153,
+          "mag": 2.3
+        },
+        {
+          "name": "grus_6",
+          "ra": 142.67541090321728,
+          "dec": -16.09223399467088,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "hercules",
+      "name": "Hercules",
+      "name_es": "Hércules",
+      "aliases": [
+        "hercules",
+        "hércules"
+      ],
+      "stars": [
+        {
+          "name": "hercules_0",
+          "ra": 128.67882181755232,
+          "dec": 10.574561328669756,
+          "mag": 1.5
+        },
+        {
+          "name": "hercules_1",
+          "ra": 88.85901007490862,
+          "dec": 18.775191839809636,
+          "mag": 2.3
+        },
+        {
+          "name": "hercules_2",
+          "ra": 59.68765216948456,
+          "dec": 5.307515988630158,
+          "mag": 3.1
+        },
+        {
+          "name": "hercules_3",
+          "ra": 65.39043678016972,
+          "dec": -16.67495003327867,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "hercules_4",
+          "ra": 103.93211196835965,
+          "dec": -27.606879365701634,
+          "mag": 1.5
+        },
+        {
+          "name": "hercules_5",
+          "ra": 148.54907139929853,
+          "dec": -16.244224665474793,
+          "mag": 2.3
+        },
+        {
+          "name": "hercules_6",
+          "ra": 167.90289579022658,
+          "dec": 11.86878490734555,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "horologium",
+      "name": "Horologium",
+      "name_es": "Horologium",
+      "aliases": [
+        "horologium",
+        "horologium"
+      ],
+      "stars": [
+        {
+          "name": "horologium_0",
+          "ra": 146.98463103929544,
+          "dec": -24.26060429977006,
+          "mag": 1.5
+        },
+        {
+          "name": "horologium_1",
+          "ra": 145.66454408160777,
+          "dec": 5.643056101384946,
+          "mag": 2.3
+        },
+        {
+          "name": "horologium_2",
+          "ra": 112.21718523237425,
+          "dec": 23.767176198005163,
+          "mag": 3.1
+        },
+        {
+          "name": "horologium_3",
+          "ra": 74.08815909569635,
+          "dec": 19.476005477791553,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "horologium_4",
+          "ra": 62.24846123172994,
+          "dec": -0.9870353978745534,
+          "mag": 1.5
+        },
+        {
+          "name": "horologium_5",
+          "ra": 87.87268680671203,
+          "dec": -19.200777694523143,
+          "mag": 2.3
+        },
+        {
+          "name": "horologium_6",
+          "ra": 133.92433251258421,
+          "dec": -18.437820385013953,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "hydra",
+      "name": "Hydra",
+      "name_es": "Hydra",
+      "aliases": [
+        "hydra",
+        "hydra"
+      ],
+      "stars": [
+        {
+          "name": "hydra_0",
+          "ra": 81.26967032920439,
+          "dec": -41.81551563700362,
+          "mag": 1.5
+        },
+        {
+          "name": "hydra_1",
+          "ra": 127.5669068416256,
+          "dec": -36.12906718129371,
+          "mag": 2.3
+        },
+        {
+          "name": "hydra_2",
+          "ra": 155.3647614287298,
+          "dec": -10.766898202233083,
+          "mag": 3.1
+        },
+        {
+          "name": "hydra_3",
+          "ra": 145.98994380237923,
+          "dec": 18.184842350111577,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "hydra_4",
+          "ra": 108.76094403549243,
+          "dec": 31.936984917074792,
+          "mag": 1.5
+        },
+        {
+          "name": "hydra_5",
+          "ra": 73.9710194745804,
+          "dec": 23.145967238278114,
+          "mag": 2.3
+        },
+        {
+          "name": "hydra_6",
+          "ra": 70.07675408798822,
+          "dec": 1.4436865150659255,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "hydrus",
+      "name": "Hydrus",
+      "name_es": "Hydrus",
+      "aliases": [
+        "hydrus",
+        "hydrus"
+      ],
+      "stars": [
+        {
+          "name": "hydrus_0",
+          "ra": 100.87262032186418,
+          "dec": 15.995430854691737,
+          "mag": 1.5
+        },
+        {
+          "name": "hydrus_1",
+          "ra": 64.45844958425879,
+          "dec": 9.111190464183966,
+          "mag": 2.3
+        },
+        {
+          "name": "hydrus_2",
+          "ra": 57.066852414058076,
+          "dec": -12.164166143094574,
+          "mag": 3.1
+        },
+        {
+          "name": "hydrus_3",
+          "ra": 86.52291343037501,
+          "dec": -28.79777991854867,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "hydrus_4",
+          "ra": 132.90467908262775,
+          "dec": -25.252118840245146,
+          "mag": 1.5
+        },
+        {
+          "name": "hydrus_5",
+          "ra": 163.54479500792098,
+          "dec": -1.1850564333215399,
+          "mag": 2.3
+        },
+        {
+          "name": "hydrus_6",
+          "ra": 157.62969015889522,
+          "dec": 28.292500016334216,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "indus",
+      "name": "Indus",
+      "name_es": "Indus",
+      "aliases": [
+        "indus",
+        "indus"
+      ],
+      "stars": [
+        {
+          "name": "indus_0",
+          "ra": 142.4024048078213,
+          "dec": 1.8975779269961475,
+          "mag": 1.5
+        },
+        {
+          "name": "indus_1",
+          "ra": 108.72208877477159,
+          "dec": 19.80289871840167,
+          "mag": 2.3
+        },
+        {
+          "name": "indus_2",
+          "ra": 70.73292318497957,
+          "dec": 15.266028906508176,
+          "mag": 3.1
+        },
+        {
+          "name": "indus_3",
+          "ra": 59.300585754160736,
+          "dec": -5.2845944199199035,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "indus_4",
+          "ra": 85.29292093375355,
+          "dec": -23.3618511546325,
+          "mag": 1.5
+        },
+        {
+          "name": "indus_5",
+          "ra": 131.39623137536023,
+          "dec": -22.34111668242511,
+          "mag": 2.3
+        },
+        {
+          "name": "indus_6",
+          "ra": 165.152845169153,
+          "dec": 0.021056705071531567,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "lacerta",
+      "name": "Lacerta",
+      "name_es": "Lacerta",
+      "aliases": [
+        "lacerta",
+        "lacerta"
+      ],
+      "stars": [
+        {
+          "name": "lacerta_0",
+          "ra": 144.93970231495834,
+          "dec": -27.151134403672334,
+          "mag": 1.5
+        },
+        {
+          "name": "lacerta_1",
+          "ra": 148.15606427020958,
+          "dec": 2.8815662659822827,
+          "mag": 2.3
+        },
+        {
+          "name": "lacerta_2",
+          "ra": 117.36898881414805,
+          "dec": 23.21418480128719,
+          "mag": 3.1
+        },
+        {
+          "name": "lacerta_3",
+          "ra": 78.02083289592511,
+          "dec": 21.547926320455687,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "lacerta_4",
+          "ra": 62.00062166691541,
+          "dec": 2.149599030162705,
+          "mag": 1.5
+        },
+        {
+          "name": "lacerta_5",
+          "ra": 83.63096212416535,
+          "dec": -17.36137938110681,
+          "mag": 2.3
+        },
+        {
+          "name": "lacerta_6",
+          "ra": 128.88282791367808,
+          "dec": -19.280762633108736,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "leo",
+      "name": "Leo",
+      "name_es": "Leo",
+      "aliases": [
+        "leo",
+        "leo"
+      ],
+      "stars": [
+        {
+          "name": "Regulus",
+          "ra": 152.09,
+          "dec": 11.97,
+          "mag": 1.4
+        },
+        {
+          "name": "Algieba",
+          "ra": 154.99,
+          "dec": 19.84,
+          "mag": 2.0
+        },
+        {
+          "name": "Denebola",
+          "ra": 177.26,
+          "dec": 14.57,
+          "mag": 2.1
+        },
+        {
+          "name": "Zosma",
+          "ra": 168.56,
+          "dec": 20.52,
+          "mag": 2.6
+        },
+        {
+          "name": "Chertan",
+          "ra": 146.46,
+          "dec": 15.43,
+          "mag": 3.3
+        }
+      ],
+      "center_ra": 159.872,
+      "center_dec": 16.466,
+      "summary_es": "Leo domina el cielo de primavera en el hemisferio norte. Su estrella más brillante, Regulus, marca el «corazón del león».",
+      "season": "Primavera (hemisferio norte)",
+      "hemisphere": "norte"
+    },
+    {
+      "id": "leo_minor",
+      "name": "Leo Minor",
+      "name_es": "Leo Menor",
+      "aliases": [
+        "leo_minor",
+        "leo_menor"
+      ],
+      "stars": [
+        {
+          "name": "leo_minor_0",
+          "ra": 61.6977778440511,
+          "dec": 5.283628290596184,
+          "mag": 1.5
+        },
+        {
+          "name": "leo_minor_1",
+          "ra": 53.991375607572806,
+          "dec": -15.944384295981934,
+          "mag": 2.3
+        },
+        {
+          "name": "leo_minor_2",
+          "ra": 83.18946713234183,
+          "dec": -32.69615426434405,
+          "mag": 3.1
+        },
+        {
+          "name": "leo_minor_3",
+          "ra": 129.56435515653055,
+          "dec": -29.345175569350197,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "leo_minor_4",
+          "ra": 160.45386431145388,
+          "dec": -5.402721930708818,
+          "mag": 1.5
+        },
+        {
+          "name": "leo_minor_5",
+          "ra": 154.85662536114611,
+          "dec": 24.114132309764337,
+          "mag": 2.3
+        },
+        {
+          "name": "leo_minor_6",
+          "ra": 119.24653458690366,
+          "dec": 39.99067546002449,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "lepus",
+      "name": "Lepus",
+      "name_es": "Liebre",
+      "aliases": [
+        "lepus",
+        "liebre"
+      ],
+      "stars": [
+        {
+          "name": "lepus_0",
+          "ra": 67.19704855047463,
+          "dec": -36.64128740668316,
+          "mag": 1.5
+        },
+        {
+          "name": "lepus_1",
+          "ra": 112.05047979727348,
+          "dec": -39.50443989568505,
+          "mag": 2.3
+        },
+        {
+          "name": "lepus_2",
+          "ra": 150.0887151605824,
+          "dec": -20.150147362343994,
+          "mag": 3.1
+        },
+        {
+          "name": "lepus_3",
+          "ra": 154.92724876208183,
+          "dec": 9.859494745245549,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "lepus_4",
+          "ra": 125.18162730059194,
+          "dec": 30.938695420059698,
+          "mag": 1.5
+        },
+        {
+          "name": "lepus_5",
+          "ra": 85.50997162556165,
+          "dec": 30.226468201760973,
+          "mag": 2.3
+        },
+        {
+          "name": "lepus_6",
+          "ra": 68.04490880343405,
+          "dec": 11.271216297646019,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "libra",
+      "name": "Libra",
+      "name_es": "Libra",
+      "aliases": [
+        "libra",
+        "libra"
+      ],
+      "stars": [
+        {
+          "name": "libra_0",
+          "ra": 98.25502516487497,
+          "dec": -43.98172481057287,
+          "mag": 1.5
+        },
+        {
+          "name": "libra_1",
+          "ra": 140.97978657846392,
+          "dec": -29.511865418856285,
+          "mag": 2.3
+        },
+        {
+          "name": "libra_2",
+          "ra": 155.10499405201193,
+          "dec": -0.34917339722108753,
+          "mag": 3.1
+        },
+        {
+          "name": "libra_3",
+          "ra": 132.25313944506252,
+          "dec": 24.558330936665655,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "libra_4",
+          "ra": 91.89119655837912,
+          "dec": 29.46687038402177,
+          "mag": 1.5
+        },
+        {
+          "name": "libra_5",
+          "ra": 66.67159280807263,
+          "dec": 13.692296210160851,
+          "mag": 2.3
+        },
+        {
+          "name": "libra_6",
+          "ra": 77.84426539313492,
+          "dec": -7.87473390419802,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "lupus",
+      "name": "Lupus",
+      "name_es": "Lupus",
+      "aliases": [
+        "lupus",
+        "lupus"
+      ],
+      "stars": [
+        {
+          "name": "lupus_0",
+          "ra": 133.4565303179429,
+          "dec": -36.294344764321835,
+          "mag": 1.5
+        },
+        {
+          "name": "lupus_1",
+          "ra": 152.91050648838677,
+          "dec": -8.205875381648964,
+          "mag": 2.3
+        },
+        {
+          "name": "lupus_2",
+          "ra": 134.78085328428367,
+          "dec": 18.531581569932943,
+          "mag": 3.1
+        },
+        {
+          "name": "lupus_3",
+          "ra": 94.97863053469985,
+          "dec": 26.796257246286668,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "lupus_4",
+          "ra": 65.73478497630016,
+          "dec": 13.376763879587845,
+          "mag": 1.5
+        },
+        {
+          "name": "lupus_5",
+          "ra": 71.32958996914347,
+          "dec": -8.609664732130977,
+          "mag": 2.3
+        },
+        {
+          "name": "lupus_6",
+          "ra": 109.80910442924312,
+          "dec": -19.594717817705643,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "lynx",
+      "name": "Lynx",
+      "name_es": "Lince",
+      "aliases": [
+        "lynx",
+        "lince"
+      ],
+      "stars": [
+        {
+          "name": "lynx_0",
+          "ra": 137.73547901113858,
+          "dec": -33.68177086971522,
+          "mag": 1.5
+        },
+        {
+          "name": "lynx_1",
+          "ra": 152.17406649280844,
+          "dec": -4.569712121635911,
+          "mag": 2.3
+        },
+        {
+          "name": "lynx_2",
+          "ra": 129.58357893724,
+          "dec": 20.453229096349453,
+          "mag": 3.1
+        },
+        {
+          "name": "lynx_3",
+          "ra": 89.23417542459076,
+          "dec": 25.556349257249103,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "lynx_4",
+          "ra": 63.76884096656715,
+          "dec": 9.908976380355117,
+          "mag": 1.5
+        },
+        {
+          "name": "lynx_5",
+          "ra": 74.62255299706504,
+          "dec": -11.694017024663008,
+          "mag": 2.3
+        },
+        {
+          "name": "lynx_6",
+          "ra": 115.88130617058997,
+          "dec": -19.97305471793956,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "lyra",
+      "name": "Lyra",
+      "name_es": "Lira",
+      "aliases": [
+        "lyra",
+        "lira"
+      ],
+      "stars": [
+        {
+          "name": "Vega",
+          "ra": 279.23,
+          "dec": 38.78,
+          "mag": 0.0
+        },
+        {
+          "name": "Sheliak",
+          "ra": 282.52,
+          "dec": 33.36,
+          "mag": 3.5
+        },
+        {
+          "name": "Sulafat",
+          "ra": 284.74,
+          "dec": 32.69,
+          "mag": 3.3
+        }
+      ],
+      "center_ra": 282.1633,
+      "center_dec": 34.9433
+    },
+    {
+      "id": "mensa",
+      "name": "Mensa",
+      "name_es": "Mensa",
+      "aliases": [
+        "mensa",
+        "mensa"
+      ],
+      "stars": [
+        {
+          "name": "mensa_0",
+          "ra": 134.73291852294986,
+          "dec": -35.58019401015953,
+          "mag": 1.5
+        },
+        {
+          "name": "mensa_1",
+          "ra": 152.77574561270075,
+          "dec": -7.161857379923887,
+          "mag": 2.3
+        },
+        {
+          "name": "mensa_2",
+          "ra": 133.33642101591715,
+          "dec": 19.119299969835716,
+          "mag": 3.1
+        },
+        {
+          "name": "mensa_3",
+          "ra": 93.31221383278148,
+          "dec": 26.48511210196979,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "mensa_4",
+          "ra": 65.1012296060803,
+          "dec": 12.401053830926166,
+          "mag": 1.5
+        },
+        {
+          "name": "mensa_5",
+          "ra": 72.20597604657206,
+          "dec": -9.515210117637373,
+          "mag": 2.3
+        },
+        {
+          "name": "mensa_6",
+          "ra": 111.53549536299833,
+          "dec": -19.74820439501091,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "microscopium",
+      "name": "Microscopium",
+      "name_es": "Microscopium",
+      "aliases": [
+        "microscopium",
+        "microscopium"
+      ],
+      "stars": [
+        {
+          "name": "microscopium_0",
+          "ra": 137.7354790111386,
+          "dec": 5.681770869715219,
+          "mag": 1.5
+        },
+        {
+          "name": "microscopium_1",
+          "ra": 100.88130617058998,
+          "dec": 19.973054717939565,
+          "mag": 2.3
+        },
+        {
+          "name": "microscopium_2",
+          "ra": 65.62255299706504,
+          "dec": 11.694017024663008,
+          "mag": 3.1
+        },
+        {
+          "name": "microscopium_3",
+          "ra": 60.76884096656716,
+          "dec": -9.908976380355154,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "microscopium_4",
+          "ra": 92.23417542459073,
+          "dec": -25.556349257249096,
+          "mag": 1.5
+        },
+        {
+          "name": "microscopium_5",
+          "ra": 138.58357893724005,
+          "dec": -20.453229096349432,
+          "mag": 2.3
+        },
+        {
+          "name": "microscopium_6",
+          "ra": 167.17406649280844,
+          "dec": 4.569712121635896,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "monoceros",
+      "name": "Monoceros",
+      "name_es": "Unicornio",
+      "aliases": [
+        "monoceros",
+        "unicornio"
+      ],
+      "stars": [
+        {
+          "name": "monoceros_0",
+          "ra": 71.3211781824477,
+          "dec": 10.574561328669752,
+          "mag": 1.5
+        },
+        {
+          "name": "monoceros_1",
+          "ra": 53.097104209773406,
+          "dec": -8.13121509265444,
+          "mag": 2.3
+        },
+        {
+          "name": "monoceros_2",
+          "ra": 72.4509286007015,
+          "dec": -28.244224665474803,
+          "mag": 3.1
+        },
+        {
+          "name": "monoceros_3",
+          "ra": 117.06788803164034,
+          "dec": -31.606879365701637,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "monoceros_4",
+          "ra": 155.60956321983025,
+          "dec": -12.674950033278678,
+          "mag": 1.5
+        },
+        {
+          "name": "monoceros_5",
+          "ra": 161.31234783051542,
+          "dec": 17.307515988630158,
+          "mag": 2.3
+        },
+        {
+          "name": "monoceros_6",
+          "ra": 132.1409899250914,
+          "dec": 38.77519183980964,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "musca",
+      "name": "Musca",
+      "name_es": "Mosca",
+      "aliases": [
+        "musca",
+        "mosca"
+      ],
+      "stars": [
+        {
+          "name": "musca_0",
+          "ra": 58.54812137224792,
+          "dec": 2.775787104122408,
+          "mag": 1.5
+        },
+        {
+          "name": "musca_1",
+          "ra": 55.29544557240379,
+          "dec": -18.985498053598587,
+          "mag": 2.3
+        },
+        {
+          "name": "musca_2",
+          "ra": 87.96527225210984,
+          "dec": -33.98051990620283,
+          "mag": 3.1
+        },
+        {
+          "name": "musca_3",
+          "ra": 134.2156167673797,
+          "dec": -27.905639570846933,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "musca_4",
+          "ra": 161.47808755196885,
+          "dec": -2.3232842598993964,
+          "mag": 1.5
+        },
+        {
+          "name": "musca_5",
+          "ra": 151.48254924087254,
+          "dec": 26.51459227767961,
+          "mag": 2.3
+        },
+        {
+          "name": "musca_6",
+          "ra": 114.0149072430174,
+          "dec": 39.90456240874573,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "norma",
+      "name": "Norma",
+      "name_es": "Norma",
+      "aliases": [
+        "norma",
+        "norma"
+      ],
+      "stars": [
+        {
+          "name": "norma_0",
+          "ra": 139.4005376803361,
+          "dec": -32.469844259769744,
+          "mag": 1.5
+        },
+        {
+          "name": "norma_1",
+          "ra": 151.633009629056,
+          "dec": -3.033011067092719,
+          "mag": 2.3
+        },
+        {
+          "name": "norma_2",
+          "ra": 127.24383339449192,
+          "dec": 21.157537358430446,
+          "mag": 3.1
+        },
+        {
+          "name": "norma_3",
+          "ra": 86.85761731864741,
+          "dec": 24.897906240250624,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "norma_4",
+          "ra": 63.145067024154514,
+          "dec": 8.383603105866811,
+          "mag": 1.5
+        },
+        {
+          "name": "norma_5",
+          "ra": 76.2212777194894,
+          "dec": -12.937683369007168,
+          "mag": 2.3
+        },
+        {
+          "name": "norma_6",
+          "ra": 118.49865723382463,
+          "dec": -19.99850800867829,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "octans",
+      "name": "Octans",
+      "name_es": "Octans",
+      "aliases": [
+        "octans",
+        "octans"
+      ],
+      "stars": [
+        {
+          "name": "octans_0",
+          "ra": 50.27390523158633,
+          "dec": -10.864146101970388,
+          "mag": 1.5
+        },
+        {
+          "name": "octans_1",
+          "ra": 67.91010485580044,
+          "dec": -31.371282908540344,
+          "mag": 2.3
+        },
+        {
+          "name": "octans_2",
+          "ra": 111.96971122701223,
+          "dec": -35.78540779025512,
+          "mag": 3.1
+        },
+        {
+          "name": "octans_3",
+          "ra": 151.53400328436697,
+          "dec": -17.770513094315138,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "octans_4",
+          "ra": 159.06932333304516,
+          "dec": 12.119899621484901,
+          "mag": 1.5
+        },
+        {
+          "name": "octans_5",
+          "ra": 131.160482872723,
+          "dec": 34.38982151397492,
+          "mag": 2.3
+        },
+        {
+          "name": "octans_6",
+          "ra": 91.08246919546592,
+          "dec": 35.281628759621185,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "ophiuchus",
+      "name": "Ophiuchus",
+      "name_es": "Ofiuco",
+      "aliases": [
+        "ophiuchus",
+        "ofiuco"
+      ],
+      "stars": [
+        {
+          "name": "ophiuchus_0",
+          "ra": 50.486596562921484,
+          "dec": -18.175193028801964,
+          "mag": 1.5
+        },
+        {
+          "name": "ophiuchus_1",
+          "ra": 77.56939349382841,
+          "dec": -35.829872840998945,
+          "mag": 2.3
+        },
+        {
+          "name": "ophiuchus_2",
+          "ra": 123.80195581371788,
+          "dec": -34.03413157053946,
+          "mag": 3.1
+        },
+        {
+          "name": "ophiuchus_3",
+          "ra": 156.6292823121573,
+          "dec": -11.128117435395692,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "ophiuchus_4",
+          "ra": 153.59078776924343,
+          "dec": 18.651555308263244,
+          "mag": 1.5
+        },
+        {
+          "name": "ophiuchus_5",
+          "ra": 119.23358173863117,
+          "dec": 35.89226727497328,
+          "mag": 2.3
+        },
+        {
+          "name": "ophiuchus_6",
+          "ra": 81.68840230950035,
+          "dec": 30.623492292499545,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "orion",
+      "name": "Orion",
+      "name_es": "Orión",
+      "aliases": [
+        "orion",
+        "orión",
+        "orion",
+        "ori"
+      ],
+      "stars": [
+        {
+          "name": "Betelgeuse",
+          "ra": 88.79,
+          "dec": 7.41,
+          "mag": 0.5
+        },
+        {
+          "name": "Bellatrix",
+          "ra": 81.28,
+          "dec": 6.35,
+          "mag": 1.6
+        },
+        {
+          "name": "Alnitak",
+          "ra": 85.19,
+          "dec": -1.94,
+          "mag": 1.7
+        },
+        {
+          "name": "Alnilam",
+          "ra": 84.05,
+          "dec": -1.2,
+          "mag": 1.7
+        },
+        {
+          "name": "Mintaka",
+          "ra": 82.56,
+          "dec": -0.3,
+          "mag": 2.0
+        },
+        {
+          "name": "Rigel",
+          "ra": 78.63,
+          "dec": -8.2,
+          "mag": 0.1
+        },
+        {
+          "name": "Saiph",
+          "ra": 86.94,
+          "dec": -9.67,
+          "mag": 2.1
+        }
+      ],
+      "center_ra": 83.92,
+      "center_dec": -1.0786,
+      "summary_es": "Orión es uno de los cielos más reconocibles del invierno boreal. El cinturón de tres estrellas apunta hacia Sirio y la Osa Mayor.",
+      "season": "Invierno (hemisferio norte)",
+      "hemisphere": "norte"
+    },
+    {
+      "id": "pavo",
+      "name": "Pavo",
+      "name_es": "Pavo",
+      "aliases": [
+        "pavo",
+        "pavo"
+      ],
+      "stars": [
+        {
+          "name": "pavo_0",
+          "ra": 108.68240888334653,
+          "dec": 15.544232590366242,
+          "mag": 1.5
+        },
+        {
+          "name": "pavo_1",
+          "ra": 69.91570812015703,
+          "dec": 12.493436089032024,
+          "mag": 2.3
+        },
+        {
+          "name": "pavo_2",
+          "ra": 56.062153939053886,
+          "dec": -7.495376569820917,
+          "mag": 3.1
+        },
+        {
+          "name": "pavo_3",
+          "ra": 79.8128163882605,
+          "dec": -26.358140171475696,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "pavo_4",
+          "ra": 125.54202340715025,
+          "dec": -26.87872740850036,
+          "mag": 1.5
+        },
+        {
+          "name": "pavo_5",
+          "ra": 161.07381059352036,
+          "dec": -5.653043888240843,
+          "mag": 2.3
+        },
+        {
+          "name": "pavo_6",
+          "ra": 161.91107866851144,
+          "dec": 24.347619358639545,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "pegasus",
+      "name": "Pegasus",
+      "name_es": "Pegaso",
+      "aliases": [
+        "pegasus",
+        "pegaso"
+      ],
+      "stars": [
+        {
+          "name": "Markab",
+          "ra": 346.19,
+          "dec": 15.21,
+          "mag": 2.5
+        },
+        {
+          "name": "Scheat",
+          "ra": 345.94,
+          "dec": 28.08,
+          "mag": 2.4
+        },
+        {
+          "name": "Algenib",
+          "ra": 3.31,
+          "dec": 15.18,
+          "mag": 2.8
+        },
+        {
+          "name": "Enif",
+          "ra": 326.05,
+          "dec": 9.88,
+          "mag": 2.4
+        }
+      ],
+      "center_ra": 255.3725,
+      "center_dec": 17.0875
+    },
+    {
+      "id": "perseus",
+      "name": "Perseus",
+      "name_es": "Perseo",
+      "aliases": [
+        "perseus",
+        "perseo"
+      ],
+      "stars": [
+        {
+          "name": "Mirfak",
+          "ra": 51.08,
+          "dec": 49.86,
+          "mag": 1.8
+        },
+        {
+          "name": "Algol",
+          "ra": 47.04,
+          "dec": 40.96,
+          "mag": 2.1
+        },
+        {
+          "name": "Atik",
+          "ra": 43.56,
+          "dec": 49.24,
+          "mag": 3.8
+        }
+      ],
+      "center_ra": 47.2267,
+      "center_dec": 46.6867
+    },
+    {
+      "id": "phoenix",
+      "name": "Phoenix",
+      "name_es": "Fénix",
+      "aliases": [
+        "phoenix",
+        "fénix"
+      ],
+      "stars": [
+        {
+          "name": "phoenix_0",
+          "ra": 144.14737964294636,
+          "dec": 0.0841468835767234,
+          "mag": 1.5
+        },
+        {
+          "name": "phoenix_1",
+          "ra": 112.17305859068912,
+          "dec": 19.490808713784748,
+          "mag": 2.3
+        },
+        {
+          "name": "phoenix_2",
+          "ra": 73.29123732334827,
+          "dec": 16.690290079646203,
+          "mag": 3.1
+        },
+        {
+          "name": "phoenix_3",
+          "ra": 59.039781488691034,
+          "dec": -3.196479782033138,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "phoenix_4",
+          "ra": 82.4093891957816,
+          "dec": -22.182275964101855,
+          "mag": 1.5
+        },
+        {
+          "name": "phoenix_5",
+          "ra": 128.06133037690694,
+          "dec": -22.95832511666902,
+          "mag": 2.3
+        },
+        {
+          "name": "phoenix_6",
+          "ra": 163.8778233816367,
+          "dec": -1.928164814203658,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "pictor",
+      "name": "Pictor",
+      "name_es": "Pictor",
+      "aliases": [
+        "pictor",
+        "pictor"
+      ],
+      "stars": [
+        {
+          "name": "pictor_0",
+          "ra": 142.4024048078213,
+          "dec": 1.8975779269961475,
+          "mag": 1.5
+        },
+        {
+          "name": "pictor_1",
+          "ra": 108.72208877477159,
+          "dec": 19.80289871840167,
+          "mag": 2.3
+        },
+        {
+          "name": "pictor_2",
+          "ra": 70.73292318497957,
+          "dec": 15.266028906508176,
+          "mag": 3.1
+        },
+        {
+          "name": "pictor_3",
+          "ra": 59.300585754160736,
+          "dec": -5.2845944199199035,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "pictor_4",
+          "ra": 85.29292093375355,
+          "dec": -23.3618511546325,
+          "mag": 1.5
+        },
+        {
+          "name": "pictor_5",
+          "ra": 131.39623137536023,
+          "dec": -22.34111668242511,
+          "mag": 2.3
+        },
+        {
+          "name": "pictor_6",
+          "ra": 165.152845169153,
+          "dec": 0.021056705071531567,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "pisces",
+      "name": "Pisces",
+      "name_es": "Piscis",
+      "aliases": [
+        "pisces",
+        "piscis"
+      ],
+      "stars": [
+        {
+          "name": "pisces_0",
+          "ra": 59.54915028125262,
+          "dec": -31.63355756877419,
+          "mag": 1.5
+        },
+        {
+          "name": "pisces_1",
+          "ra": 100.75675848247424,
+          "dec": -39.96979199623944,
+          "mag": 2.3
+        },
+        {
+          "name": "pisces_2",
+          "ra": 143.65357330018057,
+          "dec": -25.738161778191365,
+          "mag": 3.1
+        },
+        {
+          "name": "pisces_3",
+          "ra": 158.1964794299315,
+          "dec": 3.356706843959092,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "pisces_4",
+          "ra": 135.69343312364995,
+          "dec": 28.417865955702137,
+          "mag": 1.5
+        },
+        {
+          "name": "pisces_5",
+          "ra": 95.34874841730384,
+          "dec": 33.585833176543524,
+          "mag": 2.3
+        },
+        {
+          "name": "pisces_6",
+          "ra": 69.80185696520734,
+          "dec": 17.981105367000264,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "piscis_austrinus",
+      "name": "Piscis Austrinus",
+      "name_es": "Piscis Austrino",
+      "aliases": [
+        "piscis_austrinus",
+        "piscis_austrino"
+      ],
+      "stars": [
+        {
+          "name": "piscis_austrinus_0",
+          "ra": 126.49596321166024,
+          "dec": 11.44144288469278,
+          "mag": 1.5
+        },
+        {
+          "name": "piscis_austrinus_1",
+          "ra": 86.3684278417859,
+          "dec": 18.291707101491813,
+          "mag": 2.3
+        },
+        {
+          "name": "piscis_austrinus_2",
+          "ra": 58.76480552929147,
+          "dec": 3.8377388252161317,
+          "mag": 3.1
+        },
+        {
+          "name": "piscis_austrinus_3",
+          "ra": 66.73024807561248,
+          "dec": -18.02424743974786,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "piscis_austrinus_4",
+          "ra": 106.52567596680015,
+          "dec": -27.819648547503558,
+          "mag": 1.5
+        },
+        {
+          "name": "piscis_austrinus_5",
+          "ra": 150.44338151084696,
+          "dec": -15.160246089012247,
+          "mag": 2.3
+        },
+        {
+          "name": "piscis_austrinus_6",
+          "ra": 167.6714978640028,
+          "dec": 13.433253264862955,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "puppis",
+      "name": "Puppis",
+      "name_es": "Puppis",
+      "aliases": [
+        "puppis",
+        "puppis"
+      ],
+      "stars": [
+        {
+          "name": "puppis_0",
+          "ra": 55.06029768504165,
+          "dec": -0.8488655963276805,
+          "mag": 1.5
+        },
+        {
+          "name": "puppis_1",
+          "ra": 57.84393572979042,
+          "dec": -22.881566265982276,
+          "mag": 2.3
+        },
+        {
+          "name": "puppis_2",
+          "ra": 94.63101118585195,
+          "dec": -35.21418480128719,
+          "mag": 3.1
+        },
+        {
+          "name": "puppis_3",
+          "ra": 139.9791671040749,
+          "dec": -25.547926320455684,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "puppis_4",
+          "ra": 161.9993783330846,
+          "dec": 1.8504009698372719,
+          "mag": 1.5
+        },
+        {
+          "name": "puppis_5",
+          "ra": 146.3690378758346,
+          "dec": 29.361379381106833,
+          "mag": 2.3
+        },
+        {
+          "name": "puppis_6",
+          "ra": 107.11717208632192,
+          "dec": 39.280762633108736,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "pyxis",
+      "name": "Pyxis",
+      "name_es": "Pyxis",
+      "aliases": [
+        "pyxis",
+        "pyxis"
+      ],
+      "stars": [
+        {
+          "name": "pyxis_0",
+          "ra": 69.90924884239759,
+          "dec": -37.95906530141879,
+          "mag": 1.5
+        },
+        {
+          "name": "pyxis_1",
+          "ra": 115.45864276156031,
+          "dec": -39.05377082917698,
+          "mag": 2.3
+        },
+        {
+          "name": "pyxis_2",
+          "ra": 151.6264245712704,
+          "dec": -18.27039433364641,
+          "mag": 3.1
+        },
+        {
+          "name": "pyxis_3",
+          "ra": 153.43657806936733,
+          "dec": 11.752839365549498,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "pyxis_4",
+          "ra": 121.78508194022959,
+          "dec": 31.41990451568933,
+          "mag": 1.5
+        },
+        {
+          "name": "pyxis_5",
+          "ra": 82.76521953080305,
+          "dec": 28.933181508830486,
+          "mag": 2.3
+        },
+        {
+          "name": "pyxis_6",
+          "ra": 68.01880428437171,
+          "dec": 9.177305074172903,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "reticulum",
+      "name": "Reticulum",
+      "name_es": "Reticulum",
+      "aliases": [
+        "reticulum",
+        "reticulum"
+      ],
+      "stars": [
+        {
+          "name": "reticulum_0",
+          "ra": 82.08160252273498,
+          "dec": 14.007412794916053,
+          "mag": 1.5
+        },
+        {
+          "name": "reticulum_1",
+          "ra": 55.33293346470187,
+          "dec": -0.9431641037829444,
+          "mag": 2.3
+        },
+        {
+          "name": "reticulum_2",
+          "ra": 64.47853773870482,
+          "dec": -22.713723158117173,
+          "mag": 3.1
+        },
+        {
+          "name": "reticulum_3",
+          "ra": 104.8906499789385,
+          "dec": -31.898507776569463,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "reticulum_4",
+          "ra": 148.39718660049556,
+          "dec": -18.569106220853023,
+          "mag": 1.5
+        },
+        {
+          "name": "reticulum_5",
+          "ra": 164.49589934457813,
+          "dec": 10.249251852467673,
+          "mag": 2.3
+        },
+        {
+          "name": "reticulum_6",
+          "ra": 143.32319034984613,
+          "dec": 35.86783661193887,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "sagitta",
+      "name": "Sagitta",
+      "name_es": "Sagitta",
+      "aliases": [
+        "sagitta",
+        "sagitta"
+      ],
+      "stars": [
+        {
+          "name": "sagitta_0",
+          "ra": 50.068523262271306,
+          "dec": -12.429921312711686,
+          "mag": 1.5
+        },
+        {
+          "name": "sagitta_1",
+          "ra": 69.82233854948946,
+          "dec": -32.44387223816582,
+          "mag": 2.3
+        },
+        {
+          "name": "sagitta_2",
+          "ra": 114.55960960989877,
+          "dec": -35.55712959672178,
+          "mag": 3.1
+        },
+        {
+          "name": "sagitta_3",
+          "ra": 152.8513200498383,
+          "dec": -16.41326551338014,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "sagitta_4",
+          "ra": 158.12209208833644,
+          "dec": 13.584081478572399,
+          "mag": 1.5
+        },
+        {
+          "name": "sagitta_5",
+          "ra": 128.66198806509598,
+          "dec": 34.85837884496118,
+          "mag": 2.3
+        },
+        {
+          "name": "sagitta_6",
+          "ra": 88.91412837506974,
+          "dec": 34.401728337445846,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "sagittarius",
+      "name": "Sagittarius",
+      "name_es": "Sagitario",
+      "aliases": [
+        "sagittarius",
+        "sagitario"
+      ],
+      "stars": [
+        {
+          "name": "Kaus Australis",
+          "ra": 276.04,
+          "dec": -34.38,
+          "mag": 1.8
+        },
+        {
+          "name": "Nunki",
+          "ra": 283.82,
+          "dec": -26.3,
+          "mag": 2.0
+        },
+        {
+          "name": "Ascella",
+          "ra": 290.66,
+          "dec": -29.88,
+          "mag": 2.6
+        },
+        {
+          "name": "Kaus Media",
+          "ra": 274.41,
+          "dec": -29.83,
+          "mag": 2.7
+        }
+      ],
+      "center_ra": 281.2325,
+      "center_dec": -30.0975
+    },
+    {
+      "id": "scorpius",
+      "name": "Scorpius",
+      "name_es": "Escorpio",
+      "aliases": [
+        "scorpius",
+        "escorpio"
+      ],
+      "stars": [
+        {
+          "name": "Antares",
+          "ra": 247.35,
+          "dec": -26.43,
+          "mag": 1.0
+        },
+        {
+          "name": "Shaula",
+          "ra": 263.4,
+          "dec": -37.1,
+          "mag": 1.6
+        },
+        {
+          "name": "Sargas",
+          "ra": 264.33,
+          "dec": -43.0,
+          "mag": 1.9
+        },
+        {
+          "name": "Dschubba",
+          "ra": 240.08,
+          "dec": -22.62,
+          "mag": 2.3
+        },
+        {
+          "name": "Acrab",
+          "ra": 241.36,
+          "dec": -19.81,
+          "mag": 2.6
+        }
+      ],
+      "center_ra": 251.304,
+      "center_dec": -29.792,
+      "summary_es": "Escorpio brilla en verano boreal con Antares, una supergigante roja. Su cola curva es fácil de distinguir cerca del horizonte sur.",
+      "season": "Verano (hemisferio norte)",
+      "hemisphere": "ambos"
+    },
+    {
+      "id": "sculptor",
+      "name": "Sculptor",
+      "name_es": "Sculptor",
+      "aliases": [
+        "sculptor",
+        "sculptor"
+      ],
+      "stars": [
+        {
+          "name": "sculptor_0",
+          "ra": 82.08160252273498,
+          "dec": 14.007412794916053,
+          "mag": 1.5
+        },
+        {
+          "name": "sculptor_1",
+          "ra": 55.33293346470187,
+          "dec": -0.9431641037829444,
+          "mag": 2.3
+        },
+        {
+          "name": "sculptor_2",
+          "ra": 64.47853773870482,
+          "dec": -22.713723158117173,
+          "mag": 3.1
+        },
+        {
+          "name": "sculptor_3",
+          "ra": 104.8906499789385,
+          "dec": -31.898507776569463,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "sculptor_4",
+          "ra": 148.39718660049556,
+          "dec": -18.569106220853023,
+          "mag": 1.5
+        },
+        {
+          "name": "sculptor_5",
+          "ra": 164.49589934457813,
+          "dec": 10.249251852467673,
+          "mag": 2.3
+        },
+        {
+          "name": "sculptor_6",
+          "ra": 143.32319034984613,
+          "dec": 35.86783661193887,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "scutum",
+      "name": "Scutum",
+      "name_es": "Scutum",
+      "aliases": [
+        "scutum",
+        "scutum"
+      ],
+      "stars": [
+        {
+          "name": "scutum_0",
+          "ra": 119.53655642446367,
+          "dec": -41.61514560357321,
+          "mag": 1.5
+        },
+        {
+          "name": "scutum_1",
+          "ra": 151.16482740377774,
+          "dec": -18.053184737676666,
+          "mag": 2.3
+        },
+        {
+          "name": "scutum_2",
+          "ra": 146.52400096461923,
+          "dec": 11.572988490721599,
+          "mag": 3.1
+        },
+        {
+          "name": "scutum_3",
+          "ra": 111.36777526012948,
+          "dec": 27.966342961968294,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "scutum_4",
+          "ra": 74.42856649094901,
+          "dec": 21.794429980855355,
+          "mag": 1.5
+        },
+        {
+          "name": "scutum_5",
+          "ra": 65.78141347165695,
+          "dec": 0.7169074913718685,
+          "mag": 2.3
+        },
+        {
+          "name": "scutum_6",
+          "ra": 94.19685998440391,
+          "dec": -16.382338583667185,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "serpens",
+      "name": "Serpens",
+      "name_es": "Serpens",
+      "aliases": [
+        "serpens",
+        "serpens"
+      ],
+      "stars": [
+        {
+          "name": "serpens_0",
+          "ra": 50.486596562921484,
+          "dec": -18.175193028801964,
+          "mag": 1.5
+        },
+        {
+          "name": "serpens_1",
+          "ra": 77.56939349382841,
+          "dec": -35.829872840998945,
+          "mag": 2.3
+        },
+        {
+          "name": "serpens_2",
+          "ra": 123.80195581371788,
+          "dec": -34.03413157053946,
+          "mag": 3.1
+        },
+        {
+          "name": "serpens_3",
+          "ra": 156.6292823121573,
+          "dec": -11.128117435395692,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "serpens_4",
+          "ra": 153.59078776924343,
+          "dec": 18.651555308263244,
+          "mag": 1.5
+        },
+        {
+          "name": "serpens_5",
+          "ra": 119.23358173863117,
+          "dec": 35.89226727497328,
+          "mag": 2.3
+        },
+        {
+          "name": "serpens_6",
+          "ra": 81.68840230950035,
+          "dec": 30.623492292499545,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "sextans",
+      "name": "Sextans",
+      "name_es": "Sextans",
+      "aliases": [
+        "sextans",
+        "sextans"
+      ],
+      "stars": [
+        {
+          "name": "sextans_0",
+          "ra": 87.05904774487396,
+          "dec": 14.97777478867205,
+          "mag": 1.5
+        },
+        {
+          "name": "sextans_1",
+          "ra": 57.17188720650119,
+          "dec": 1.9967607295922267,
+          "mag": 2.3
+        },
+        {
+          "name": "sextans_2",
+          "ra": 61.794230324769515,
+          "dec": -20.01805884819186,
+          "mag": 3.1
+        },
+        {
+          "name": "sextans_3",
+          "ra": 99.70441964185424,
+          "dec": -31.476994196998646,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "sextans_4",
+          "ra": 144.61437056390608,
+          "dec": -20.73915169436358,
+          "mag": 1.5
+        },
+        {
+          "name": "sextans_5",
+          "ra": 164.96503523941993,
+          "dec": 7.121735828289779,
+          "mag": 2.3
+        },
+        {
+          "name": "sextans_6",
+          "ra": 147.6910092786751,
+          "dec": 34.13793339300004,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "taurus",
+      "name": "Taurus",
+      "name_es": "Tauro",
+      "aliases": [
+        "taurus",
+        "tauro"
+      ],
+      "stars": [
+        {
+          "name": "Aldebaran",
+          "ra": 68.98,
+          "dec": 16.51,
+          "mag": 0.9
+        },
+        {
+          "name": "Elnath",
+          "ra": 81.57,
+          "dec": 28.61,
+          "mag": 1.7
+        },
+        {
+          "name": "Alcyone",
+          "ra": 56.87,
+          "dec": 24.11,
+          "mag": 2.9
+        },
+        {
+          "name": "Atlas",
+          "ra": 56.17,
+          "dec": 24.05,
+          "mag": 3.6
+        }
+      ],
+      "center_ra": 65.8975,
+      "center_dec": 23.32,
+      "summary_es": "Tauro alberga Aldebarán y el cúmulo de las Pléyades. Visible en invierno boreal, precede a Orión en el horizonte.",
+      "season": "Invierno (hemisferio norte)",
+      "hemisphere": "norte"
+    },
+    {
+      "id": "telescopium",
+      "name": "Telescopium",
+      "name_es": "Telescopium",
+      "aliases": [
+        "telescopium",
+        "telescopium"
+      ],
+      "stars": [
+        {
+          "name": "telescopium_0",
+          "ra": 87.90390522001661,
+          "dec": 15.108871788279895,
+          "mag": 1.5
+        },
+        {
+          "name": "telescopium_1",
+          "ra": 57.52782095702589,
+          "dec": 2.474820075260979,
+          "mag": 2.3
+        },
+        {
+          "name": "telescopium_2",
+          "ra": 61.39321497680583,
+          "dec": -19.553025594384252,
+          "mag": 3.1
+        },
+        {
+          "name": "telescopium_3",
+          "ra": 98.84842793164118,
+          "dec": -31.37516656011894,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "telescopium_4",
+          "ra": 143.94798170828278,
+          "dec": -21.077207961887467,
+          "mag": 1.5
+        },
+        {
+          "name": "telescopium_5",
+          "ra": 164.99005363852618,
+          "dec": 6.598358920898957,
+          "mag": 2.3
+        },
+        {
+          "name": "telescopium_6",
+          "ra": 148.38859556770151,
+          "dec": 33.82334933195082,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "triangulum",
+      "name": "Triangulum",
+      "name_es": "Triángulo",
+      "aliases": [
+        "triangulum",
+        "triángulo"
+      ],
+      "stars": [
+        {
+          "name": "triangulum_0",
+          "ra": 78.08144266054612,
+          "dec": 12.963821388975006,
+          "mag": 1.5
+        },
+        {
+          "name": "triangulum_1",
+          "ra": 54.198728944818775,
+          "dec": -3.4703032517931334,
+          "mag": 2.3
+        },
+        {
+          "name": "triangulum_2",
+          "ra": 67.0643676981553,
+          "dec": -24.821422725500774,
+          "mag": 3.1
+        },
+        {
+          "name": "triangulum_3",
+          "ra": 109.2493317169379,
+          "dec": -31.999626999850754,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "triangulum_4",
+          "ra": 151.2465438674261,
+          "dec": -16.587500262444944,
+          "mag": 1.5
+        },
+        {
+          "name": "triangulum_5",
+          "ra": 163.69030800214531,
+          "dec": 12.821393288488842,
+          "mag": 2.3
+        },
+        {
+          "name": "triangulum_6",
+          "ra": 139.46927710997045,
+          "dec": 37.09363856212575,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "triangulum_australe",
+      "name": "Triangulum Australe",
+      "name_es": "Triángulo Austral",
+      "aliases": [
+        "triangulum_australe",
+        "triángulo_austral"
+      ],
+      "stars": [
+        {
+          "name": "triangulum_australe_0",
+          "ra": 146.35919272833937,
+          "dec": -25.238197802477373,
+          "mag": 1.5
+        },
+        {
+          "name": "triangulum_australe_1",
+          "ra": 146.54844530215618,
+          "dec": 4.740144104975355,
+          "mag": 2.3
+        },
+        {
+          "name": "triangulum_australe_2",
+          "ra": 113.94483033705514,
+          "dec": 23.618856857237873,
+          "mag": 3.1
+        },
+        {
+          "name": "triangulum_australe_3",
+          "ra": 75.35859608314733,
+          "dec": 20.193966281427514,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "triangulum_australe_4",
+          "ra": 62.10502513820868,
+          "dec": 0.05656642129543177,
+          "mag": 1.5
+        },
+        {
+          "name": "triangulum_australe_5",
+          "ra": 86.42338793620307,
+          "dec": -18.617388315251723,
+          "mag": 2.3
+        },
+        {
+          "name": "triangulum_australe_6",
+          "ra": 132.26052247489014,
+          "dec": -18.75394754720707,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "tucana",
+      "name": "Tucana",
+      "name_es": "Tucana",
+      "aliases": [
+        "tucana",
+        "tucana"
+      ],
+      "stars": [
+        {
+          "name": "tucana_0",
+          "ra": 78.86908691296503,
+          "dec": 13.189233611099503,
+          "mag": 1.5
+        },
+        {
+          "name": "tucana_1",
+          "ra": 54.396093150711266,
+          "dec": -2.96027798596855,
+          "mag": 2.3
+        },
+        {
+          "name": "tucana_2",
+          "ra": 66.52283258498822,
+          "dec": -24.410843843761416,
+          "mag": 3.1
+        },
+        {
+          "name": "tucana_3",
+          "ra": 108.37668427022926,
+          "dec": -31.997668774429247,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "tucana_4",
+          "ra": 150.69990541331137,
+          "dec": -16.995637277024187,
+          "mag": 1.5
+        },
+        {
+          "name": "tucana_5",
+          "ra": 163.88130844596523,
+          "dec": 12.310496530364876,
+          "mag": 2.3
+        },
+        {
+          "name": "tucana_6",
+          "ra": 140.25408922182964,
+          "dec": 36.86469773971902,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "ursa_major",
+      "name": "Ursa Major",
+      "name_es": "Osa Mayor",
+      "aliases": [
+        "ursa_major",
+        "osa_mayor",
+        "osa_mayor",
+        "great_bear",
+        "big_dipper"
+      ],
+      "stars": [
+        {
+          "name": "Dubhe",
+          "ra": 165.93,
+          "dec": 61.75,
+          "mag": 1.8
+        },
+        {
+          "name": "Merak",
+          "ra": 165.46,
+          "dec": 56.38,
+          "mag": 2.4
+        },
+        {
+          "name": "Phecda",
+          "ra": 178.46,
+          "dec": 53.69,
+          "mag": 2.4
+        },
+        {
+          "name": "Megrez",
+          "ra": 183.86,
+          "dec": 57.03,
+          "mag": 3.3
+        },
+        {
+          "name": "Alioth",
+          "ra": 193.51,
+          "dec": 55.96,
+          "mag": 1.8
+        },
+        {
+          "name": "Mizar",
+          "ra": 200.98,
+          "dec": 54.93,
+          "mag": 2.2
+        },
+        {
+          "name": "Alkaid",
+          "ra": 206.89,
+          "dec": 49.31,
+          "mag": 1.9
+        }
+      ],
+      "center_ra": 185.0129,
+      "center_dec": 55.5786,
+      "summary_es": "La Osa Mayor circumpolar en latitudes medias del norte. Sus siete estrellas forman el Carro o el Cazo, útil para encontrar el Polo.",
+      "season": "Todo el año (circumpolar norte)",
+      "hemisphere": "norte"
+    },
+    {
+      "id": "ursa_minor",
+      "name": "Ursa Minor",
+      "name_es": "Osa Menor",
+      "aliases": [
+        "ursa_minor",
+        "osa_menor"
+      ],
+      "stars": [
+        {
+          "name": "ursa_minor_0",
+          "ra": 125.0,
+          "dec": 11.980762113533157,
+          "mag": 1.5
+        },
+        {
+          "name": "ursa_minor_1",
+          "ra": 84.73294878168025,
+          "dec": 17.926212459326127,
+          "mag": 2.3
+        },
+        {
+          "name": "ursa_minor_2",
+          "ra": 58.22135971069296,
+          "dec": 2.842655232327127,
+          "mag": 3.1
+        },
+        {
+          "name": "ursa_minor_3",
+          "ra": 67.68806128420024,
+          "dec": -18.89960174190866,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "ursa_minor_4",
+          "ra": 108.26349532067881,
+          "dec": -27.916113915435403,
+          "mag": 1.5
+        },
+        {
+          "name": "ursa_minor_5",
+          "ra": 151.65259359149132,
+          "dec": -14.405182133127575,
+          "mag": 2.3
+        },
+        {
+          "name": "ursa_minor_6",
+          "ra": 167.44154131125643,
+          "dec": 14.471267985285216,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "vela",
+      "name": "Vela",
+      "name_es": "Vela",
+      "aliases": [
+        "vela",
+        "vela"
+      ],
+      "stars": [
+        {
+          "name": "vela_0",
+          "ra": 58.548121372247905,
+          "dec": -30.7757871041224,
+          "mag": 1.5
+        },
+        {
+          "name": "vela_1",
+          "ra": 99.01490724301739,
+          "dec": -39.90456240874573,
+          "mag": 2.3
+        },
+        {
+          "name": "vela_2",
+          "ra": 142.48254924087254,
+          "dec": -26.5145922776796,
+          "mag": 3.1
+        },
+        {
+          "name": "vela_3",
+          "ra": 158.47808755196885,
+          "dec": 2.323284259899409,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "vela_4",
+          "ra": 137.21561676737971,
+          "dec": 27.90563957084693,
+          "mag": 1.5
+        },
+        {
+          "name": "vela_5",
+          "ra": 96.96527225210981,
+          "dec": 33.98051990620283,
+          "mag": 2.3
+        },
+        {
+          "name": "vela_6",
+          "ra": 70.29544557240379,
+          "dec": 18.985498053598576,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "virgo",
+      "name": "Virgo",
+      "name_es": "Virgo",
+      "aliases": [
+        "virgo",
+        "virgo"
+      ],
+      "stars": [
+        {
+          "name": "Spica",
+          "ra": 201.3,
+          "dec": -11.16,
+          "mag": 1.0
+        },
+        {
+          "name": "Porrima",
+          "ra": 190.42,
+          "dec": -1.45,
+          "mag": 2.7
+        },
+        {
+          "name": "Vindemiatrix",
+          "ra": 195.82,
+          "dec": 10.96,
+          "mag": 3.4
+        }
+      ],
+      "center_ra": 195.8467,
+      "center_dec": -0.55
+    },
+    {
+      "id": "volans",
+      "name": "Volans",
+      "name_es": "Volans",
+      "aliases": [
+        "volans",
+        "volans"
+      ],
+      "stars": [
+        {
+          "name": "volans_0",
+          "ra": 149.2403876506104,
+          "dec": -19.20944533000791,
+          "mag": 1.5
+        },
+        {
+          "name": "volans_1",
+          "ra": 140.48906014838673,
+          "dec": 9.850575127905781,
+          "mag": 2.3
+        },
+        {
+          "name": "volans_2",
+          "ra": 103.5077057169651,
+          "dec": 23.96270763656767,
+          "mag": 3.1
+        },
+        {
+          "name": "volans_3",
+          "ra": 68.40309971420717,
+          "dec": 15.512310167043697,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "volans_4",
+          "ra": 63.868787652499414,
+          "dec": -6.1252140442902,
+          "mag": 1.5
+        },
+        {
+          "name": "volans_5",
+          "ra": 95.57826018626525,
+          "dec": -21.64428635611223,
+          "mag": 2.3
+        },
+        {
+          "name": "volans_6",
+          "ra": 141.9126989310659,
+          "dec": -16.346647201106858,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    },
+    {
+      "id": "vulpecula",
+      "name": "Vulpecula",
+      "name_es": "Vulpecula",
+      "aliases": [
+        "vulpecula",
+        "vulpecula"
+      ],
+      "stars": [
+        {
+          "name": "vulpecula_0",
+          "ra": 139.93177550236464,
+          "dec": -32.05445069456145,
+          "mag": 1.5
+        },
+        {
+          "name": "vulpecula_1",
+          "ra": 151.42295138196164,
+          "dec": -2.5248143430638113,
+          "mag": 2.3
+        },
+        {
+          "name": "vulpecula_2",
+          "ra": 126.45065722274401,
+          "dec": 21.375854742762243,
+          "mag": 3.1
+        },
+        {
+          "name": "vulpecula_3",
+          "ra": 86.07860105741754,
+          "dec": 24.661946841620413,
+          "mag": 3.9000000000000004
+        },
+        {
+          "name": "vulpecula_4",
+          "ra": 62.96682580718444,
+          "dec": 7.871049164137724,
+          "mag": 1.5
+        },
+        {
+          "name": "vulpecula_5",
+          "ra": 76.7780308186158,
+          "dec": -13.340868281518123,
+          "mag": 2.3
+        },
+        {
+          "name": "vulpecula_6",
+          "ra": 119.37115820971182,
+          "dec": -19.988717429376976,
+          "mag": 3.1
+        }
+      ],
+      "center_ra": 109.0,
+      "center_dec": -2.0
+    }
+  ]
+}
