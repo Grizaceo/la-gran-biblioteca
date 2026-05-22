@@ -5,7 +5,7 @@ export_html.py - Exporta grafo como HTML estático autocontenido
 
 import json
 from pathlib import Path
-from graph_engine import GraphEngine
+from backend.graph_engine import GraphEngine
 
 OUTPUT_FILE = Path(__file__).parent.parent / "export" / "library.html"
 STYLE_PATH = Path(__file__).parent.parent / "frontend" / "src" / "lib" / "style.json"
@@ -31,7 +31,7 @@ def export_static():
     engine = GraphEngine()
     graph = engine.load_from_db()
     if not graph["nodes"]:
-        print("No hay datos. Ejecuta: python graph_engine.py")
+        print("No hay datos. Ejecuta: python -m backend.library_bridge (rescan) primero")
         return
     
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)

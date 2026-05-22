@@ -1,4 +1,5 @@
 import { fetchGraph, fetchOverview, subscribeToUpdates } from './lib/bridge'
+import { processGraphUpdate } from './services/syncGraphFromSSE'
 import type { Graph, Overview } from './lib/bridge'
 import { Graph3DEngine } from './render3d/Graph3DEngine'
 import { initSearch } from './render3d/ui/search.js'
@@ -106,7 +107,7 @@ async function init(): Promise<void> {
     setupContextMenu(engine, showToast)
 
     initMenuBar(engine, {
-      openViewOptions: () => viewOptions.openPanel(),
+      openViewOptions: () => viewOptions?.openPanel?.(),
       constellationSettings,
       onRescanComplete: () => {
         statusEl.textContent = 'Sincronizando tras escaneo…'
@@ -193,68 +194,22 @@ async function init(): Promise<void> {
     viewOptions.renderList()
 
     const unsubscribe = subscribeToUpdates((updated, event) => {
-      if (event === 'init' && graphHydrated) {
-        return
-      }
       currentGraph = updated
-      engine.applyUpdate(updated)
-      graphHydrated = true
-      statsEl.textContent = formatStats(updated, overview)
-      minimap.invalidateBounds()
-      minimap.update()
-      search.setup(updated.nodes)
-      viewOptions.renderList()
-      const nodeId = panel.getCurrentNodeId()
-      if (nodeId) panel.refreshNeighbors(nodeId)
-
-      if ((window as any).addActivityLog) {
-        ;(window as any).addActivityLog(
-          `Grafo sincronizado: ${updated.nodes.length} nodos, ${updated.edges.length} aristas.`,
-          'info',
-        )
-      }
-
-      const pendingQueue: string[] = (engine as any)._pendingFocusQueue ?? []
-      ;(engine as any)._pendingFocusQueue = pendingQueue
-      const remaining: string[] = []
-      for (const rawPath of pendingQueue) {
-        const targetPath = rawPath.replace(/\\/g, '/').toLowerCase()
-        const cleanTarget = targetPath.replace(/^\/+|\/+$/g, '')
-        const fileStem = cleanTarget.split('/').pop() || cleanTarget
-        const matchedNode = updated.nodes.find(node => {
-          const nodePath = (node.path || '').replace(/\\/g, '/').toLowerCase()
-          const cleanNode = nodePath.replace(/^\/+|\/+$/g, '')
-          const nodeId = (node.id || '').replace(/\\/g, '/').toLowerCase()
-          return (
-            cleanNode === cleanTarget
-            || cleanNode.endsWith('/' + cleanTarget)
-            || cleanNode.endsWith(cleanTarget)
-            || cleanTarget.endsWith(cleanNode)
-            || nodeId === cleanTarget
-            || nodeId.endsWith('/' + cleanTarget)
-            || nodeId.endsWith(cleanTarget)
-            || (fileStem.length > 4 && (cleanNode.includes(fileStem) || nodeId.includes(fileStem)))
-          )
-        })
-        if (matchedNode) {
-          if (rawPath.toLowerCase().includes('imports/')) {
-            engine.ensureImportsWorkspaceVisible()
-            engine.refreshVisibility()
-          }
-          if ((window as any).addActivityLog) {
-            ;(window as any).addActivityLog(
-              `Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`,
-              'success',
-            )
-          }
-          panel.selectNode(matchedNode.id, 950).catch(err => {
-            console.error('Error auto-selecting node:', err)
-          })
-        } else {
-          remaining.push(rawPath)
-        }
-      }
-      ;(engine as any)._pendingFocusQueue = remaining
+      processGraphUpdate(updated, event, {
+        engine,
+        getOverview: () => overview,
+        onStats: (g) => { statsEl.textContent = formatStats(g, overview) },
+        onSearchSetup: (nodes) => search.setup(nodes),
+        onMinimapInvalidate: () => minimap.invalidateBounds(),
+        onMinimapUpdate: () => minimap.update(),
+        onViewOptionsRender: () => viewOptions.renderList(),
+        getCurrentNodeId: () => panel.getCurrentNodeId(),
+        refreshNeighbors: (id) => { panel.refreshNeighbors(id) },
+        selectNode: (id, delay) => panel.selectNode(id, delay),
+        addActivityLog: (window as any).addActivityLog,
+        isGraphHydrated: () => graphHydrated,
+        setGraphHydrated: (v) => { graphHydrated = v },
+      })
     })
     window.addEventListener('beforeunload', unsubscribe)
   } catch (err) {

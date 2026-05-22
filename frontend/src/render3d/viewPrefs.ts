@@ -17,6 +17,7 @@ export interface ViewPrefs {
 export interface GraphFiltersState {
   workspaces: string[] | null
   hideTags: boolean
+  showArchived: boolean
   studyFilter: StudyFilter
   minDegree: number
   hiddenEdgeTypes: string[]
@@ -25,6 +26,7 @@ export interface GraphFiltersState {
 export const DEFAULT_GRAPH_FILTERS: GraphFiltersState = {
   workspaces: null,
   hideTags: false,
+  showArchived: false,
   studyFilter: 'all',
   minDegree: 0,
   hiddenEdgeTypes: [],

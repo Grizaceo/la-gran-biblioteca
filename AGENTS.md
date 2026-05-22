@@ -85,16 +85,21 @@ En la UI: Archivo → Importar arXiv → pestaña **Buscar** → seleccionar fil
 
 ```
 backend/
-  library_bridge.py   # FastAPI server (HTTP + SSE)
-  mcp_server.py       # MCP stdio server (este archivo llama aquí)
-  graph_engine.py     # GraphEngine: SQLite ↔ grafo en memoria
-  scan_workspaces.py  # BFS scanner recursivo
-  overview.py         # build_overview() compartido por MCP y HTTP
-  imports.py          # GitHub / arXiv / PubMed importers
-  preview.py          # read_preview() para contenido de archivos
-  constants.py        # WORKSPACE_ROOT, extensiones, límites
+  library_bridge.py        # FastAPI app factory + lifespan
+  api/                     # Routers: graph, nodes, constellation, create, imports, overview
+  services/graph_pipeline.py  # Scan → merge imports → constellation → build (HTTP + MCP)
+  graph_state.py           # Grafo en memoria, cap 1000 nodos, imports recientes
+  mcp_server.py            # MCP stdio (usa graph_pipeline)
+  graph_engine.py          # GraphEngine: SQLite ↔ grafo en memoria
+  scan/                    # walker, markdown, layout (scan_workspaces re-exporta)
+  overview.py              # build_overview() compartido por MCP y HTTP
+  imports.py               # GitHub / arXiv / PubMed importers
+  preview.py               # read_node_content() / read_preview()
+  constants.py             # WORKSPACE_ROOT, LGB_ARCHIVE_POLICY, excludes
 frontend/src/
-  lib/bridge.ts              # API client + SSE
+  lib/api/                   # client, graph, nodes, imports, constellation
+  lib/bridge.ts              # Barrel re-export
+  services/constellationService.ts
   render3d/Graph3DEngine.ts  # WebGL 3D + d3-force
   render3d/renderOptimizations.ts  # perfiles adaptativos, carga progresiva
   render3d/ui/               # search, minimap, focus, visibility
@@ -104,6 +109,18 @@ frontend/src/
 ## Variables de entorno
 
 Ver [`.env.example`](.env.example). Para exposición en red: `LGB_API_KEY` (header `X-API-Key` en POST mutadores) y `LGB_RATE_LIMIT_PER_MIN`.
+
+### Vault hygiene (carpetas archive)
+
+Por defecto el escáner **omite** subárboles cuyo directorio se llame exactamente `archive`, `backups` o `snapshots` (ruido, snapshots viejos, copias de seguridad). Configurable con `LGB_ARCHIVE_POLICY`:
+
+| Valor | Comportamiento |
+|-------|----------------|
+| `exclude` (default) | No entran al BFS |
+| `shadow` | Nodo `folder` con `metadata.archived: true`, sin hijos (“bóveda cerrada”) |
+| `include` | Escaneo normal (solo para vaults pequeños) |
+
+`LGB_EXTRA_EXCLUDE_DIRS=vendor,cache` añade nombres a la lista de exclusión técnica (`.git`, `node_modules`, etc.).
 
 ## Endpoints HTTP (si el bridge está corriendo en :3001)
 
@@ -127,11 +144,12 @@ POST /api/rescan            ← re-escanear
 
 ## Health Stack
 
+Ejecutar todo: `./scripts/health.sh` (desde la raíz del repo, en WSL/Linux).
+
 - **typecheck**: `cd frontend && npx tsc --noEmit`
 - **lint**: `ruff check backend/`
 - **test**: `cd backend && python -m pytest tests/ -v`
-- **deadcode**: no disponible (instalar `vulture` o `knip`)
-- **shell**: no aplica (sin scripts .sh propios)
+- **deadcode (opcional)**: `vulture backend/` — símbolos Python sin usar; `cd frontend && npx knip` — exports TS muertos tras splits de `bridge.ts`
 
 ## Skill routing
 

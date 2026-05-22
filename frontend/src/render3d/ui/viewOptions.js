@@ -56,6 +56,10 @@ export function initViewOptions(engine) {
         <span>Ocultar nodos #tag</span>
       </label>
       <label class="vo-item">
+        <input type="checkbox" class="vo-show-archived" ${filters.showArchived ? 'checked' : ''}>
+        <span>Mostrar carpetas archive (bóveda)</span>
+      </label>
+      <label class="vo-item">
         <span>Grado mínimo (hubs)</span>
         <input type="number" class="vo-min-degree" min="0" max="50" value="${filters.minDegree}" style="width:48px">
       </label>`
@@ -113,6 +117,14 @@ export function initViewOptions(engine) {
     if (hideTags) {
       hideTags.addEventListener('change', (e) => {
         engine.setGraphFilters({ hideTags: e.target.checked })
+        persist()
+      })
+    }
+
+    const showArchived = list.querySelector('.vo-show-archived')
+    if (showArchived) {
+      showArchived.addEventListener('change', (e) => {
+        engine.setGraphFilters({ showArchived: e.target.checked })
         persist()
       })
     }

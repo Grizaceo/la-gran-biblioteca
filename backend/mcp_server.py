@@ -22,7 +22,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from .constants import WORKSPACE_ROOT, CONTENT_MAX_BYTES, TEXT_EXTENSIONS
+from .constants import WORKSPACE_ROOT
 from .graph_engine import GraphEngine, DB_PATH
 from .overview import build_overview
 from .imports import (
@@ -31,7 +31,8 @@ from .imports import (
     import_pubmed as _import_pubmed,
     search_arxiv as _search_arxiv,
 )
-from .scan_workspaces import scan_workspaces
+from . import graph_state
+from .services.graph_pipeline import rebuild_graph
 
 # ---------------------------------------------------------------------------
 # State (loaded once at startup, refreshed on demand)
@@ -113,8 +114,11 @@ def _validate_workspace_path(path_str: str) -> Path:
 
 
 def _rescan_and_reload() -> dict:
-    raw = scan_workspaces()
-    new_graph = _engine.rebuild_graph(raw)
+    new_graph = rebuild_graph(
+        _engine,
+        recently_imported_paths=graph_state.recently_imported_paths,
+        use_rebuild=True,
+    )
     _load()
     return new_graph
 
@@ -273,31 +277,14 @@ def read_node(node_id: str, max_chars: int = 8000) -> dict:
     if not p.is_file():
         return {"error": "Path is a directory, not a file"}
 
-    ext = p.suffix.lstrip(".").lower()
-    if p.name.lower() == "dockerfile":
-        ext = "dockerfile"
-    lang = TEXT_EXTENSIONS.get(ext, "text")
-
-    size = p.stat().st_size
-    read_bytes = min(max_chars * 4, CONTENT_MAX_BYTES)  # generous byte estimate
-    truncated_disk = size > read_bytes
+    from .preview import read_node_content
 
     try:
-        with open(p, "r", encoding="utf-8", errors="replace") as f:
-            raw = f.read(read_bytes)
+        return read_node_content(p, max_chars=max_chars)
+    except ValueError as e:
+        return {"error": str(e)}
     except Exception as e:
         return {"error": f"Cannot read file: {e}"}
-
-    content = raw[:max_chars]
-    truncated = truncated_disk or len(raw) > max_chars
-
-    return {
-        "content": content,
-        "lang": lang,
-        "size": size,
-        "truncated": truncated,
-        "total_bytes": size,
-    }
 
 
 @mcp.tool()

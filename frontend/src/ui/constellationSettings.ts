@@ -5,11 +5,12 @@ import {
   type LayoutMode,
 } from '../render3d/viewPrefs'
 import {
-  fetchConstellationCatalog,
-  fetchConstellationPrefs,
-  saveConstellationPref,
+  confirmPref,
+  loadCatalog,
+  loadPrefs,
+  constellationLabel,
   triggerConstellationRelayout,
-} from '../lib/bridge'
+} from '../services/constellationService'
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -55,17 +56,9 @@ export function initConstellationSettings(
 
   let catalogCache: Array<{ id: string; name: string; name_es?: string }> | null = null
 
-  async function loadCatalog() {
-    if (!catalogCache) {
-      const data = await fetchConstellationCatalog()
-      catalogCache = data.constellations || []
-    }
+  async function getCatalog() {
+    if (!catalogCache) catalogCache = await loadCatalog()
     return catalogCache
-  }
-
-  function constellationLabel(id: string): string {
-    const c = (catalogCache || []).find((x) => x.id === id)
-    return c ? (c.name_es || c.name) : id
   }
 
   function isLayoutEnabled(): boolean {
@@ -91,7 +84,7 @@ export function initConstellationSettings(
   }
 
   async function openConstellationPicker(folderPath: string, currentId?: string): Promise<void> {
-    const catalog = await loadCatalog()
+    const catalog = await getCatalog()
     const picked = window.prompt(
       `Constelación para ${folderLabelFromPath(folderPath)}:\n(id, p. ej. orion, ursa_major)`,
       currentId || 'orion',
@@ -102,7 +95,7 @@ export function initConstellationSettings(
       window.alert('Constelación no reconocida en el catálogo.')
       return
     }
-    await saveConstellationPref(folderPath, cid, 'confirmed')
+    await confirmPref(folderPath, cid)
     showToast?.('Constelación guardada')
     await renderPanel()
   }
@@ -117,7 +110,7 @@ export function initConstellationSettings(
     let allPrefs: typeof pending = []
 
     try {
-      const prefData = await fetchConstellationPrefs()
+      const prefData = await loadPrefs()
       pending = prefData.pending || []
       allPrefs = prefData.prefs || []
     } catch {
@@ -125,7 +118,7 @@ export function initConstellationSettings(
       allPrefs = []
     }
 
-    await loadCatalog()
+    await getCatalog()
 
     let html = `<p class="constellation-intro">
       Opcional. Por defecto el grafo usa el layout de árbol. Activa las constelaciones para colocar
@@ -143,7 +136,9 @@ export function initConstellationSettings(
       } else {
         for (const p of pending) {
           const label = folderLabelFromPath(p.folder_path)
-          const cname = constellationLabel(p.constellation_id)
+          const cname = (catalogCache || []).find((x) => x.id === p.constellation_id)?.name_es
+            || (catalogCache || []).find((x) => x.id === p.constellation_id)?.name
+            || p.constellation_id
           html += `<div class="constellation-pending-row">
             <span class="constellation-pending-label">${escapeHtml(label)} → ${escapeHtml(cname)}</span>
             <button type="button" class="cs-confirm-pref" data-folder="${escapeHtml(p.folder_path)}" data-cid="${escapeHtml(p.constellation_id)}">Confirmar</button>
@@ -159,7 +154,9 @@ export function initConstellationSettings(
       } else {
         html += `<ul class="constellation-confirmed-list">`
         for (const p of confirmed.slice(0, 20)) {
-          html += `<li>${escapeHtml(folderLabelFromPath(p.folder_path))} — ${escapeHtml(constellationLabel(p.constellation_id))}</li>`
+          const cn = (catalogCache || []).find((x) => x.id === p.constellation_id)
+          const cname = cn ? (cn.name_es || cn.name) : p.constellation_id
+          html += `<li>${escapeHtml(folderLabelFromPath(p.folder_path))} — ${escapeHtml(cname)}</li>`
         }
         html += `</ul>`
         if (confirmed.length > 20) {
@@ -190,7 +187,7 @@ export function initConstellationSettings(
         const cid = el.dataset.cid
         if (!folder || !cid) return
         try {
-          await saveConstellationPref(folder, cid, 'confirmed')
+          await confirmPref(folder, cid)
           showToast?.('Sugerencia confirmada')
           await renderPanel()
         } catch (err) {

@@ -14,7 +14,6 @@ import os
 
 from .constellation_layout import now_iso, suggest_constellation
 
-WORKSPACE_ROOT = Path.home() / ".hermes" / "workspaces"
 _DB_DEFAULT = str(Path(__file__).parent / "library.db")
 DB_PATH = Path(os.environ.get("DB_PATH", _DB_DEFAULT))
 

@@ -38,6 +38,15 @@ En lugar de renderizar carpetas, el backend de la Biblioteca (un script Python) 
 
 Esta API nunca cambia, sin importar qué UI se construya encima.
 
+### Vault hygiene (archives y exclusiones)
+
+El escáner (`backend/scan/walker.py`) comparte el pipeline HTTP y MCP (`backend/services/graph_pipeline.py`).
+
+- **Exclusiones técnicas:** `.git`, `node_modules`, `.hermes`, etc., más `LGB_EXTRA_EXCLUDE_DIRS`.
+- **Carpetas archive:** nombres exactos `archive`, `backups`, `snapshots` gobernados por `LGB_ARCHIVE_POLICY` (`exclude` | `shadow` | `include`). Ver `.env.example` y `AGENTS.md`.
+- **Overview:** `GET /api/overview` incluye `skipped_archive_dirs` del último escaneo.
+- **UI:** Opciones de vista → “Mostrar carpetas archive (bóveda)” cuando el backend emite nodos `archived`.
+
 ### Fase 1: El MVP Físico (Opción B - 2D Grid)
 - Se aprovecha la "Vista Local" de RepoCiv (estilo RimWorld) ya existente en `src/types.ts`.
 - El frontend consume el JSON del Grafo y utiliza un layout de grilla para asignar coordenadas `(x, y)` a los nodos.

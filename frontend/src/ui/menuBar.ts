@@ -8,6 +8,7 @@ import {
 } from '../render3d/viewPrefs'
 
 import type { ConstellationSettingsAPI } from './constellationSettings'
+import { createModalShell } from './modals/modalShell'
 
 export interface MenuBarOptions {
   openViewOptions?: () => void
@@ -342,106 +343,14 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
     }
   }
 
-  // --- Reusable Modal Dialog Manager ---
-  interface ModalField {
-    label: string
-    id: string
-    type: 'text' | 'textarea'
-    placeholder?: string
-    defaultValue?: string
-  }
-
-  function showModal(
-    title: string,
-    fields: ModalField[],
-    onConfirm: (values: Record<string, string>) => Promise<void>
-  ): void {
-    modalTitle.textContent = title
-    modalBody.innerHTML = ''
-    modalError.textContent = ''
-    modalConfirmBtn.disabled = false
-    modalConfirmBtn.textContent = 'Confirmar'
-
-    // Build form fields programmatically
-    const values: Record<string, string> = {}
-    
-    fields.forEach((field) => {
-      const fieldContainer = document.createElement('div')
-      fieldContainer.style.display = 'flex'
-      fieldContainer.style.flexDirection = 'column'
-      fieldContainer.style.gap = '6px'
-
-      const label = document.createElement('label')
-      label.textContent = field.label
-      fieldContainer.appendChild(label)
-
-      let input: HTMLInputElement | HTMLTextAreaElement
-      if (field.type === 'textarea') {
-        input = document.createElement('textarea')
-      } else {
-        input = document.createElement('input')
-        input.type = 'text'
-      }
-
-      input.id = field.id
-      if (field.placeholder) {
-        input.placeholder = field.placeholder
-      }
-      if (field.defaultValue) {
-        input.value = field.defaultValue
-      }
-
-      fieldContainer.appendChild(input)
-      modalBody.appendChild(fieldContainer)
-    })
-
-    // Show modal overlay
-    modalContainer.style.display = 'flex'
-    void modalContainer.offsetWidth
-    modalContainer.classList.add('active')
-
-    // Clean listeners and bind new ones
-    const closeListener = (): void => closeModal()
-    const confirmListener = async (): Promise<void> => {
-      modalConfirmBtn.disabled = true
-      modalConfirmBtn.textContent = 'Procesando...'
-      modalError.textContent = ''
-
-      // Gather input values
-      fields.forEach((field) => {
-        const el = document.getElementById(field.id) as HTMLInputElement | HTMLTextAreaElement
-        values[field.id] = el ? el.value : ''
-      })
-
-      try {
-        await onConfirm(values)
-        closeModal()
-      } catch (err: any) {
-        modalConfirmBtn.disabled = false
-        modalConfirmBtn.textContent = 'Confirmar'
-        modalError.textContent = err.message || 'Ocurrió un error inesperado'
-      }
-    }
-
-    // Assign temporary listeners
-    modalCloseBtn.onclick = closeListener
-    modalCancelBtn.onclick = closeListener
-    modalConfirmBtn.onclick = confirmListener
-  }
-
-  function closeModal(): void {
-    modalContainer.classList.remove('active')
-    modalConfirmBtn.style.display = ''
-    setTimeout(() => {
-      modalContainer.style.display = 'none'
-    }, 300)
-  }
-
-  // Close modal when clicking on overlay background
-  modalContainer.addEventListener('click', (e) => {
-    if (e.target === modalContainer) {
-      closeModal()
-    }
+  const { showModal, closeModal } = createModalShell({
+    container: modalContainer,
+    title: modalTitle,
+    body: modalBody,
+    closeBtn: modalCloseBtn,
+    cancelBtn: modalCancelBtn,
+    confirmBtn: modalConfirmBtn,
+    error: modalError,
   })
 
   // --- Specific Modal Handlers ---
@@ -457,7 +366,7 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
       if ((window as any).addActivityLog) {
         (window as any).addActivityLog(`Archivo seleccionado con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
       }
-      ((engine as any)._pendingFocusQueue ??= []).push(res.path)
+      engine.enqueuePendingFocus(res.path)
     } catch (err: any) {
       if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
         showNotification('Operación cancelada o sin selección', 'info')
@@ -484,7 +393,7 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
       if ((window as any).addActivityLog) {
         (window as any).addActivityLog(`Carpeta seleccionada con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
       }
-      ((engine as any)._pendingFocusQueue ??= []).push(res.path)
+      engine.enqueuePendingFocus(res.path)
     } catch (err: any) {
       if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
         showNotification('Operación cancelada o sin selección', 'info')
@@ -535,9 +444,8 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
             'success',
           )
         }
-        const queue = (engine as any)._pendingFocusQueue ??= []
-        queue.push(res.path)
-        if (res.node_id) queue.push(res.node_id)
+        engine.enqueuePendingFocus(res.path)
+        if (res.node_id) engine.enqueuePendingFocus(res.node_id)
       }
     )
   }
@@ -828,7 +736,7 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
         if ((window as any).addActivityLog) {
           (window as any).addActivityLog(`PubMed importado en: ${res.path}. Esperando actualización del grafo...`, 'success')
         }
-        ((engine as any)._pendingFocusQueue ??= []).push(res.path)
+        engine.enqueuePendingFocus(res.path)
       }
     )
   }

@@ -348,35 +348,35 @@ def test_api_create_endpoints(mock_urlopen):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
-        
-        # Configure bridge settings
-        bridge.WORKSPACE_ROOT = workspace_root
-        client = TestClient(bridge.app)
-        
-        # Test 1: /api/create/folder
-        resp = client.post("/api/create/folder", json={"path": "documents"})
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
-        assert (workspace_root / "documents").exists()
-        assert (workspace_root / "documents").is_dir()
-        
-        # Test 2: /api/create/file
-        resp = client.post("/api/create/file", json={"path": "documents/note.md", "content": "# Hello"})
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
-        note_file = workspace_root / "documents" / "note.md"
-        assert note_file.exists()
-        assert note_file.read_text(encoding="utf-8") == "# Hello"
-        
-        # Test 3: Path outside workspace protection
-        resp = client.post("/api/create/file", json={"path": "../outside.md"})
-        assert resp.status_code == 403
-        
-        # Test 4: /api/create/arxiv
-        resp = client.post("/api/create/arxiv", json={"id": "2303.08774"})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "ok"
-        assert data["path"] == "imports/arxiv/2303.08774.md"
-        assert data["node_id"] == "file_imports/arxiv/2303.08774.md"
-        assert (workspace_root / "imports" / "arxiv" / "2303.08774.md").exists()
+
+        with patch("backend.constants.WORKSPACE_ROOT", workspace_root), patch(
+            "backend.api.create.WORKSPACE_ROOT", workspace_root
+        ), patch("backend.api.imports_api.WORKSPACE_ROOT", workspace_root):
+            client = TestClient(bridge.app)
+
+            resp = client.post("/api/create/folder", json={"path": "documents"})
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "ok"
+            assert (workspace_root / "documents").exists()
+            assert (workspace_root / "documents").is_dir()
+
+            resp = client.post(
+                "/api/create/file",
+                json={"path": "documents/note.md", "content": "# Hello"},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "ok"
+            note_file = workspace_root / "documents" / "note.md"
+            assert note_file.exists()
+            assert note_file.read_text(encoding="utf-8") == "# Hello"
+
+            resp = client.post("/api/create/file", json={"path": "../outside.md"})
+            assert resp.status_code == 403
+
+            resp = client.post("/api/create/arxiv", json={"id": "2303.08774"})
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "ok"
+            assert data["path"] == "imports/arxiv/2303.08774.md"
+            assert data["node_id"] == "file_imports/arxiv/2303.08774.md"
+            assert (workspace_root / "imports" / "arxiv" / "2303.08774.md").exists()

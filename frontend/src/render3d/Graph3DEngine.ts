@@ -12,6 +12,13 @@ import {
   type StarfieldConfig,
 } from './renderOptimizations'
 import {
+  getNodeWorkspace as resolveNodeWorkspace,
+  isLinkGraphVisible,
+  isNodeGraphVisible,
+  mergeImportsIntoWorkspaceFilter,
+} from './graphFilters'
+import { applyLayoutForces, hydrateNodeForLayout } from './layoutMode'
+import {
   type GraphFiltersState,
   type QualityPreset,
   type LayoutMode,
@@ -209,6 +216,7 @@ export class Graph3DEngine {
   private _lodNodeCount = 0
   private _progressivePump: (() => void) | null = null
   private _apiGraph: Graph | null = null
+  pendingFocusQueue: string[] = []
 
   constructor(container: HTMLElement) {
     const bootProfile = getRenderProfile(400)
@@ -437,65 +445,91 @@ export class Graph3DEngine {
   }
 
   getNodeWorkspace(node: Record<string, unknown>): string {
-    const path = String(node.path || '').replace(/\\/g, '/')
-    const nodeId = String(node.id || '').replace(/\\/g, '/')
-    const blob = `${path} ${nodeId}`.toLowerCase()
-    if (blob.includes('/imports/github/') || blob.includes('imports/github/')) {
-      return 'imports'
-    }
-    if (!path || !this.workspaceRoot) return ''
-    const root = this.workspaceRoot.replace(/\\/g, '/')
-    if (path.startsWith(root + '/')) {
-      const rel = path.slice(root.length + 1)
-      return rel.split('/')[0] || 'root'
-    }
-    const parts = path.split('/').filter(Boolean)
-    return parts.length >= 2 ? parts[parts.length - 2] : ''
+    return resolveNodeWorkspace(node, this.workspaceRoot)
   }
 
   /** Show vault imports when workspace filters hide everything except e.g. lexo. */
   ensureImportsWorkspaceVisible(): void {
-    const filters = this.getGraphFilters()
-    if (filters.workspaces === null) return
-    const workspaces = this.getWorkspaceList()
-    if (!workspaces.includes('imports')) return
-    const selected = [...new Set([...(filters.workspaces || []), 'imports'])]
-    this.setGraphFilters({
-      workspaces: selected.length >= workspaces.length ? null : selected,
-    })
+    const patch = mergeImportsIntoWorkspaceFilter(
+      this.graphFilters,
+      this.getWorkspaceList(),
+    )
+    if (Object.keys(patch).length) this.setGraphFilters(patch)
   }
 
-  private passesGraphFilters(node: Record<string, unknown>): boolean {
-    const f = this.graphFilters
-    const type = (node.type as string) || 'default'
-    if (f.hideTags && (type === 'tag' || (node.metadata as Record<string, unknown>)?.is_tag)) {
-      return false
-    }
-    if (f.workspaces !== null) {
-      if (f.workspaces.length === 0) return false
-      const ws = this.getNodeWorkspace(node)
-      if (!ws || !f.workspaces.includes(ws)) return false
-    }
-    const study = Number((node.metadata as Record<string, unknown>)?.study_count) || 0
-    if (f.studyFilter === 'studied' && study <= 0) return false
-    if (f.studyFilter === 'unstudied' && study > 0) return false
-    const degree = Number(node.degree) || 0
-    if (f.minDegree > 0 && degree < f.minDegree) return false
-    return true
-  }
+  private _wsFn = (node: Record<string, unknown>) => this.getNodeWorkspace(node)
 
   isNodeGraphVisible(node: Record<string, unknown>): boolean {
-    const type = (node.type as string) || 'default'
-    return !this.hiddenTypes.has(type) && this.passesGraphFilters(node)
+    return isNodeGraphVisible(
+      node,
+      this.graphFilters,
+      this.hiddenTypes,
+      this._wsFn,
+    )
   }
 
   isLinkGraphVisible(link: Record<string, unknown>): boolean {
-    const edgeType = (link.type as string) || 'default'
-    if (this.graphFilters.hiddenEdgeTypes.includes(edgeType)) return false
-    const src = link.source as Record<string, unknown>
-    const tgt = link.target as Record<string, unknown>
-    if (!src || !tgt || typeof src !== 'object' || typeof tgt !== 'object') return false
-    return this.isNodeGraphVisible(src) && this.isNodeGraphVisible(tgt)
+    return isLinkGraphVisible(
+      link,
+      this.graphFilters,
+      this.hiddenTypes,
+      this._wsFn,
+    )
+  }
+
+  enqueuePendingFocus(path: string): void {
+    this.pendingFocusQueue.push(path)
+  }
+
+  setPendingFocusQueue(paths: string[]): void {
+    this.pendingFocusQueue = paths
+  }
+
+  drainPendingFocusQueue(
+    updated: Graph,
+    hooks: {
+      selectNode: (id: string, delay?: number) => Promise<void>
+      addActivityLog?: (msg: string, type?: string) => void
+    },
+  ): string[] {
+    const remaining: string[] = []
+    for (const rawPath of this.pendingFocusQueue) {
+      const targetPath = rawPath.replace(/\\/g, '/').toLowerCase()
+      const cleanTarget = targetPath.replace(/^\/+|\/+$/g, '')
+      const fileStem = cleanTarget.split('/').pop() || cleanTarget
+      const matchedNode = updated.nodes.find((node) => {
+        const nodePath = (node.path || '').replace(/\\/g, '/').toLowerCase()
+        const cleanNode = nodePath.replace(/^\/+|\/+$/g, '')
+        const nodeId = (node.id || '').replace(/\\/g, '/').toLowerCase()
+        return (
+          cleanNode === cleanTarget
+          || cleanNode.endsWith('/' + cleanTarget)
+          || cleanNode.endsWith(cleanTarget)
+          || cleanTarget.endsWith(cleanNode)
+          || nodeId === cleanTarget
+          || nodeId.endsWith('/' + cleanTarget)
+          || nodeId.endsWith(cleanTarget)
+          || (fileStem.length > 4
+            && (cleanNode.includes(fileStem) || nodeId.includes(fileStem)))
+        )
+      })
+      if (matchedNode) {
+        if (rawPath.toLowerCase().includes('imports/')) {
+          this.ensureImportsWorkspaceVisible()
+          this.refreshVisibility()
+        }
+        hooks.addActivityLog?.(
+          `Enfocando nuevo elemento importado: ${matchedNode.label} [${matchedNode.type}]`,
+          'success',
+        )
+        hooks.selectNode(matchedNode.id, 950).catch((err) => {
+          console.error('Error auto-selecting node:', err)
+        })
+      } else {
+        remaining.push(rawPath)
+      }
+    }
+    return remaining
   }
 
   setFocusMode(active: boolean): void {
@@ -585,25 +619,12 @@ export class Graph3DEngine {
   }
 
   private _applyLayoutForces(profile: RenderProfile): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fg = this.fg as any
-    const link = fg.d3Force?.('link')
-    const charge = fg.d3Force?.('charge')
-    if (this.layoutMode === 'constellation') {
-      if (link?.strength) {
-        this._savedLinkStrength = link.strength()
-        link.strength(0)
-      }
-      if (charge?.strength) {
-        this._savedChargeStrength = charge.strength()
-        charge.strength(0)
-      }
-      fg.warmupTicks(0).cooldownTicks(0)
-    } else {
-      if (link?.strength) link.strength(this._savedLinkStrength)
-      if (charge?.strength) charge.strength(this._savedChargeStrength)
-      fg.warmupTicks(profile.warmupTicks).cooldownTicks(profile.cooldownTicks)
-    }
+    const saved = applyLayoutForces(this.fg, this.layoutMode, profile, {
+      linkStrength: this._savedLinkStrength,
+      chargeStrength: this._savedChargeStrength,
+    })
+    this._savedLinkStrength = saved.linkStrength
+    this._savedChargeStrength = saved.chargeStrength
   }
 
   setQualityPreset(preset: QualityPreset): void {
@@ -853,33 +874,7 @@ export class Graph3DEngine {
   }
 
   private hydrate(n: Node, degree = 0): Record<string, unknown> {
-    const studyCount = (n.metadata?.study_count as number | undefined) ?? 0
-    const weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
-    const h: Record<string, unknown> = { ...n, name: n.label, weight, degree }
-
-    // Modo árbol (predeterminado): sin posiciones del backend — el force graph 3D
-    // organiza el espacio como antes de constelaciones.
-    if (this.layoutMode !== 'constellation') {
-      return h
-    }
-
-    const meta = n.metadata || {}
-    const p = n.position
-    const hasConstellationMeta = Boolean(meta.constellation_id)
-    const hasValid3D =
-      p != null &&
-      typeof p.x === 'number' &&
-      typeof p.y === 'number' &&
-      typeof p.z === 'number'
-    if (hasConstellationMeta || hasValid3D) {
-      h.x = p!.x
-      h.y = p!.y
-      h.z = p!.z
-      h.fx = h.x
-      h.fy = h.y
-      h.fz = h.z
-    }
-    return h
+    return hydrateNodeForLayout(n, degree, this.layoutMode)
   }
 
   destroy(): void {
