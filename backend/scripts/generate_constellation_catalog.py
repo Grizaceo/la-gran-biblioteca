@@ -123,6 +123,74 @@ REAL = {
     ],
 }
 
+# Narrative and observing hints for well-known constellations (Spanish UI).
+ENRICHMENT = {
+    "leo": {
+        "summary_es": (
+            "Leo domina el cielo de primavera en el hemisferio norte. "
+            "Su estrella más brillante, Regulus, marca el «corazón del león»."
+        ),
+        "season": "Primavera (hemisferio norte)",
+        "hemisphere": "norte",
+    },
+    "orion": {
+        "summary_es": (
+            "Orión es uno de los cielos más reconocibles del invierno boreal. "
+            "El cinturón de tres estrellas apunta hacia Sirio y la Osa Mayor."
+        ),
+        "season": "Invierno (hemisferio norte)",
+        "hemisphere": "norte",
+    },
+    "ursa_major": {
+        "summary_es": (
+            "La Osa Mayor circumpolar en latitudes medias del norte. "
+            "Sus siete estrellas forman el Carro o el Cazo, útil para encontrar el Polo."
+        ),
+        "season": "Todo el año (circumpolar norte)",
+        "hemisphere": "norte",
+    },
+    "scorpius": {
+        "summary_es": (
+            "Escorpio brilla en verano boreal con Antares, una supergigante roja. "
+            "Su cola curva es fácil de distinguir cerca del horizonte sur."
+        ),
+        "season": "Verano (hemisferio norte)",
+        "hemisphere": "ambos",
+    },
+    "cygnus": {
+        "summary_es": (
+            "El Cisne cruza la Vía Láctea de verano; Deneb es una de las estrellas "
+            "del Triángulo de Verano junto a Vega y Altair."
+        ),
+        "season": "Verano (hemisferio norte)",
+        "hemisphere": "norte",
+    },
+    "cassiopeia": {
+        "summary_es": (
+            "Casiopea forma una W distintiva en el cielo norte. "
+            "Es circumpolar en muchas latitudes y complementa a la Osa Mayor."
+        ),
+        "season": "Otoño e invierno (hemisferio norte)",
+        "hemisphere": "norte",
+    },
+    "taurus": {
+        "summary_es": (
+            "Tauro alberga Aldebarán y el cúmulo de las Pléyades. "
+            "Visible en invierno boreal, precede a Orión en el horizonte."
+        ),
+        "season": "Invierno (hemisferio norte)",
+        "hemisphere": "norte",
+    },
+    "crux": {
+        "summary_es": (
+            "La Cruz del Sur es un referente del cielo austral. "
+            "Sus cuatro estrellas principales orientan hacia el polo sur celeste."
+        ),
+        "season": "Todo el año (hemisferio sur)",
+        "hemisphere": "sur",
+    },
+}
+
 ENTRIES = [
     ("andromeda", "Andromeda", "Andrómeda"),
     ("antlia", "Antlia", "Antlia"),
@@ -231,22 +299,37 @@ def synthetic_stars(cid: str, count: int = 7) -> list:
     return stars
 
 
+def _center_from_stars(stars: list) -> tuple[float, float]:
+    if not stars:
+        return 0.0, 0.0
+    ras = [float(s["ra"]) for s in stars]
+    decs = [float(s["dec"]) for s in stars]
+    return sum(ras) / len(ras), sum(decs) / len(decs)
+
+
 def build_constellations() -> list:
     constellations = []
     for cid, name, name_es in ENTRIES:
         stars = REAL.get(cid) or synthetic_stars(cid)
+        center_ra, center_dec = _center_from_stars(stars)
         aliases = [name.lower().replace(" ", "_"), name_es.lower().replace(" ", "_")]
         if cid == "ursa_major":
             aliases.extend(["osa_mayor", "great_bear", "big_dipper"])
         if cid == "orion":
             aliases.extend(["orion", "ori"])
-        constellations.append({
+        entry = {
             "id": cid,
             "name": name,
             "name_es": name_es,
             "aliases": aliases,
             "stars": stars,
-        })
+            "center_ra": round(center_ra, 4),
+            "center_dec": round(center_dec, 4),
+        }
+        extra = ENRICHMENT.get(cid)
+        if extra:
+            entry.update(extra)
+        constellations.append(entry)
     return constellations
 
 

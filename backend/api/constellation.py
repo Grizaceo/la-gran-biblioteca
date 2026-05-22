@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..app_deps import engine
-from ..constellation_layout import load_catalog
+from ..constellation_layout import catalog_by_id, load_catalog
 from ..bridge_tasks import force_graph_update
 
 router = APIRouter(prefix="/api/constellation", tags=["constellation"])
@@ -81,3 +81,38 @@ async def constellation_relayout():
 
     g = graph_state.get_current_graph()
     return {"status": "ok", "nodes": len(g["nodes"]), "edges": len(g["edges"])}
+
+
+@router.get("/{constellation_id}")
+async def get_constellation_detail(constellation_id: str):
+    const = catalog_by_id().get(constellation_id)
+    if not const:
+        raise HTTPException(status_code=404, detail="Unknown constellation_id")
+    stars = const.get("stars") or []
+    center_ra = const.get("center_ra")
+    center_dec = const.get("center_dec")
+    if center_ra is None and stars:
+        ras = [float(s["ra"]) for s in stars]
+        decs = [float(s["dec"]) for s in stars]
+        center_ra = sum(ras) / len(ras)
+        center_dec = sum(decs) / len(decs)
+    return {
+        "id": const["id"],
+        "name": const.get("name"),
+        "name_es": const.get("name_es"),
+        "summary_es": const.get("summary_es"),
+        "season": const.get("season"),
+        "hemisphere": const.get("hemisphere"),
+        "center_ra": center_ra,
+        "center_dec": center_dec,
+        "star_count": len(stars),
+        "stars": [
+            {
+                "name": s.get("name"),
+                "ra": s.get("ra"),
+                "dec": s.get("dec"),
+                "mag": s.get("mag"),
+            }
+            for s in stars
+        ],
+    }

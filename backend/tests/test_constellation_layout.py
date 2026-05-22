@@ -6,6 +6,7 @@ import math
 
 from backend.constellation_layout import (
     _ISLAND_SPHERE_RADIUS,
+    _PERIPHERAL_NEAR_CENTER_RADIUS,
     apply_constellation_layout,
     load_catalog,
     suggest_constellation,
@@ -125,7 +126,7 @@ def test_unanchored_peripheral_cloud(tmp_path):
     pos = node["position"]
     assert "z" in pos
     r = math.hypot(pos["x"], pos["y"], pos.get("z", 0))
-    assert r < _ISLAND_SPHERE_RADIUS * 2.5
+    assert r < _PERIPHERAL_NEAR_CENTER_RADIUS * 2.5
 
 
 def test_top_level_islands_clustered(tmp_path):
@@ -172,4 +173,5 @@ def test_top_level_islands_clustered(tmp_path):
         for b in positions[i + 1:]:
             d = math.dist(a, b)
             max_pair = max(max_pair, d)
-    assert max_pair < 2 * _ISLAND_SPHERE_RADIUS
+    # Island origins sit on a sphere of _ISLAND_SPHERE_RADIUS; star layout adds inner spread.
+    assert max_pair < 2.8 * _ISLAND_SPHERE_RADIUS

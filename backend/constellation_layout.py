@@ -18,9 +18,19 @@ _CATALOG_PATH = Path(__file__).parent / "data" / "constellations.json"
 _LAYOUT_SCALE = 400.0
 _NESTED_SCALE = 0.32
 _FILE_ORBIT_RADIUS = 28.0
-_ISLAND_SPHERE_RADIUS = 600.0
+_ISLAND_SPHERE_RADIUS = 400.0
 _MAX_SCENE_RADIUS = 2400.0
-_PERIPHERAL_CLOUD_RADIUS = 1.4 * _ISLAND_SPHERE_RADIUS
+_PERIPHERAL_CLOUD_RADIUS = 550.0
+_PERIPHERAL_NEAR_CENTER_RADIUS = 120.0
+
+# Folder names too generic for automatic constellation suggestions.
+GENERIC_FOLDER_NAMES = frozenset({
+    "src", "docs", "doc", "lib", "bin", "dist", "build", "tmp", "temp",
+    "node_modules", "vendor", "assets", "static", "public", "private",
+    "test", "tests", "spec", "coverage", "data", "cache", "config",
+    "scripts", "tools", "utils", "common", "shared", "include",
+    "out", "target", "obj", "venv", ".venv", "env",
+})
 _catalog_cache: Optional[List[Dict[str, Any]]] = None
 
 
@@ -418,6 +428,11 @@ def apply_constellation_layout(
         all_positions.update(subtree_pos)
         anchor_world[anchor_path] = origin
 
+    has_confirmed = any(p.get("status") == "confirmed" for p in prefs_by_path.values())
+    cloud_radius = (
+        _PERIPHERAL_NEAR_CENTER_RADIUS if has_confirmed else _PERIPHERAL_CLOUD_RADIUS
+    )
+
     unanchored = [
         n for n in graph.get("nodes", [])
         if n["id"] not in all_positions
@@ -427,7 +442,7 @@ def apply_constellation_layout(
         all_positions[node["id"]] = _fibonacci_sphere_point(
             i,
             max(len(unanchored), 1),
-            _PERIPHERAL_CLOUD_RADIUS,
+            cloud_radius,
         )
 
     all_positions = _recenter_positions(all_positions)

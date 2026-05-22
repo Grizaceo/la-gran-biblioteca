@@ -12,7 +12,15 @@ from dataclasses import dataclass, asdict
 
 import os
 
-from .constellation_layout import now_iso, suggest_constellation
+from .constellation_layout import (
+    GENERIC_FOLDER_NAMES,
+    now_iso,
+    suggest_constellation,
+    _normalize_name,
+)
+
+_SUGGEST_MAX_DEPTH = 1
+_SUGGEST_THRESHOLD = 0.85
 
 _DB_DEFAULT = str(Path(__file__).parent / "library.db")
 DB_PATH = Path(os.environ.get("DB_PATH", _DB_DEFAULT))
@@ -263,10 +271,18 @@ class GraphEngine:
             path = n.get("path")
             if not path:
                 continue
+            meta = n.get("metadata") or {}
+            depth = meta.get("depth")
+            if depth is not None and int(depth) > _SUGGEST_MAX_DEPTH:
+                continue
+            label = n.get("label") or Path(path).name
+            norm_label = _normalize_name(label)
+            if norm_label in GENERIC_FOLDER_NAMES or label.lower() in GENERIC_FOLDER_NAMES:
+                continue
             fp = str(Path(path).resolve())
             if fp in existing:
                 continue
-            cid = suggest_constellation(n.get("label") or Path(path).name)
+            cid = suggest_constellation(label, threshold=_SUGGEST_THRESHOLD)
             if not cid:
                 continue
             self.upsert_constellation_pref(fp, cid, "suggested", "name_match")
