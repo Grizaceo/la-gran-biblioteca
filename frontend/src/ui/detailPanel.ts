@@ -25,6 +25,32 @@ function escapeAttr(s: string | null | undefined): string {
   return escapeHtml(s)
 }
 
+const PURIFY_HTML_OPTS = { ADD_ATTR: ['target', 'rel'] }
+
+function isExternalHref(href: string): boolean {
+  return /^https?:\/\//i.test(href)
+}
+
+/** Open PubMed/arXiv and other http(s) links in a new tab, not the LGB shell. */
+function applyExternalLinks(root: ParentNode): void {
+  root.querySelectorAll('a[href]').forEach((anchor) => {
+    const a = anchor as HTMLAnchorElement
+    const href = a.getAttribute('href') || ''
+    if (!isExternalHref(href)) return
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+  })
+}
+
+function formatMetaValue(key: string, value: unknown): string {
+  const text = String(value)
+  if (key === 'url' || /^https?:\/\//i.test(text)) {
+    const href = escapeAttr(text)
+    return `<a class="detail-external-link" href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`
+  }
+  return escapeHtml(text)
+}
+
 const NON_FILE_TYPES = new Set(['folder', 'workspace', 'project'])
 
 interface Engine {
@@ -136,7 +162,10 @@ export function setupDetailPanel(
 
       let html = ''
       if (lang === 'markdown') {
-        html = DOMPurify.sanitize(await Promise.resolve(marked.parse(content)))
+        html = DOMPurify.sanitize(
+          await Promise.resolve(marked.parse(content)),
+          PURIFY_HTML_OPTS,
+        )
       } else {
         const hljs = await getHljs()
         const highlighted = lang
@@ -153,6 +182,7 @@ export function setupDetailPanel(
         <div class="detail-section-title">Vista previa</div>
         ${truncNote}
         <div class="preview-content markdown-body">${html}</div>`
+      applyExternalLinks(detailPreview)
     } catch (err: unknown) {
       const status = err instanceof Error ? err.message : String(err)
       if (status === '415') {
@@ -213,9 +243,10 @@ export function setupDetailPanel(
     const meta = node.metadata ?? {}
     const rows = Object.entries(meta)
       .filter(([, v]) => v !== null && v !== undefined && v !== '')
-      .map(([k, v]) => `<div class="detail-meta-row"><span>${escapeHtml(k)}</span><span>${escapeHtml(String(v))}</span></div>`)
+      .map(([k, v]) => `<div class="detail-meta-row"><span>${escapeHtml(k)}</span><span>${formatMetaValue(k, v)}</span></div>`)
       .join('')
     detailMeta.innerHTML = rows
+    applyExternalLinks(detailMeta)
       || '<div class="detail-meta-row"><span style="opacity:.4">sin metadatos</span></div>'
 
     renderActions(node)
