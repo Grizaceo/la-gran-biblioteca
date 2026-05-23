@@ -12,6 +12,17 @@ Explora en 3D un mapa de tus notas, documentos y proyectos: cada archivo es un p
 
 Todo corre en tu máquina. No hace falta instalar una base de datos aparte ni subir tus archivos a ningún servicio.
 
+## Capturas
+
+![Vista del grafo](docs/images/graph-hero.png)
+*6.711 nodos, 4.037 aristas — bóveda completa renderizada como constelación 3D*
+
+![Búsqueda](docs/images/search.png)
+*Búsqueda de texto en todos los nodos (Ctrl+K)*
+
+![Panel de detalle](docs/images/detail-panel.png)
+*Detalle del nodo: tipo, ruta, metadatos, vecinos y vista previa del markdown*
+
 ## Requisitos
 
 - **Python 3.11+** (servidor y escaneo)
