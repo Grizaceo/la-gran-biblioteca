@@ -12,7 +12,7 @@
 
 ### Changed
 - `SECURITY.md` — report via GitHub Security Advisories
-- `CONTRIBUTING.md` — `main` branch, `health.sh`, local `.env` guard
+- `CONTRIBUTING.md` — `master` branch, `health.sh`, local `.env` guard
 - `README.md` — dual setup profiles, publish checklist, CI badge placeholder
 - `frontend/package.json` — MIT license and repository metadata placeholder
 

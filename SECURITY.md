@@ -46,4 +46,4 @@ Run `npm audit` in `frontend/` periodically. Known vulnerabilities in dev depend
 
 ## Supported versions
 
-Only the latest `main` branch receives security fixes.
+Only the latest `master` branch receives security fixes.

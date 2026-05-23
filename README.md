@@ -127,6 +127,12 @@ bash scripts/health.sh
 
 Ejecuta revisión de código, tests del backend y comprobación de tipos del frontend.
 
+## UI, API y MCP
+
+- **Visor 3D** (`npm run dev`, :5173) habla con el **bridge** FastAPI (:3001).
+- **Agentes** pueden usar el servidor **MCP** (`python -m backend.mcp_server`) sin levantar el bridge; leen la misma `library.db`.
+- Son **dos procesos**: si cambias archivos por la UI o por MCP, el otro lado puede necesitar un **rescan** (botón en la app, `POST /api/rescan`, o tool `rescan()` en MCP) para ver el grafo actualizado. Detalle en [`AGENTS.md`](AGENTS.md#bridge-http-vs-servidor-mcp-dos-procesos).
+
 ## Más documentación
 
 | Documento | Para quién |

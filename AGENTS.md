@@ -81,6 +81,25 @@ mark_studied("<id>")
 Flujo recomendado con arXiv: `search_arxiv` → revisar `results[].arxiv_id` → `import_arxiv(id)` → `rescan()`.
 En la UI: Archivo → Importar arXiv → pestaña **Buscar** → seleccionar fila → **Importar seleccionado**.
 
+## Bridge HTTP vs servidor MCP (dos procesos)
+
+Hay **dos procesos independientes** que comparten `backend/library.db` y `WORKSPACE_ROOT`, pero **no** comparten el grafo en memoria:
+
+| | **Bridge HTTP** (`python -m backend.library_bridge`, :3001) | **MCP** (`python -m backend.mcp_server`, stdio) |
+|---|-------------------------------------------------------------|------------------------------------------------|
+| Para qué | UI en el navegador, SSE, watchdog al cambiar archivos | Agentes (Cursor, Claude Code, etc.) |
+| Grafo en RAM | `graph_state` (cap ~1000 nodos para `/api/graph`) | Copia propia cargada al arrancar |
+| ¿Necesita el otro? | No para servir la UI | No para leer/escribir la bóveda |
+
+**Qué implica en la práctica:**
+
+1. **Cambios en la UI o por watchdog** (rescan automático, imports desde el menú): el MCP sigue con datos viejos hasta que llames `rescan()` en el MCP o **reinicies** el proceso MCP.
+2. **Mutaciones por MCP** (`create_file`, `import_arxiv`, etc.): escriben en disco y en SQLite solo tras `rescan()`; la UI no muestra nodos nuevos hasta `POST /api/rescan`, un rescan por watchdog, o reiniciar el bridge.
+3. **`create_file` / imports no llaman `rescan()` solos** — el agente debe ejecutar `rescan()` antes de `search()` si quiere ver el nodo nuevo.
+4. **`overview().recent_imports`** en MCP solo lista imports hechos **en esa sesión MCP**; los de la UI viven en `graph_state` del bridge.
+
+Ambos usan el mismo pipeline (`rebuild_graph` en `services/graph_pipeline.py`) cuando rescanean.
+
 ## Estructura del código (si necesitas tocar internals)
 
 ```

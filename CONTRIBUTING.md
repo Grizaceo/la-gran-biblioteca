@@ -57,7 +57,7 @@ CI uses a temporary `WORKSPACE_ROOT` the same way.
 
 ## PR workflow
 
-1. Fork the repo and create a feature branch from `main`.
+1. Fork the repo and create a feature branch from `master` (default branch).
 2. Keep changes focused — one feature or fix per PR.
 3. Add tests for new behavior.
 4. Run `bash scripts/health.sh` before pushing.
