@@ -26,10 +26,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          three: ['three'],
-          forcegraph: ['3d-force-graph'],
-          markdown: ['marked', 'dompurify'],
+        manualChunks(id) {
+          if (id.includes('node_modules/three')) return 'three'
+          if (id.includes('node_modules/3d-force-graph')) return 'forcegraph'
+          if (id.includes('node_modules/marked') || id.includes('node_modules/dompurify')) {
+            return 'markdown'
+          }
         },
       },
     },

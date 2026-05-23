@@ -610,7 +610,7 @@ export class Graph3DEngine {
       scene.remove(this.starfield)
       this.starfield.geometry.dispose()
       if (Array.isArray(this.starfield.material)) {
-        this.starfield.material.forEach(m => m.dispose())
+        this.starfield.material.forEach((m: THREE.Material) => m.dispose())
       } else {
         this.starfield.material.dispose()
       }
