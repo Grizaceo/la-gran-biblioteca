@@ -18,10 +18,21 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ModuleNotFoundError:  # pragma: no cover - fallback for test/runtime without MCP package
+    class FastMCP:  # type: ignore[override]
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def tool(self):
+            def decorator(fn):
+                return fn
+            return decorator
 
 from .constants import WORKSPACE_ROOT
 from .graph_engine import GraphEngine, DB_PATH
+from .graph_queries import build_subgraph, search_graph
 from .overview import build_overview
 from .imports import (
     download_and_extract_github,
@@ -170,6 +181,12 @@ def search(
     node_type: str = "",
     tag: str = "",
     workspace: str = "",
+    topic: str = "",
+    folder_prefix: str = "",
+    min_degree: int = 0,
+    studied: str = "all",
+    is_import: str = "",
+    mode: str = "text",
     limit: int = 20,
     offset: int = 0,
 ) -> dict:
@@ -181,6 +198,12 @@ def search(
         node_type: Filter by type ('markdown', 'code', 'folder', ...).
         tag: Filter by tag in node metadata.
         workspace: Restrict to a specific top-level workspace name.
+        topic: Restrict to normalized topic metadata.
+        folder_prefix: Filter by parent folder prefix.
+        min_degree: Minimum graph degree.
+        studied: all|studied|unstudied.
+        is_import: true/false import filter.
+        mode: text|related|hub.
         limit: Max results (default 20, max 100).
         offset: Pagination offset.
 
@@ -188,39 +211,32 @@ def search(
         {results, total, has_more}
     """
     limit = min(limit, 100)
-    q = query.lower()
     with _lock:
-        nodes = list(_graph["nodes"])
-
-    matched = []
-    for n in nodes:
-        label = (n.get("label") or "").lower()
-        path = (n.get("path") or "").lower()
-        if q and q not in label and q not in path:
-            continue
-        if node_type and n.get("type", "") != node_type:
-            continue
-        if workspace:
-            try:
-                rel = Path(n.get("path", "")).relative_to(WORKSPACE_ROOT)
-                ws = rel.parts[0] if rel.parts else ""
-            except ValueError:
-                ws = ""
-            if ws != workspace:
-                continue
-        if tag:
-            tags = (n.get("metadata") or {}).get("tags", [])
-            if tag not in tags:
-                continue
-        matched.append(n)
-
-    total = len(matched)
-    page = matched[offset : offset + limit]
-    return {
-        "results": [_node_summary(n) for n in page],
-        "total": total,
-        "has_more": (offset + limit) < total,
-    }
+        graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
+    indexed = _engine.search_index(query, limit=max(limit * 5, 50), offset=0) if mode in {"text", "related"} else []
+    result = search_graph(
+        graph,
+        engine_search_results=indexed,
+        query=query,
+        node_type=node_type,
+        workspace=workspace,
+        folder_prefix=folder_prefix,
+        topic=topic,
+        min_degree=min_degree,
+        studied=studied,
+        is_import=is_import,
+        mode=mode,
+        limit=limit,
+        offset=offset,
+    )
+    if tag:
+        result["results"] = [
+            item for item in result["results"]
+            if tag in ((_node_index.get(item["id"], {}).get("metadata") or {}).get("tags", []))
+        ]
+        result["total"] = len(result["results"])
+        result["has_more"] = False
+    return result
 
 
 @mcp.tool()
@@ -345,6 +361,29 @@ def neighbors(
 
     truncated = len(collected_nodes) >= limit
     return {"nodes": collected_nodes, "edges": collected_edges, "truncated": truncated}
+
+
+@mcp.tool()
+def subgraph(
+    node_id: str,
+    depth: int = 1,
+    direction: str = "both",
+    workspace: str = "",
+    node_type: str = "",
+    limit: int = 120,
+) -> dict:
+    """Return a focused subgraph around a node, aligned with the HTTP endpoint."""
+    with _lock:
+        graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
+    return build_subgraph(
+        graph,
+        node_id=node_id,
+        depth=depth,
+        direction=direction,
+        workspace=workspace,
+        node_type=node_type,
+        limit=limit,
+    )
 
 
 # ── Mutation tools ──────────────────────────────────────────────────────────

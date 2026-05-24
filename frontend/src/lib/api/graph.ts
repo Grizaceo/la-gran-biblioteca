@@ -1,5 +1,5 @@
 import { apiFetch, GRAPH_FETCH_MS, streamUrl } from './client'
-import type { Graph, GraphUpdateEvent } from './types'
+import type { Graph, GraphUpdateEvent, OverviewStructure } from './types'
 
 export async function fetchGraph(): Promise<Graph> {
   const controller = new AbortController()
@@ -16,6 +16,30 @@ export async function fetchGraph(): Promise<Graph> {
   } finally {
     clearTimeout(timer)
   }
+}
+
+export async function fetchOverviewStructure(): Promise<OverviewStructure> {
+  const res = await apiFetch('/graph/overview-structure')
+  if (!res.ok) throw new Error(`Failed to fetch graph structure: ${res.status} ${res.statusText}`)
+  return res.json()
+}
+
+export async function fetchSubgraph(params: {
+  node_id: string
+  depth?: number
+  direction?: 'in' | 'out' | 'both'
+  workspace?: string
+  type?: string
+  limit?: number
+}): Promise<Graph> {
+  const qs = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    qs.set(key, String(value))
+  }
+  const res = await apiFetch(`/graph/subgraph?${qs.toString()}`)
+  if (!res.ok) throw new Error(`Failed to fetch subgraph: ${res.status} ${res.statusText}`)
+  return res.json()
 }
 
 export function subscribeToUpdates(

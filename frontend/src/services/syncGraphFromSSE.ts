@@ -9,6 +9,7 @@ export interface SyncGraphContext {
   onSearchSetup: (nodes: Graph['nodes']) => void
   onMinimapInvalidate: () => void
   onMinimapUpdate: () => void
+  refreshStructure?: () => Promise<void>
   onViewOptionsRender: () => void
   getCurrentNodeId: () => string | null
   refreshNeighbors: (nodeId: string) => void
@@ -31,6 +32,7 @@ export function processGraphUpdate(
   ctx.onStats(updated)
   ctx.onMinimapInvalidate()
   ctx.onMinimapUpdate()
+  void ctx.refreshStructure?.()
   ctx.onSearchSetup(updated.nodes)
   ctx.onViewOptionsRender()
   const nodeId = ctx.getCurrentNodeId()

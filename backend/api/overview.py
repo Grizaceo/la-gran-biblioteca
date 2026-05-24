@@ -8,7 +8,7 @@ from .. import graph_state
 from ..app_deps import engine
 from ..constants import WORKSPACE_ROOT
 from ..overview import build_overview
-from ..services.graph_pipeline import get_last_scan_stats
+from ..services.graph_pipeline import get_last_pipeline_stats, get_last_scan_stats
 
 router = APIRouter(prefix="/api", tags=["overview"])
 
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api", tags=["overview"])
 async def get_overview():
     graph = graph_state.get_current_graph()
     stats = get_last_scan_stats()
+    pipeline = get_last_pipeline_stats()
     data = build_overview(
         graph["nodes"],
         graph["edges"],
@@ -24,6 +25,8 @@ async def get_overview():
         WORKSPACE_ROOT,
     )
     data["skipped_archive_dirs"] = stats.get("skipped_archive_dirs", 0)
+    data["pipeline"] = pipeline
+    data["limited_count"] = len(graph_state.get_limited_graph().get("nodes", []))
     return data
 
 
@@ -31,6 +34,7 @@ async def get_overview():
 async def health():
     graph = graph_state.get_current_graph()
     stats = get_last_scan_stats()
+    pipeline = get_last_pipeline_stats()
     return {
         "status": "ok",
         "nodes": len(graph["nodes"]),
@@ -38,4 +42,5 @@ async def health():
         "workspace_root": str(WORKSPACE_ROOT),
         "db_path": str(engine.db_path),
         "skipped_archive_dirs": stats.get("skipped_archive_dirs", 0),
+        "pipeline": pipeline,
     }

@@ -99,6 +99,21 @@ def test_search_by_workspace(isolated_mcp):
     assert result["total"] == 2
 
 
+def test_search_hubs_mode(isolated_mcp):
+    srv, ws = isolated_mcp
+    result = srv.search("", mode="hub")
+    assert result["total"] >= 1
+    assert result["results"][0]["why"].startswith("hub")
+
+
+def test_subgraph(isolated_mcp):
+    srv, ws = isolated_mcp
+    result = srv.subgraph("n1", depth=1, direction="out")
+    ids = {node["id"] for node in result["nodes"]}
+    assert "n1" in ids
+    assert "n2" in ids
+
+
 def test_get_node_found(isolated_mcp):
     srv, ws = isolated_mcp
     result = srv.get_node("n1")

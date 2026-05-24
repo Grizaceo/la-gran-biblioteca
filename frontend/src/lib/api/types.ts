@@ -27,6 +27,70 @@ export interface Overview {
   recent_imports: string[]
   workspace_root: string
   skipped_archive_dirs?: number
+  pipeline?: {
+    scan_ms: number
+    finalize_ms: number
+    build_ms: number
+    node_count: number
+    edge_count: number
+  }
+  limited_count?: number
+}
+
+export interface StructureCluster {
+  key: string
+  label: string
+  count: number
+  degree_sum?: number
+  studied_count?: number
+  sample_node_ids?: string[]
+  centroid?: { x: number; y: number }
+}
+
+export interface OverviewStructure {
+  workspace_root: string
+  total_nodes: number
+  total_edges: number
+  limited_count?: number
+  pipeline?: {
+    scan_ms: number
+    finalize_ms: number
+    build_ms: number
+    node_count: number
+    edge_count: number
+  }
+  modes: {
+    workspace: StructureCluster[]
+    folder: StructureCluster[]
+    topic: StructureCluster[]
+  }
+  legend: {
+    workspaces: Array<{ key: string; count: number }>
+    topics: Array<{ key: string; count: number }>
+    roles: Record<string, number>
+  }
+}
+
+export interface SearchHit {
+  id: string
+  label: string
+  type: string
+  path: string
+  workspace: string
+  topics: string[]
+  degree: number
+  structural_role: string
+  study_count: number
+  why: string
+  folder?: string
+  related_score?: number
+  search_rank?: number
+}
+
+export interface SearchResponse {
+  results: SearchHit[]
+  total: number
+  has_more: boolean
 }
 
 export type GraphUpdateEvent = 'init' | 'update'

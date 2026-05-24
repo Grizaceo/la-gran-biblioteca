@@ -3,9 +3,9 @@
 graph_engine.py - Versión minimalista para testing
 """
 
-import shutil
 import json
 import sqlite3
+import shutil
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
@@ -22,8 +22,8 @@ from .constellation_layout import (
 _SUGGEST_MAX_DEPTH = 1
 _SUGGEST_THRESHOLD = 0.85
 
-_DB_DEFAULT = str(Path(__file__).parent / "library.db")
-DB_PATH = Path(os.environ.get("DB_PATH", _DB_DEFAULT))
+_DB_DEFAULT = Path(__file__).parent / "library.db"
+DB_PATH = Path(os.environ.get("DB_PATH", str(_DB_DEFAULT)))
 
 
 @dataclass
@@ -48,17 +48,22 @@ class Edge:
 
 
 class GraphEngine:
-    def __init__(self, db_path: Path = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Path | None = None):
+        self.db_path = Path(db_path) if db_path is not None else Path(os.environ.get("DB_PATH", str(_DB_DEFAULT)))
         self.nodes: Dict[str, Node] = {}
         self.edges: List[Edge] = []
+        self._fts_enabled = False
         self._init_db()
     
     def _init_db(self):
         conn = sqlite3.connect(self.db_path)
-        conn.execute("PRAGMA journal_mode=WAL")
+        self._enable_wal(conn)
         conn.execute('CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, type TEXT, label TEXT, path TEXT, metadata TEXT, position TEXT)')
         conn.execute('CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, type TEXT, PRIMARY KEY (source, target, type))')
+        conn.execute(
+            'CREATE TABLE IF NOT EXISTS node_search ('
+            'node_id TEXT PRIMARY KEY, label TEXT, path TEXT, title TEXT, tags TEXT, topics TEXT, search_blob TEXT)'
+        )
         conn.execute('''CREATE TABLE IF NOT EXISTS constellation_prefs (
             folder_path TEXT PRIMARY KEY,
             constellation_id TEXT NOT NULL,
@@ -66,16 +71,63 @@ class GraphEngine:
             suggested_from TEXT,
             updated_at TEXT NOT NULL
         )''')
+        self._ensure_fts(conn)
         conn.commit()
         conn.close()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
-        conn.execute("PRAGMA journal_mode=WAL")
+        self._enable_wal(conn)
         return conn
+
+    def _enable_wal(self, conn: sqlite3.Connection) -> None:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError:
+            # Another process may temporarily hold a lock on the shared DB.
+            pass
+
+    def _ensure_fts(self, conn: sqlite3.Connection) -> None:
+        try:
+            conn.execute(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5("
+                "node_id UNINDEXED, label, path, title, tags, topics)"
+            )
+            self._fts_enabled = True
+        except sqlite3.OperationalError:
+            self._fts_enabled = False
+
+    def _search_row_for_node(self, node: Node) -> tuple[str, str, str, str, str, str, str]:
+        meta = node.metadata or {}
+        frontmatter = meta.get("frontmatter") or {}
+        title = str(frontmatter.get("title") or node.label or "")
+        tags = " ".join(str(tag) for tag in meta.get("tags") or [])
+        topics = " ".join(str(topic) for topic in meta.get("topics") or [])
+        search_blob = " ".join(part for part in [node.label, node.path, title, tags, topics] if part)
+        return (node.id, node.label, node.path, title, tags, topics, search_blob)
+
+    def _rebuild_search_index(self, conn: sqlite3.Connection) -> None:
+        conn.execute("DELETE FROM node_search")
+        if self._fts_enabled:
+            conn.execute("DELETE FROM nodes_fts")
+        for node in self.nodes.values():
+            row = self._search_row_for_node(node)
+            conn.execute(
+                "INSERT INTO node_search (node_id, label, path, title, tags, topics, search_blob) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                row,
+            )
+            if self._fts_enabled:
+                conn.execute(
+                    "INSERT INTO nodes_fts (node_id, label, path, title, tags, topics) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    row[:6],
+                )
     
     def load_from_db(self) -> Dict[str, Any]:
         conn = self._connect()
+        self.nodes.clear()
+        self.edges.clear()
         nodes = []
         for row in conn.execute("SELECT * FROM nodes"):
             node = Node(id=row[0], type=row[1], label=row[2], path=row[3], metadata=json.loads(row[4]), position=json.loads(row[5]) if row[5] else None)
@@ -112,6 +164,7 @@ class GraphEngine:
                     "INSERT INTO edges VALUES (?,?,?)",
                     (e.source, e.target, e.type),
                 )
+            self._rebuild_search_index(conn)
             conn.commit()
         except Exception:
             conn.rollback()
@@ -157,6 +210,7 @@ class GraphEngine:
                     (edge.source, edge.target, edge.type)
                 )
 
+            self._rebuild_search_index(conn)
             conn.commit()
         except Exception:
             conn.rollback()
@@ -181,10 +235,78 @@ class GraphEngine:
     def update_node_metadata(self, node_id: str, metadata: Dict[str, Any]) -> None:
         conn = self._connect()
         conn.execute("UPDATE nodes SET metadata = ? WHERE id = ?", (json.dumps(metadata), node_id))
+        if node_id in self.nodes:
+            temp_node = Node(
+                id=node_id,
+                type=self.nodes[node_id].type,
+                label=self.nodes[node_id].label,
+                path=self.nodes[node_id].path,
+                metadata=metadata,
+                position=self.nodes[node_id].position,
+            )
+            row = self._search_row_for_node(temp_node)
+            conn.execute(
+                "INSERT INTO node_search (node_id, label, path, title, tags, topics, search_blob) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(node_id) DO UPDATE SET "
+                "label = excluded.label, path = excluded.path, title = excluded.title, "
+                "tags = excluded.tags, topics = excluded.topics, search_blob = excluded.search_blob",
+                row,
+            )
+            if self._fts_enabled:
+                conn.execute("DELETE FROM nodes_fts WHERE node_id = ?", (node_id,))
+                conn.execute(
+                    "INSERT INTO nodes_fts (node_id, label, path, title, tags, topics) VALUES (?, ?, ?, ?, ?, ?)",
+                    row[:6],
+                )
         conn.commit()
         conn.close()
         if node_id in self.nodes:
             self.nodes[node_id].metadata = metadata
+
+    def search_index(
+        self,
+        query: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        conn = self._connect()
+        self._ensure_fts(conn)
+        rows: list[sqlite3.Row | tuple] = []
+        q = " ".join(part.strip() for part in query.split() if part.strip())
+        if q and self._fts_enabled:
+            match = " OR ".join(f'"{token}"*' for token in q.split())
+            try:
+                rows = conn.execute(
+                    "SELECT node_id, label, path, title, tags, topics, bm25(nodes_fts) AS rank "
+                    "FROM nodes_fts WHERE nodes_fts MATCH ? ORDER BY rank LIMIT ? OFFSET ?",
+                    (match, limit, offset),
+                ).fetchall()
+            except sqlite3.OperationalError:
+                rows = []
+        if not rows:
+            like = f"%{q.lower()}%"
+            rows = conn.execute(
+                "SELECT node_id, label, path, title, tags, topics, 0.0 AS rank "
+                "FROM node_search "
+                "WHERE ? = '' OR lower(search_blob) LIKE ? "
+                "ORDER BY length(label), label LIMIT ? OFFSET ?",
+                (q, like, limit, offset),
+            ).fetchall()
+        conn.close()
+        return [
+            {
+                "node_id": row[0],
+                "label": row[1],
+                "path": row[2],
+                "title": row[3],
+                "tags": row[4],
+                "topics": row[5],
+                "rank": float(row[6]),
+            }
+            for row in rows
+        ]
 
     def list_constellation_prefs(self) -> List[Dict[str, Any]]:
         conn = self._connect()

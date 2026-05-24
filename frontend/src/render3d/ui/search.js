@@ -1,8 +1,9 @@
 import MiniSearch from 'minisearch'
 import * as THREE from 'three'
 import { PALETTE } from '../palette.js'
+import { fetchSearch } from '../../lib/api/search'
 
-const DEBOUNCE_MS = 120
+const DEBOUNCE_MS = 160
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
@@ -11,36 +12,32 @@ function escapeHtml(s) {
 }
 
 export function initSearch(forceGraph, engine = null) {
-  const searchInput        = document.getElementById('search-input')
-  const searchBtn          = document.getElementById('search-btn')
-  const searchResults      = document.getElementById('search-results')
-  const searchTypeBtn      = document.getElementById('search-type-btn')
+  const searchInput = document.getElementById('search-input')
+  const searchBtn = document.getElementById('search-btn')
+  const searchResults = document.getElementById('search-results')
+  const searchTypeBtn = document.getElementById('search-type-btn')
   const searchTypeDropdown = document.getElementById('search-type-dropdown')
-  const searchTypeDot      = document.getElementById('search-type-dot')
-  const searchTypeLabel    = document.getElementById('search-type-label')
+  const searchTypeDot = document.getElementById('search-type-dot')
+  const searchTypeLabel = document.getElementById('search-type-label')
+  const searchModeSelect = document.getElementById('search-mode-select')
+  const searchTabs = [...document.querySelectorAll('[data-search-tab]')]
 
-  let allNodes         = []
-  let nodesByType      = new Map()
+  let allNodes = []
   let activeTypeFilter = null
-  let debounceTimer    = null
-  let miniSearch       = null
-  let lastNodeIds      = ''
+  let debounceTimer = null
+  let miniSearch = null
+  let lastNodeIds = ''
+  let activeTab = 'text'
 
   function setup(nodes) {
     const ids = nodes.map((n) => n.id).join(',')
     if (ids === lastNodeIds && miniSearch) return
     lastNodeIds = ids
-
     allNodes = nodes
-    nodesByType = new Map()
-    for (const n of nodes) {
-      if (!nodesByType.has(n.type)) nodesByType.set(n.type, [])
-      nodesByType.get(n.type).push(n)
-    }
 
     miniSearch = new MiniSearch({
-      fields: ['name', 'label', 'id'],
-      storeFields: ['id', 'name', 'label', 'type'],
+      fields: ['name', 'label', 'id', 'topics'],
+      storeFields: ['id', 'name', 'label', 'type', 'topics'],
       searchOptions: { prefix: true, fuzzy: 0.15 },
     })
     miniSearch.addAll(
@@ -49,6 +46,7 @@ export function initSearch(forceGraph, engine = null) {
         name: String(n.name || n.id || ''),
         label: String(n.label || ''),
         type: n.type,
+        topics: ((n.metadata?.topics) || []).join(' '),
       })),
     )
     buildTypeDropdown()
@@ -87,19 +85,19 @@ export function initSearch(forceGraph, engine = null) {
       searchTypeLabel.textContent = type
       if (engine) engine.setTypeVisible(type, true)
     }
-    searchTypeDropdown.querySelectorAll('.type-filter-item').forEach(item => {
+    searchTypeDropdown.querySelectorAll('.type-filter-item').forEach((item) => {
       item.classList.toggle('active', item.dataset.type === type)
     })
-    if (searchInput.value.trim()) doSearch()
+    if (searchInput.value.trim()) void doSearch()
   }
 
   function focusNode(nodeId) {
     const graphData = forceGraph.graphData()
-    const node = graphData.nodes.find(n => n.id === nodeId)
+    const node = graphData.nodes.find((n) => n.id === nodeId)
     if (!node) return
 
     const distance = 150
-    const distRatio = 1 + distance / Math.hypot(node.x || 0, node.y || 0, node.z || 0)
+    const distRatio = 1 + distance / Math.max(1, Math.hypot(node.x || 0, node.y || 0, node.z || 0))
     forceGraph.cameraPosition(
       { x: (node.x || 0) * distRatio, y: (node.y || 0) * distRatio, z: (node.z || 0) * distRatio },
       node, 1000,
@@ -124,41 +122,29 @@ export function initSearch(forceGraph, engine = null) {
     }
 
     const infoEl = document.getElementById('info-msg')
-    infoEl.textContent = node.name || node.id
+    infoEl.textContent = node.name || node.label || node.id
     infoEl.style.color = '#4fc3f7'
     setTimeout(() => { infoEl.style.color = '' }, 3000)
   }
 
-  function doSearch() {
-    const query = searchInput.value.trim()
-    if (!query || !allNodes.length || !miniSearch) {
-      searchResults.classList.remove('active')
-      return
-    }
-
-    let hits = miniSearch.search(query, { limit: 40 })
-    if (activeTypeFilter) {
-      hits = hits.filter((h) => h.type === activeTypeFilter)
-    }
-    const matches = hits.slice(0, 20).map((h) => {
-      const n = allNodes.find((x) => x.id === h.id)
-      return n || { id: h.id, name: h.name, label: h.label, type: h.type }
-    })
-
+  function renderResults(matches) {
     if (!matches.length) {
-      const typeLabel = activeTypeFilter ? ` en "${activeTypeFilter}"` : ''
-      searchResults.innerHTML = `<div class="search-no-results">Sin resultados${typeLabel}</div>`
+      searchResults.innerHTML = `<div class="search-no-results">Sin resultados</div>`
       searchResults.classList.add('active')
       return
     }
 
-    searchResults.innerHTML = matches.map(n => {
+    searchResults.innerHTML = matches.map((n) => {
       const color = PALETTE[n.type] || PALETTE.default
-      const name = n.name || n.id
-      const displayName = name.length > 40 ? name.slice(0, 37) + '...' : name
+      const name = n.label || n.name || n.id
+      const displayName = name.length > 42 ? name.slice(0, 39) + '...' : name
+      const why = n.why || (((n.topics || []).length > 0) ? `topics: ${(n.topics || []).slice(0, 3).join(', ')}` : '')
       return `<div class="search-result-item" data-node-id="${escapeHtml(n.id)}">
         <div class="search-result-dot" style="background:${color}"></div>
-        <span class="search-result-name">${escapeHtml(displayName)}</span>
+        <div class="search-result-meta">
+          <span class="search-result-name">${escapeHtml(displayName)}</span>
+          ${why ? `<span class="search-result-why">${escapeHtml(why)}</span>` : ''}
+        </div>
         <span class="search-result-type">${escapeHtml(n.type)}</span>
       </div>`
     }).join('')
@@ -166,12 +152,58 @@ export function initSearch(forceGraph, engine = null) {
     searchResults.classList.add('active')
   }
 
+  async function doSearch() {
+    const query = searchInput.value.trim()
+    const mode = searchModeSelect.value || (activeTab === 'related' ? 'related' : 'text')
+    const params = {
+      q: query,
+      mode,
+      type: activeTypeFilter || '',
+      limit: 20,
+    }
+
+    if (!query && mode === 'text') {
+      searchResults.classList.remove('active')
+      return
+    }
+
+    try {
+      const response = await fetchSearch(params)
+      renderResults(response.results)
+      return
+    } catch (_) {
+      // Fallback to local search over the visible graph when the backend search fails.
+    }
+
+    if (!query || !allNodes.length || !miniSearch) {
+      searchResults.classList.remove('active')
+      return
+    }
+    let hits = miniSearch.search(query, { limit: 40 })
+    if (activeTypeFilter) hits = hits.filter((h) => h.type === activeTypeFilter)
+    renderResults(hits.slice(0, 20).map((hit) => ({
+      id: hit.id,
+      label: hit.label || hit.name || hit.id,
+      type: hit.type,
+      why: 'índice local',
+      topics: [],
+    })))
+  }
+
+  function setTab(tab) {
+    activeTab = tab
+    searchTabs.forEach((button) => button.classList.toggle('active', button.dataset.searchTab === tab))
+    searchModeSelect.value = tab === 'related' ? 'related' : 'text'
+    searchInput.placeholder = tab === 'related'
+      ? 'Explorar conexiones, hubs o nodos puente…'
+      : 'Buscar… (Ctrl+K)'
+  }
+
   searchResults.addEventListener('click', (e) => {
     const item = e.target.closest('.search-result-item')
     if (!item) return
     focusNode(item.dataset.nodeId)
     searchResults.classList.remove('active')
-    searchInput.value = ''
   })
 
   searchTypeDropdown.addEventListener('click', (e) => {
@@ -186,17 +218,22 @@ export function initSearch(forceGraph, engine = null) {
     searchTypeDropdown.classList.toggle('active')
   })
 
-  searchBtn.addEventListener('click', doSearch)
+  searchTabs.forEach((button) => {
+    button.addEventListener('click', () => setTab(button.dataset.searchTab || 'text'))
+  })
+
+  searchBtn.addEventListener('click', () => { void doSearch() })
+  searchModeSelect.addEventListener('change', () => { if (searchInput.value.trim()) void doSearch() })
 
   searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); doSearch() }
+    if (e.key === 'Enter') { e.preventDefault(); void doSearch() }
     if (e.key === 'Escape') { searchResults.classList.remove('active'); searchInput.blur() }
   })
 
   searchInput.addEventListener('keyup', (e) => {
     if (e.key === 'Enter' || e.key === 'Escape') return
     clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(doSearch, DEBOUNCE_MS)
+    debounceTimer = setTimeout(() => { void doSearch() }, DEBOUNCE_MS)
   })
 
   document.addEventListener('click', (e) => {
@@ -218,5 +255,5 @@ export function initSearch(forceGraph, engine = null) {
     }
   })
 
-  return { setup, focusNode }
+  return { setup, focusNode, setTab }
 }

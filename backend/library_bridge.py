@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import graph_state
-from .api import constellation, create, graph, imports_api, nodes, overview
+from .api import constellation, create, graph, imports_api, nodes, overview, search_api
 from .app_deps import engine
 from .bridge_tasks import force_graph_update
 from .constants import WORKSPACE_ROOT  # tests may patch via bridge.WORKSPACE_ROOT
@@ -115,6 +115,7 @@ app.include_router(constellation.router)
 app.include_router(create.router)
 app.include_router(imports_api.router)
 app.include_router(overview.router)
+app.include_router(search_api.router)
 
 
 @app.get("/")

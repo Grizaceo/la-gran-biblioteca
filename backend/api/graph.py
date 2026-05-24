@@ -6,14 +6,15 @@ import asyncio
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
 
 from .. import graph_state
 from .. import app_deps
 from ..app_deps import engine, notify_graph_clients
+from ..graph_queries import build_subgraph
 from ..security import safe_error_detail
-from ..services.graph_pipeline import rebuild_graph
+from ..services.graph_pipeline import get_last_pipeline_stats, rebuild_graph
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["graph"])
@@ -22,6 +23,38 @@ router = APIRouter(prefix="/api", tags=["graph"])
 @router.get("/graph")
 async def get_graph():
     return graph_state.get_limited_graph()
+
+
+@router.get("/graph/overview-structure")
+async def get_graph_overview_structure():
+    data = graph_state.get_overview_structure()
+    data["pipeline"] = get_last_pipeline_stats()
+    data["limited_count"] = len(graph_state.get_limited_graph().get("nodes", []))
+    return data
+
+
+@router.get("/graph/subgraph")
+async def get_graph_subgraph(
+    node_id: str,
+    depth: int = Query(1, ge=1, le=4),
+    direction: str = Query("both", pattern="^(out|in|both)$"),
+    workspace: str = "",
+    node_type: str = Query("", alias="type"),
+    limit: int = Query(120, ge=1, le=500),
+):
+    graph = graph_state.get_current_graph()
+    result = build_subgraph(
+        graph,
+        node_id=node_id,
+        depth=depth,
+        direction=direction,
+        workspace=workspace,
+        node_type=node_type,
+        limit=limit,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
 
 
 @router.get("/stream")

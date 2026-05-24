@@ -1,9 +1,12 @@
 import tempfile
+import os
 from pathlib import Path
 from fastapi.testclient import TestClient
-from backend.graph_engine import GraphEngine
 
 # We need to import the app after setting up a temporary DB
+_IMPORT_TMP = tempfile.mkdtemp()
+os.environ.setdefault("DB_PATH", str(Path(_IMPORT_TMP) / "import-test.db"))
+from backend.graph_engine import GraphEngine
 import backend.app_deps as app_deps
 import backend.library_bridge as bridge
 
@@ -42,6 +45,49 @@ def test_get_graph():
         assert response.status_code == 200
         data = response.json()
         assert len(data["nodes"]) == 1
+
+
+def test_overview_structure_and_search():
+    with tempfile.TemporaryDirectory() as tmp:
+        db = Path(tmp) / "library.db"
+        ge = _use_engine(db)
+        graph = {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "type": "document",
+                    "label": "Graph Notes",
+                    "path": str(Path(tmp) / "vault" / "notes" / "graph.md"),
+                    "metadata": {
+                        "workspace": "notes",
+                        "topics": ["graph"],
+                        "structural_role": "notes",
+                        "parent_folder": "notes",
+                    },
+                    "position": {"x": 0, "y": 0},
+                },
+                {
+                    "id": "n2",
+                    "type": "folder",
+                    "label": "notes",
+                    "path": str(Path(tmp) / "vault" / "notes"),
+                    "metadata": {"workspace": "notes", "structural_role": "docs"},
+                    "position": {"x": 1, "y": 1},
+                },
+            ],
+            "edges": [{"source": "n2", "target": "n1", "type": "contains"}],
+        }
+        ge.build_graph(graph)
+        bridge.set_current_graph(graph)
+        client = TestClient(bridge.app)
+
+        structure = client.get("/api/graph/overview-structure")
+        assert structure.status_code == 200
+        assert "modes" in structure.json()
+
+        search = client.get("/api/search?q=graph")
+        assert search.status_code == 200
+        assert search.json()["results"][0]["id"] == "n1"
 
 
 def test_study_node_persists():

@@ -155,9 +155,29 @@
     #search-container {
       position: relative;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 6px;
+      min-width: 420px;
     }
+    #search-shell { display: flex; flex-direction: column; gap: 4px; }
+    #search-tabs { display: flex; gap: 4px; }
+    .search-tab {
+      background: rgba(0,0,17,0.7);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.55);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .search-tab.active {
+      color: #dff5ff;
+      border-color: rgba(79,195,247,0.45);
+      background: rgba(79,195,247,0.16);
+    }
+    #search-row { display: flex; align-items: center; gap: 0; }
     #search-type-btn {
       background: rgba(0,0,17,0.85);
       border: 1px solid rgba(255,255,255,0.15);
@@ -231,6 +251,15 @@
       transition: all 0.2s;
     }
     #search-btn:hover { border-color: rgba(79,195,247,0.4); color: rgba(255,255,255,0.9); }
+    #search-mode-select {
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-left: none;
+      color: rgba(255,255,255,0.65);
+      padding: 5px 8px;
+      font-size: 11px;
+      min-width: 98px;
+    }
     #search-results {
       position: absolute;
       top: 100%; right: 0;
@@ -259,8 +288,10 @@
     .search-result-item:last-child { border-bottom: none; }
     .search-result-item:hover { background: rgba(79,195,247,0.15); color: rgba(255,255,255,0.95); }
     .search-result-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .search-result-meta { display: flex; flex-direction: column; flex: 1; min-width: 0; }
     .search-result-name { flex: 1; }
     .search-result-type { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; }
+    .search-result-why { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
     .search-no-results {
       padding: 12px;
       text-align: center;
@@ -331,7 +362,7 @@
     /* Minimap */
     #minimap {
       position: absolute; bottom: 20px; left: 20px;
-      width: 180px; height: 120px;
+      width: 220px; min-height: 156px;
       background: rgba(0,0,17,0.85);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 6px;
@@ -339,6 +370,36 @@
       overflow: hidden;
       cursor: pointer;
     }
+    .minimap-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 10px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: rgba(255,255,255,0.7);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .minimap-controls { display: flex; gap: 4px; padding: 6px 8px 0; }
+    .minimap-chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: rgba(255,255,255,0.5);
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .minimap-chip.active {
+      color: #dff5ff;
+      border-color: rgba(79,195,247,0.4);
+      background: rgba(79,195,247,0.16);
+    }
+    .minimap-meta {
+      padding: 4px 10px 0;
+      color: rgba(255,255,255,0.35);
+      font-size: 10px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    #minimap-canvas-wrap { position: relative; width: 220px; height: 120px; margin-top: 4px; }
     #minimap-canvas { width: 100%; height: 100%; }
     #minimap-viewbox {
       position: absolute;
@@ -1316,13 +1377,26 @@
     <h1>LA GRAN BIBLIOTECA</h1>
     <span class="status" id="status" aria-live="polite">Conectando…</span>
     <div id="search-container" role="search">
+      <div id="search-shell">
+        <div id="search-tabs">
+          <button type="button" class="search-tab active" data-search-tab="text">Buscar</button>
+          <button type="button" class="search-tab" data-search-tab="related">Explorar relaciones</button>
+        </div>
+        <div id="search-row">
       <button type="button" id="search-type-btn" title="Filtrar por tipo" aria-haspopup="listbox" aria-expanded="false">
         <span class="type-dot" id="search-type-dot" style="background:#90a4ae"></span>
         <span id="search-type-label">Todos</span>
       </button>
       <div id="search-type-dropdown"></div>
+      <select id="search-mode-select" aria-label="Modo de búsqueda">
+        <option value="text">Texto</option>
+        <option value="hub">Hubs</option>
+        <option value="related">Relacionados</option>
+      </select>
       <input type="search" id="search-input" placeholder="Buscar… (Ctrl+K)" aria-label="Buscar nodos" autocomplete="off" />
       <button type="button" id="search-btn">Buscar</button>
+        </div>
+      </div>
       <div id="search-results" role="listbox" aria-label="Resultados de búsqueda"></div>
     </div>
     <span class="stats" id="stats" aria-live="polite"></span>
@@ -1360,8 +1434,20 @@
   <div id="breadcrumb"></div>
 
   <div id="minimap">
-    <canvas id="minimap-canvas"></canvas>
-    <div id="minimap-viewbox"></div>
+    <div class="minimap-header">
+      <span>Mapa estructural</span>
+      <span id="minimap-mode-label">workspace</span>
+    </div>
+    <div class="minimap-controls">
+      <button type="button" class="minimap-chip active" data-minimap-mode="workspace">Workspace</button>
+      <button type="button" class="minimap-chip" data-minimap-mode="folder">Carpetas</button>
+      <button type="button" class="minimap-chip" data-minimap-mode="topic">Topics</button>
+    </div>
+    <div class="minimap-meta" id="minimap-meta">Cargando estructura…</div>
+    <div id="minimap-canvas-wrap">
+      <canvas id="minimap-canvas"></canvas>
+      <div id="minimap-viewbox"></div>
+    </div>
   </div>
 
   <!-- Collapsible Activity Log -->

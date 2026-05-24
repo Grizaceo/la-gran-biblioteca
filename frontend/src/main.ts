@@ -1,6 +1,6 @@
-import { fetchGraph, fetchOverview, subscribeToUpdates } from './lib/bridge'
+import { fetchGraph, fetchOverview, fetchOverviewStructure, subscribeToUpdates } from './lib/bridge'
 import { processGraphUpdate } from './services/syncGraphFromSSE'
-import type { Graph, Overview } from './lib/bridge'
+import type { Graph, Overview, OverviewStructure } from './lib/bridge'
 import { Graph3DEngine } from './render3d/Graph3DEngine'
 import { initSearch } from './render3d/ui/search.js'
 import { initMinimap } from './render3d/ui/minimap.js'
@@ -39,6 +39,7 @@ async function init(): Promise<void> {
 
   let currentGraph: Graph | null = null
   let overview: Overview | null = null
+  let overviewStructure: OverviewStructure | null = null
   let graphHydrated = false
 
   function showError(msg: string, err?: Error): void {
@@ -62,9 +63,10 @@ async function init(): Promise<void> {
   step('1/6 Conectando al backend…')
   let graph: Graph
   try {
-    const [g, ov] = await Promise.all([fetchGraph(), fetchOverview()])
+    const [g, ov, structure] = await Promise.all([fetchGraph(), fetchOverview(), fetchOverviewStructure()])
     graph = g
     overview = ov
+    overviewStructure = structure
   } catch (err) {
     showError(`No se pudo conectar al backend: ${(err as Error).message}`)
     return
@@ -189,13 +191,18 @@ async function init(): Promise<void> {
 
   step('5/6 Iniciando minimap y búsqueda…')
   try {
-    const minimap = initMinimap(engine.fg, engine)
+    const minimap = initMinimap(engine.fg, engine) as {
+      update: () => void
+      invalidateBounds: () => void
+      setStructure: (data: OverviewStructure | null) => void
+    }
     const search  = initSearch(engine.fg, engine)
 
     engine.onMinimapTick = () => minimap.update()
     engine.onStop = () => minimap.invalidateBounds()
 
     search.setup(graph.nodes)
+    minimap.setStructure(overviewStructure)
     minimap.update()
     viewOptions.renderList()
 
@@ -208,6 +215,14 @@ async function init(): Promise<void> {
         onSearchSetup: (nodes) => search.setup(nodes),
         onMinimapInvalidate: () => minimap.invalidateBounds(),
         onMinimapUpdate: () => minimap.update(),
+        refreshStructure: async () => {
+          try {
+            overviewStructure = await fetchOverviewStructure()
+            minimap.setStructure(overviewStructure)
+          } catch (err) {
+            console.warn('[LGB] structure refresh failed', err)
+          }
+        },
         onViewOptionsRender: () => viewOptions.renderList(),
         getCurrentNodeId: () => panel.getCurrentNodeId(),
         refreshNeighbors: (id) => { panel.refreshNeighbors(id) },

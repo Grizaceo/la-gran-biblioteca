@@ -4,6 +4,8 @@ export function getNodeWorkspace(
   node: Record<string, unknown>,
   workspaceRoot: string,
 ): string {
+  const metaWorkspace = String((node.metadata as Record<string, unknown> | undefined)?.workspace || '')
+  if (metaWorkspace) return metaWorkspace
   const path = String(node.path || '').replace(/\\/g, '/')
   const nodeId = String(node.id || '').replace(/\\/g, '/')
   const blob = `${path} ${nodeId}`.toLowerCase()
@@ -37,6 +39,11 @@ export function passesGraphFilters(
     if (filters.workspaces.length === 0) return false
     const ws = getWorkspace(node)
     if (!ws || !filters.workspaces.includes(ws)) return false
+  }
+  if (filters.topics !== null) {
+    if (filters.topics.length === 0) return false
+    const nodeTopics = new Set((meta.topics as string[] | undefined) || [])
+    if (!filters.topics.some((topic) => nodeTopics.has(topic))) return false
   }
   const study = Number(meta.study_count) || 0
   if (filters.studyFilter === 'studied' && study <= 0) return false
