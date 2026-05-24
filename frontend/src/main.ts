@@ -191,7 +191,10 @@ async function init(): Promise<void> {
 
   step('5/6 Iniciando minimap y búsqueda…')
   try {
-    const minimap = initMinimap(engine.fg, engine) as {
+    const minimap = initMinimap(engine.fg, engine, {
+      showToast,
+      onFiltersChange: () => viewOptions.renderList(),
+    }) as {
       update: () => void
       invalidateBounds: () => void
       setStructure: (data: OverviewStructure | null) => void

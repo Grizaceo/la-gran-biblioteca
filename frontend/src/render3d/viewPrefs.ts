@@ -17,6 +17,7 @@ export interface ViewPrefs {
 export interface GraphFiltersState {
   workspaces: string[] | null
   topics: string[] | null
+  folders: string[] | null
   hideTags: boolean
   showArchived: boolean
   studyFilter: StudyFilter
@@ -27,6 +28,7 @@ export interface GraphFiltersState {
 export const DEFAULT_GRAPH_FILTERS: GraphFiltersState = {
   workspaces: null,
   topics: null,
+  folders: null,
   hideTags: false,
   showArchived: false,
   studyFilter: 'all',

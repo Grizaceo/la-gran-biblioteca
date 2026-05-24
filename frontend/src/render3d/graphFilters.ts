@@ -45,6 +45,24 @@ export function passesGraphFilters(
     const nodeTopics = new Set((meta.topics as string[] | undefined) || [])
     if (!filters.topics.some((topic) => nodeTopics.has(topic))) return false
   }
+  if (filters.folders !== null) {
+    if (filters.folders.length === 0) return false
+    const parentFolder = String(meta.parent_folder || '').replace(/\\/g, '/')
+    const nodePath = String(node.path || '').replace(/\\/g, '/')
+    const nodeId = String(node.id || '').replace(/\\/g, '/')
+    const nodeType = String(node.type || '')
+    const matchesFolder = filters.folders.some((folderKey) => {
+      const key = folderKey.replace(/\\/g, '/')
+      return (
+        parentFolder === key
+        || parentFolder.startsWith(`${key}/`)
+        || nodePath === key
+        || nodePath.endsWith(`/${key}`)
+        || (nodeType === 'folder' && (nodePath.endsWith(key) || nodeId.endsWith(key)))
+      )
+    })
+    if (!matchesFolder) return false
+  }
   const study = Number(meta.study_count) || 0
   if (filters.studyFilter === 'studied' && study <= 0) return false
   if (filters.studyFilter === 'unstudied' && study > 0) return false
