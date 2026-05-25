@@ -6,8 +6,10 @@ graph_engine.py - Versión minimalista para testing
 import json
 import sqlite3
 import shutil
+import hashlib
+import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, asdict
 
 import os
@@ -24,6 +26,7 @@ _SUGGEST_THRESHOLD = 0.85
 
 _DB_DEFAULT = Path(__file__).parent / "library.db"
 DB_PATH = Path(os.environ.get("DB_PATH", str(_DB_DEFAULT)))
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -71,9 +74,22 @@ class GraphEngine:
             suggested_from TEXT,
             updated_at TEXT NOT NULL
         )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS exploration_tours (
+            workspace TEXT PRIMARY KEY,
+            steps TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )''')
+        self._ensure_node_fingerprint_columns(conn)
         self._ensure_fts(conn)
         conn.commit()
         conn.close()
+
+    def _ensure_node_fingerprint_columns(self, conn: sqlite3.Connection) -> None:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(nodes)")}
+        if "content_hash" not in cols:
+            conn.execute("ALTER TABLE nodes ADD COLUMN content_hash TEXT")
+        if "mtime" not in cols:
+            conn.execute("ALTER TABLE nodes ADD COLUMN mtime REAL")
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -124,13 +140,127 @@ class GraphEngine:
                     row[:6],
                 )
     
+    @staticmethod
+    def file_fingerprint(path: Path) -> tuple[str, float]:
+        """Return (content_hash, mtime) for incremental scan."""
+        try:
+            st = path.stat()
+        except OSError:
+            return "", 0.0
+        mtime = float(st.st_mtime_ns)
+        if path.is_file() and st.st_size <= 256 * 1024:
+            try:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+            except OSError:
+                digest = f"{st.st_size}:{int(st.st_mtime)}"
+        else:
+            digest = f"{st.st_size}:{int(st.st_mtime)}"
+        return digest, mtime
+
+    def _stored_fingerprints(self, conn: sqlite3.Connection) -> dict[str, tuple[str, float]]:
+        try:
+            rows = conn.execute(
+                "SELECT id, path, content_hash, mtime FROM nodes WHERE path != ''"
+            ).fetchall()
+        except sqlite3.OperationalError:
+            rows = conn.execute("SELECT id, path FROM nodes WHERE path != ''").fetchall()
+            return {r[0]: ("", 0.0) for r in rows}
+        out: dict[str, tuple[str, float]] = {}
+        for row in rows:
+            out[row[0]] = (row[2] or "", float(row[3] or 0.0))
+        return out
+
+    def scan_incremental(
+        self,
+        root: Path,
+        scan_fn: Callable[..., Dict[str, Any]],
+        *,
+        max_files: int,
+        max_children: int,
+    ) -> tuple[Dict[str, Any], dict[str, Any]]:
+        """
+        Skip full filesystem parse when no vault files changed (fingerprints match).
+        """
+        from .scan.walker import should_scan
+        from .constants import get_exclude_dirs, is_archive_dir_name, get_archive_policy
+
+        conn = self._connect()
+        stored = self._stored_fingerprints(conn)
+        conn.close()
+
+        if not stored:
+            raw = scan_fn(root, max_files=max_files, max_children=max_children)
+            return raw, {"incremental": False, "reason": "empty_db"}
+
+        exclude = get_exclude_dirs()
+        current_paths: dict[str, tuple[str, float]] = {}
+
+        def walk_dir(directory: Path) -> None:
+            if len(current_paths) >= max_files * 2:
+                return
+            try:
+                entries = list(directory.iterdir())
+            except OSError:
+                return
+            for entry in entries:
+                if not should_scan(entry):
+                    continue
+                if entry.is_dir():
+                    if entry.name in exclude:
+                        continue
+                    if is_archive_dir_name(entry.name) and get_archive_policy() == "exclude":
+                        continue
+                    walk_dir(entry)
+                elif entry.is_file():
+                    try:
+                        rel = entry.resolve().relative_to(root.resolve()).as_posix()
+                    except ValueError:
+                        continue
+                    from .scan.layout import file_node_id
+                    nid = file_node_id(rel)
+                    current_paths[nid] = self.file_fingerprint(entry)
+
+        walk_dir(root)
+
+        changed: list[str] = []
+        removed: list[str] = []
+        for nid, fp in current_paths.items():
+            old = stored.get(nid)
+            if old is None or old != fp:
+                changed.append(nid)
+        for nid in stored:
+            if nid not in current_paths and nid.startswith("file_"):
+                removed.append(nid)
+
+        if not changed and not removed:
+            logger.info("Incremental scan: no file changes, reusing DB graph")
+            raw = self.load_from_db()
+            return raw, {
+                "incremental": True,
+                "skipped_full_scan": True,
+                "changed_files": 0,
+                "removed_files": 0,
+            }
+
+        raw = scan_fn(root, max_files=max_files, max_children=max_children)
+        return raw, {
+            "incremental": True,
+            "skipped_full_scan": False,
+            "changed_files": len(changed),
+            "removed_files": len(removed),
+        }
+
     def load_from_db(self) -> Dict[str, Any]:
         conn = self._connect()
         self.nodes.clear()
         self.edges.clear()
         nodes = []
         for row in conn.execute("SELECT * FROM nodes"):
-            node = Node(id=row[0], type=row[1], label=row[2], path=row[3], metadata=json.loads(row[4]), position=json.loads(row[5]) if row[5] else None)
+            node = Node(
+                id=row[0], type=row[1], label=row[2], path=row[3],
+                metadata=json.loads(row[4]),
+                position=json.loads(row[5]) if row[5] else None,
+            )
             self.nodes[node.id] = node
             nodes.append(node.to_dict())
         for row in conn.execute("SELECT * FROM edges"):
@@ -154,10 +284,17 @@ class GraphEngine:
             conn.execute("DELETE FROM nodes")
             conn.execute("DELETE FROM edges")
             for n in self.nodes.values():
+                ch, mt = ("", 0.0)
+                if n.path:
+                    try:
+                        ch, mt = self.file_fingerprint(Path(n.path))
+                    except OSError:
+                        pass
                 conn.execute(
-                    "INSERT INTO nodes VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO nodes (id, type, label, path, metadata, position, content_hash, mtime) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
                     (n.id, n.type, n.label, n.path, json.dumps(n.metadata),
-                     json.dumps(n.position) if n.position else None),
+                     json.dumps(n.position) if n.position else None, ch, mt),
                 )
             for e in self.edges:
                 conn.execute(
@@ -196,10 +333,18 @@ class GraphEngine:
                     position=nd.get("position")
                 )
                 self.nodes[node.id] = node
+                ch, mt = ("", 0.0)
+                if node.path:
+                    try:
+                        ch, mt = self.file_fingerprint(Path(node.path))
+                    except OSError:
+                        pass
                 conn.execute(
-                    "INSERT INTO nodes VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO nodes (id, type, label, path, metadata, position, content_hash, mtime) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
                     (node.id, node.type, node.label, node.path,
-                     json.dumps(node.metadata), json.dumps(node.position) if node.position else None)
+                     json.dumps(node.metadata), json.dumps(node.position) if node.position else None,
+                     ch, mt),
                 )
 
             for ed in raw["edges"]:
@@ -411,6 +556,44 @@ class GraphEngine:
             existing.add(fp)
             added += 1
         return added
+
+    def upsert_exploration_tour(self, workspace: str, steps: list[dict[str, Any]]) -> None:
+        ts = now_iso()
+        conn = self._connect()
+        conn.execute(
+            """INSERT INTO exploration_tours (workspace, steps, updated_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(workspace) DO UPDATE SET steps = excluded.steps, updated_at = excluded.updated_at""",
+            (workspace, json.dumps(steps), ts),
+        )
+        conn.commit()
+        conn.close()
+
+    def get_exploration_tour(self, workspace: str) -> dict[str, Any] | None:
+        conn = self._connect()
+        row = conn.execute(
+            "SELECT workspace, steps, updated_at FROM exploration_tours WHERE workspace = ?",
+            (workspace,),
+        ).fetchone()
+        conn.close()
+        if not row:
+            return None
+        return {
+            "workspace": row[0],
+            "steps": json.loads(row[1]),
+            "updated_at": row[2],
+        }
+
+    def list_exploration_tours(self) -> list[dict[str, Any]]:
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT workspace, steps, updated_at FROM exploration_tours ORDER BY workspace"
+        ).fetchall()
+        conn.close()
+        return [
+            {"workspace": r[0], "steps": json.loads(r[1]), "updated_at": r[2]}
+            for r in rows
+        ]
 
 
 if __name__ == "__main__":

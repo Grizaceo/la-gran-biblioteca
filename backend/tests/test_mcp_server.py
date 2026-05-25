@@ -206,3 +206,27 @@ def test_list_workspaces(isolated_mcp):
     names = [w["workspace"] for w in result]
     assert "alpha" in names
     assert "beta" in names
+
+
+def test_explore_composite(isolated_mcp):
+    srv, ws = isolated_mcp
+    result = srv.explore("note", depth=1, limit=3)
+    assert result["search"]["total"] >= 1
+    assert result["focus"] is not None
+    assert result["focus"]["node_id"] == "n1"
+    assert len(result["previews"]) >= 1
+    assert "Hello" in (result["previews"][0].get("content") or "")
+
+
+def test_impact_files(isolated_mcp):
+    srv, ws = isolated_mcp
+    result = srv.impact_files([str(ws / "beta" / "index.md")])
+    assert "impacted" in result
+    impacted_ids = {n["id"] for n in result["impacted"]}
+    assert "n1" in impacted_ids
+
+
+def test_get_tour_missing(isolated_mcp):
+    srv, ws = isolated_mcp
+    result = srv.get_tour("nonexistent")
+    assert "error" in result

@@ -6,10 +6,40 @@ Visualizador y gestor de un **grafo de conocimiento** sobre `WORKSPACE_ROOT` (co
 Cada archivo/carpeta escaneado es un **nodo**; cada wikilink o dependencia es una **arista**.
 Backend: FastAPI + SQLite (`backend/library.db`) + watchdog (SSE event-driven). Frontend: WebGL 3D (`three` + `3d-force-graph`).
 
+## LGB MCP vs CodeGraph (repos de código en el vault)
+
+La Gran Biblioteca escanea **todo el vault** (notas, papers, imports, carpetas de código clonadas).
+**CodeGraph** es un MCP hermano para **símbolos y call graphs** dentro de un repo concreto — no lo sustituye.
+
+| Pregunta del agente | Herramienta |
+|---------------------|-------------|
+| Mapa del vault, huecos de estudio, lens en la UI | LGB `overview()` → `coverage()` → `publish_lens()` |
+| Contenido de una nota o archivo del vault | LGB `read_node()` / `explore()` |
+| Búsqueda rápida con contexto (nodos + aristas + preview) | LGB `explore(query)` |
+| Cómo funciona **código** en un repo clonado bajo el vault | **CodeGraph** en esa carpeta (`.codegraph/`) |
+| Re-analizar el grafo tras editar archivos **por MCP** | LGB `rescan()` (obligatorio antes de `search` si acabas de crear/importar) |
+
+### CodeGraph opcional (subcarpetas `imports/` o workspaces de código)
+
+Instálalo **solo** en la carpeta del repo, no en la raíz del vault entero:
+
+```bash
+# Dentro del repo clonado, p.ej. WORKSPACE_ROOT/imports/github/owner-repo/
+npm install -g @colbymchenry/codegraph   # o el instalador del proyecto CodeGraph
+codegraph init -i
+```
+
+Configura el MCP CodeGraph en Cursor/Claude apuntando al directorio del repo.
+El agente usa **LGB** para conocimiento (wikis, papers, lens 3D) y **CodeGraph** para `trace`, impacto a nivel **símbolo**, y contexto de funciones.
+
+LGB ofrece `impact_files()` a nivel **archivo** (wikilinks + `depends_on` heurístico) cuando no hace falta CodeGraph.
+
 ## Cómo navegar rápido (MCP preferred)
 
 Usa el MCP server `la-gran-biblioteca` en lugar de leer código o llamar a `curl`.
 Es más rápido, más seguro (path-validated) y no gasta tokens parseando JSON a mano.
+
+Tras **cualquier mutación MCP** (`create_file`, `import_arxiv`, `import_github`, …) llama `rescan()` antes de confiar en `search()` o `overview()` — el proceso MCP mantiene su propia copia del grafo en RAM (ver bridge vs MCP más abajo).
 
 ### Configurar el MCP en Claude Code
 
@@ -52,6 +82,9 @@ O en `~/.claude/claude_desktop_config.json`:
 | `search_arxiv(query?, author?, category?, max_results?, sort?)` | Busca papers en arXiv (solo lectura; respeta ~1 req/3 s) |
 | `import_arxiv(arxiv_id)` | Importa paper de arXiv como Markdown |
 | `import_pubmed(pmid)` | Importa paper de PubMed como Markdown |
+| `explore(query, workspace?, depth=1)` | Búsqueda + subgrafo + previews truncados en una llamada |
+| `impact_files(paths[])` | BFS inverso: qué nodos referencian o dependen de esas rutas |
+| `get_tour(workspace)` | Pasos del tour generados desde `index.md` (wiki Karpathy) |
 | `open_in_os(id, reveal?)` | Abre en app del SO (requiere `LGB_MCP_ALLOW_OS_OPEN=1`) |
 
 ## Flujos comunes
@@ -74,7 +107,7 @@ publish_lens(preset="gaps_unstudied", focus_node_id="<id>", highlight_ids=[...])
 neighbors("<id>", depth=2)                    # mismo radio que foco depth=2 en UI
 ```
 
-El humano ve la **barra «Vista del agente»** (poll de `GET /api/lens/current`) y pulsa **Aplicar** para filtros + heatmap + flyTo + resaltados **sin recargar** el grafo. Presets: `heatmap_study`, `heatmap_volume`, `gaps_unstudied`, `agent_default`.
+El humano ve la **barra «Vista del agente»** (poll de `GET /api/lens/current`) y pulsa **Aplicar** para filtros + heatmap + flyTo + resaltados **sin recargar** el grafo. Presets: `heatmap_study`, `heatmap_volume`, `gaps_unstudied`, `follow_index` (tour desde `index.md`), `agent_default`.
 
 ### Encontrar todo lo relacionado con un tema
 ```

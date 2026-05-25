@@ -69,3 +69,57 @@ def test_import_ensure_paths_includes_github_root(tmp_path, engine):
     with patch("backend.services.graph_pipeline.WORKSPACE_ROOT", ws):
         paths = import_ensure_paths([], extra=[ws / "imports" / "arxiv" / "x.md"])
     assert any(p.name == "demo" for p in paths)
+
+
+def test_incremental_scan_skips_unchanged_vault(tiny_workspace, engine, tmp_path):
+    first = rebuild_graph(
+        engine,
+        root=tiny_workspace,
+        use_rebuild=True,
+        max_files=100,
+        max_children=20,
+        incremental=True,
+    )
+    assert len(first["nodes"]) > 0
+
+    from backend.services.graph_pipeline import get_last_pipeline_stats
+
+    stats_second = {}
+    second = rebuild_graph(
+        engine,
+        root=tiny_workspace,
+        use_rebuild=True,
+        max_files=100,
+        max_children=20,
+        incremental=True,
+    )
+    stats_second = get_last_pipeline_stats()
+    assert stats_second.get("skipped_full_scan") is True
+    assert len(second["nodes"]) == len(first["nodes"])
+
+
+def test_incremental_scan_detects_file_change(tiny_workspace, engine):
+    rebuild_graph(
+        engine,
+        root=tiny_workspace,
+        use_rebuild=True,
+        max_files=100,
+        max_children=20,
+        incremental=True,
+    )
+    alpha = tiny_workspace / "alpha.md"
+    alpha.write_text("# Alpha changed\n\n[[beta]]\n", encoding="utf-8")
+
+    from backend.services.graph_pipeline import get_last_pipeline_stats
+
+    rebuild_graph(
+        engine,
+        root=tiny_workspace,
+        use_rebuild=True,
+        max_files=100,
+        max_children=20,
+        incremental=True,
+    )
+    stats = get_last_pipeline_stats()
+    assert stats.get("skipped_full_scan") is False
+    assert stats.get("changed_files", 0) >= 1

@@ -393,13 +393,36 @@ export function setupDetailPanel(
     detailPath.textContent      = node.path ?? ''
 
     const meta = node.metadata ?? {}
-    const rows = Object.entries(meta)
-      .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    const backlinks = Array.isArray(meta.backlinks) ? meta.backlinks as Array<{ id: string; label?: string }> : []
+    const metaRows = Object.entries(meta)
+      .filter(([k, v]) => k !== 'backlinks' && v !== null && v !== undefined && v !== '')
       .map(([k, v]) => `<div class="detail-meta-row"><span>${escapeHtml(k)}</span><span>${formatMetaValue(k, v)}</span></div>`)
       .join('')
-    detailMeta.innerHTML = rows
-      || '<div class="detail-meta-row"><span style="opacity:.4">sin metadatos</span></div>'
+
+    let backlinksHtml = ''
+    if (backlinks.length) {
+      backlinksHtml = `
+        <div class="detail-section-title">Backlinks (${backlinks.length})</div>
+        <div class="neighbor-list">
+          ${backlinks.slice(0, 25).map(bl => {
+            const name = bl.label || bl.id
+            const short = name.length > 36 ? name.slice(0, 34) + '…' : name
+            return `<div class="neighbor-item" data-id="${escapeAttr(bl.id)}">
+              <span class="neighbor-dot" style="background:#81c784"></span>
+              <span class="neighbor-name">${escapeHtml(short)}</span>
+            </div>`
+          }).join('')}
+        </div>`
+    }
+
+    detailMeta.innerHTML = (metaRows || '<div class="detail-meta-row"><span style="opacity:.4">sin metadatos</span></div>') + backlinksHtml
     applyExternalLinks(detailMeta)
+    detailMeta.querySelectorAll('.neighbor-item[data-id]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = (el as HTMLElement).dataset.id!
+        selectNode(id)
+      })
+    })
 
     await renderActions(node)
     renderNeighbors(node.id)

@@ -44,7 +44,8 @@ from .imports import (
     search_arxiv as _search_arxiv,
 )
 from . import graph_state
-from .services.graph_pipeline import rebuild_graph
+from .services.graph_pipeline import rebuild_graph, get_last_scan_stats
+from .impact import impact_files_bfs, paths_to_node_ids
 
 # ---------------------------------------------------------------------------
 # State (loaded once at startup, refreshed on demand)
@@ -151,9 +152,16 @@ def overview() -> dict:
         edges = _graph["edges"]
         recent = list(_recent_imports)
     overview_data = build_overview(nodes, edges, recent, WORKSPACE_ROOT)
-    overview_data["coverage"] = build_graph_structure_summary(
-        nodes, edges, WORKSPACE_ROOT
-    )
+    coverage = build_graph_structure_summary(nodes, edges, WORKSPACE_ROOT)
+    scan_meta = get_last_scan_stats()
+    coverage["wiki_pattern"] = scan_meta.get("wiki_pattern") or coverage.get("wiki_pattern")
+    coverage["unresolved_wikilinks"] = scan_meta.get("unresolved_wikilinks") or coverage.get(
+        "unresolved_wikilinks"
+    ) or []
+    coverage["categories"] = scan_meta.get("categories") or coverage.get("categories") or []
+    overview_data["coverage"] = coverage
+    overview_data["wiki_pattern"] = scan_meta.get("wiki_pattern")
+    overview_data["unresolved_wikilinks"] = scan_meta.get("unresolved_wikilinks") or []
     session = get_session_lens()
     if session.get("lens"):
         overview_data["published_lens"] = {
@@ -376,6 +384,116 @@ def neighbors(
 
     truncated = len(collected_nodes) >= limit
     return {"nodes": collected_nodes, "edges": collected_edges, "truncated": truncated}
+
+
+@mcp.tool()
+def explore(
+    query: str,
+    workspace: str = "",
+    depth: int = 1,
+    limit: int = 5,
+) -> dict:
+    """
+    Composite exploration: FTS search + subgraph around top hit + truncated previews.
+
+    Prefer this over chaining search + subgraph + read_node when orienting on a topic.
+    """
+    depth = min(max(depth, 1), 3)
+    limit = min(max(limit, 1), 10)
+    preview_chars = 500
+
+    with _lock:
+        graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
+
+    indexed = _engine.search_index(query, limit=limit * 3, offset=0) if query.strip() else []
+    search_result = search_graph(
+        graph,
+        engine_search_results=indexed,
+        query=query,
+        workspace=workspace,
+        mode="text",
+        limit=limit,
+        offset=0,
+    )
+    hits = search_result.get("results") or []
+    if not hits:
+        return {
+            "query": query,
+            "search": search_result,
+            "focus": None,
+            "previews": [],
+        }
+
+    focus_id = hits[0]["id"]
+    sub = build_subgraph(
+        graph,
+        node_id=focus_id,
+        depth=depth,
+        direction="both",
+        workspace=workspace,
+        limit=120,
+    )
+
+    previews: list[dict] = []
+    for hit in hits[:2]:
+        nid = hit["id"]
+        preview: dict[str, Any] = {"node_id": nid, "label": hit.get("label"), "type": hit.get("type")}
+        with _lock:
+            n = _node_index.get(nid)
+        if n and n.get("path"):
+            from .preview import read_node_content
+
+            try:
+                body = read_node_content(Path(n["path"]), max_chars=preview_chars)
+                preview["content"] = body.get("content", "")[:preview_chars]
+                preview["truncated"] = body.get("truncated", False)
+                preview["lang"] = body.get("lang")
+            except (ValueError, OSError):
+                preview["error"] = "unreadable"
+        meta = (n or {}).get("metadata") or {}
+        if meta.get("summary"):
+            preview["summary"] = meta["summary"]
+        if meta.get("backlinks"):
+            preview["backlinks"] = meta["backlinks"][:10]
+        previews.append(preview)
+
+    return {
+        "query": query,
+        "search": search_result,
+        "focus": {"node_id": focus_id, "subgraph": sub},
+        "previews": previews,
+    }
+
+
+@mcp.tool()
+def impact_files(paths: list[str], limit: int = 80) -> dict:
+    """
+    Reverse reachability from file paths: who references or depends on these files.
+
+    Args:
+        paths: Workspace-relative or absolute paths (files changed in a diff).
+        limit: Max impacted nodes returned.
+    """
+    if not paths:
+        return {"error": "paths must be a non-empty list"}
+    limit = min(max(limit, 1), 200)
+    with _lock:
+        graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
+    seed_ids = paths_to_node_ids(paths, WORKSPACE_ROOT, graph.get("nodes"))
+    if not seed_ids:
+        return {"error": "No paths resolved to graph nodes", "paths": paths}
+    return impact_files_bfs(graph, seed_ids, limit=limit)
+
+
+@mcp.tool()
+def get_tour(workspace: str) -> dict:
+    """
+    Return exploration tour steps generated from index.md (Karpathy wiki layout).
+    """
+    tour = _engine.get_exploration_tour(workspace)
+    if not tour:
+        return {"error": f"No tour for workspace {workspace!r}"}
+    return tour
 
 
 @mcp.tool()

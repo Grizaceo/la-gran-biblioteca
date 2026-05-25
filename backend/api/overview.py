@@ -27,6 +27,9 @@ async def get_overview():
     data["skipped_archive_dirs"] = stats.get("skipped_archive_dirs", 0)
     data["pipeline"] = pipeline
     data["limited_count"] = len(graph_state.get_limited_graph().get("nodes", []))
+    data["wiki_pattern"] = stats.get("wiki_pattern")
+    data["unresolved_wikilinks"] = stats.get("unresolved_wikilinks") or []
+    data["categories"] = stats.get("categories") or []
     return data
 
 

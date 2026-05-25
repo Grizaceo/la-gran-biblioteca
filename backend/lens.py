@@ -46,6 +46,11 @@ PRESETS: dict[str, dict[str, Any]] = {
         "label": "Vista del agente",
         "heatmap": "off",
     },
+    "follow_index": {
+        "label": "Seguir índice",
+        "heatmap": "off",
+        "depth": 1,
+    },
 }
 
 

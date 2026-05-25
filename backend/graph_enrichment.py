@@ -320,10 +320,17 @@ def build_graph_structure_summary(
 
     role_counts = Counter(str((node.get("metadata") or {}).get("structural_role") or "unknown") for node in nodes)
 
+    from .services.graph_pipeline import get_last_scan_stats
+
+    scan_meta = get_last_scan_stats()
+
     return {
         "workspace_root": str(workspace_root),
         "total_nodes": len(nodes),
         "total_edges": len(edges),
+        "wiki_pattern": scan_meta.get("wiki_pattern"),
+        "unresolved_wikilinks": scan_meta.get("unresolved_wikilinks") or [],
+        "categories": scan_meta.get("categories") or [],
         "modes": {
             "workspace": workspaces,
             "folder": folders,

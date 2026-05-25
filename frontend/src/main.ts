@@ -14,6 +14,7 @@ import { initMenuBar } from './ui/menuBar'
 import { initConstellationSettings } from './ui/constellationSettings'
 import { initPanelDock } from './ui/panelDock'
 import { initAgentLensBar } from './ui/agentLensBar'
+import { initIndexTour } from './ui/indexTour'
 import { initCoverageMap } from './ui/coverageMap'
 import { resetExplorerState } from './ui/navigationReset'
 
@@ -266,6 +267,13 @@ async function init(): Promise<void> {
       showToast,
       selectNode: (id, delay) => panel.selectNode(id, delay),
       enterAgentFocus: focus.enterAgentFocus,
+    })
+
+    initIndexTour({
+      engine,
+      showToast,
+      selectNode: (id, delay) => panel.selectNode(id, delay),
+      getDefaultWorkspace: () => overview?.top_workspaces?.[0]?.workspace ?? null,
     })
 
     const unsubscribe = subscribeToUpdates((updated, event) => {

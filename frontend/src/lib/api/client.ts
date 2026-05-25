@@ -44,6 +44,14 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   throw new Error(`${lastErr instanceof Error ? lastErr.message : String(lastErr)}${hint}`)
 }
 
+export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await apiFetch(path, init)
+  if (!res.ok) {
+    await handleResponseError(res, `Failed GET ${path}: ${res.status} ${res.statusText}`)
+  }
+  return res.json() as Promise<T>
+}
+
 export function streamUrl(): string {
   return joinApi('/stream', API_BASE)
 }
