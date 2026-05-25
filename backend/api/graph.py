@@ -29,7 +29,9 @@ async def get_graph():
 async def get_graph_overview_structure():
     data = graph_state.get_overview_structure()
     data["pipeline"] = get_last_pipeline_stats()
-    data["limited_count"] = len(graph_state.get_limited_graph().get("nodes", []))
+    limited = graph_state.get_limited_graph()
+    data["limited_count"] = len(limited.get("nodes", []))
+    data["shown_count"] = len(limited.get("nodes", []))
     return data
 
 

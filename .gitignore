@@ -4,6 +4,7 @@ __pycache__/
 .eggs/
 backend/library.db
 backend/library.db.bak
+backend/.session_lens.json
 *.db.bak
 backend/venv/
 data/
@@ -38,4 +39,3 @@ export/
 .gstack/
 
 # Test/scratch files
-TEST_NODE.md

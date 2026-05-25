@@ -22,9 +22,11 @@ import {
   type GraphFiltersState,
   type QualityPreset,
   type LayoutMode,
+  type HeatmapMode,
   DEFAULT_GRAPH_FILTERS,
   loadGraphFilters,
   getLayoutMode,
+  getHeatmapMode,
 } from './viewPrefs'
 
 export type { GraphFiltersState }
@@ -114,6 +116,30 @@ function getRingMat(type: string): THREE.MeshBasicMaterial {
 
 function nodeSize(weight: number): number {
   return Math.min(Math.cbrt(weight || 1) * 3, 22)
+}
+
+function volumeNodeSize(degree: number, childCount: number): number {
+  const hub = degree + childCount * 0.5
+  return Math.min(4 + Math.sqrt(hub) * 2.2, 24)
+}
+
+function studyNodeSize(base: number, studyCount: number): number {
+  const boost = studyCount > 0 ? 1 + Math.min(studyCount, 8) * 0.15 : 1
+  return Math.min(base * boost, 26)
+}
+
+function heatmapStudyColor(score: number, maxScore: number): THREE.Color {
+  const t = maxScore > 0 ? Math.min(1, score / maxScore) : 0
+  const cold = new THREE.Color(0x4fc3f7)
+  const warm = new THREE.Color(0xff7043)
+  return cold.clone().lerp(warm, t)
+}
+
+function heatmapVolumeColor(degree: number, maxDegree: number): THREE.Color {
+  const t = maxDegree > 0 ? Math.min(1, degree / maxDegree) : 0
+  const low = new THREE.Color(0x5c6bc0)
+  const high = new THREE.Color(0xffee58)
+  return low.clone().lerp(high, t)
 }
 
 function computeDegree(edges: Edge[]): Map<string, number> {
@@ -217,6 +243,10 @@ export class Graph3DEngine {
   private _progressivePump: (() => void) | null = null
   private _apiGraph: Graph | null = null
   pendingFocusQueue: string[] = []
+  heatmapMode: HeatmapMode = getHeatmapMode()
+  private highlightNodeIds = new Set<string>()
+  private _highlightMeshes: THREE.Object3D[] = []
+  private _heatmapStats = { maxStudyScore: 1, maxDegree: 1 }
 
   constructor(container: HTMLElement) {
     const bootProfile = getRenderProfile(400)
@@ -229,7 +259,7 @@ export class Graph3DEngine {
       .nodeLabel((node: Record<string, unknown>) =>
         this.showLabels ? String(node.name || node.label || node.id || '') : '')
       .nodeThreeObject((node: Record<string, unknown>) => {
-        const size = nodeSize(node.weight as number)
+        const size = this._nodeDisplaySize(node)
         const type = (node.type as string) || 'default'
         
         // Multi-level LOD Group representation
@@ -432,7 +462,17 @@ export class Graph3DEngine {
         ? [...partial.hiddenEdgeTypes]
         : this.graphFilters.hiddenEdgeTypes,
     }
-    if (!this._inFocusMode) this.refreshVisibility()
+    if (!this._inFocusMode) {
+      this.refreshVisibility()
+      if (partial.workspaces !== undefined
+        || partial.topics !== undefined
+        || partial.folders !== undefined
+        || partial.studyFilter !== undefined
+        || partial.minDegree !== undefined) {
+        this._recomputeHeatmapStats()
+        this.refreshHeatmapAppearance()
+      }
+    }
   }
 
   getWorkspaceList(): string[] {
@@ -537,6 +577,177 @@ export class Graph3DEngine {
     if (!active) this.refreshVisibility()
   }
 
+  setHeatmapMode(mode: HeatmapMode): void {
+    this.heatmapMode = mode
+    this._recomputeHeatmapStats()
+    this.refreshHeatmapAppearance()
+    this.refreshVisibility()
+  }
+
+  getHeatmapMode(): HeatmapMode {
+    return this.heatmapMode
+  }
+
+  setHighlightNodeIds(ids: string[] | null | undefined): void {
+    this.highlightNodeIds = new Set(ids || [])
+    this._refreshHighlights()
+  }
+
+  private _nodeDisplaySize(node: Record<string, unknown>): number {
+    const meta = (node.metadata as Record<string, unknown>) || {}
+    const degree = Number(node.degree) || Number(meta.degree_hint) || 0
+    const childCount = Number(meta.child_count) || 0
+    const studyCount = Number(meta.study_count) || 0
+    const base = nodeSize(node.weight as number)
+
+    if (this.heatmapMode === 'volume') {
+      return volumeNodeSize(degree, childCount)
+    }
+    if (this.heatmapMode === 'study') {
+      return studyNodeSize(base, studyCount)
+    }
+    return base
+  }
+
+  private _recomputeHeatmapStats(): void {
+    let maxStudyScore = 1
+    let maxDegree = 1
+    for (const node of this.nodeIndex.values()) {
+      const meta = (node.metadata as Record<string, unknown>) || {}
+      maxStudyScore = Math.max(maxStudyScore, Number(meta.study_score) || 0)
+      maxDegree = Math.max(maxDegree, Number(node.degree) || 0)
+    }
+    this._heatmapStats = { maxStudyScore, maxDegree }
+  }
+
+  private _setMeshColor(mesh: THREE.Mesh, color: THREE.Color, opacity: number): void {
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const mat of mats) {
+      if (mat instanceof THREE.MeshLambertMaterial || mat instanceof THREE.MeshBasicMaterial) {
+        mat.color.copy(color)
+        if ('emissive' in mat && mat.emissive) {
+          mat.emissive.copy(color)
+        }
+        mat.transparent = true
+        mat.opacity = opacity
+        mat.needsUpdate = true
+      }
+    }
+  }
+
+  private _applyNodeVisual(node: Record<string, unknown>, passesFilter: boolean): void {
+    const obj = node.__threeObj as THREE.Group | undefined
+    if (!obj || !obj.isGroup) return
+
+    const meta = (node.metadata as Record<string, unknown>) || {}
+    const type = (node.type as string) || 'default'
+    const paletteColor = new THREE.Color(
+      (PALETTE as Record<string, string>)[type] ?? PALETTE.default,
+    )
+    let color = paletteColor
+    let opacity = passesFilter ? 0.85 : 0.14
+
+    if (this.heatmapMode === 'study') {
+      color = heatmapStudyColor(
+        Number(meta.study_score) || 0,
+        this._heatmapStats.maxStudyScore,
+      )
+      opacity = passesFilter ? 0.9 : 0.12
+    } else if (this.heatmapMode === 'volume') {
+      color = heatmapVolumeColor(
+        Number(node.degree) || 0,
+        this._heatmapStats.maxDegree,
+      )
+      opacity = passesFilter ? 0.88 : 0.12
+    } else if (!passesFilter) {
+      opacity = 0.14
+    }
+
+    const size = this._nodeDisplaySize(node)
+    obj.userData._lodDistance = size
+    obj.scale.set(1, 1, 1)
+
+    for (const name of ['lod_hi', 'lod_mid', 'lod_low']) {
+      const mesh = obj.getObjectByName(name) as THREE.Mesh | undefined
+      if (!mesh) continue
+      const baseOpacity = name === 'lod_low' ? 0.45 : name === 'lod_mid' ? 0.7 : 0.85
+      this._setMeshColor(mesh, color, opacity * baseOpacity)
+    }
+    const ring = obj.getObjectByName('lod_ring') as THREE.Mesh | undefined
+    if (ring) {
+      this._setMeshColor(ring, color, passesFilter ? 0.25 : 0.08)
+    }
+  }
+
+  refreshHeatmapAppearance(): void {
+    const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
+    if (!nodes?.length) return
+    for (const node of nodes) {
+      const passes = this.isNodeGraphVisible(node)
+      this._applyNodeVisual(node, passes)
+    }
+    this._refreshHighlights()
+  }
+
+  private _clearHighlights(): void {
+    for (const mesh of this._highlightMeshes) {
+      if (mesh.parent) mesh.parent.remove(mesh)
+      mesh.traverse((obj) => {
+        if (obj instanceof THREE.Mesh && obj.geometry) obj.geometry.dispose()
+      })
+      const mat = mesh instanceof THREE.Mesh ? mesh.material : null
+      if (mat && !Array.isArray(mat)) mat.dispose()
+    }
+    this._highlightMeshes = []
+  }
+
+  private _refreshHighlights(): void {
+    this._clearHighlights()
+    if (!this.highlightNodeIds.size) return
+
+    const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
+    for (const node of nodes) {
+      if (!this.highlightNodeIds.has(String(node.id))) continue
+      const original = node.__threeObj as THREE.Group | undefined
+      if (!original?.parent) continue
+      const highlightMesh = original.clone()
+      highlightMesh.scale.set(2.2, 2.2, 2.2)
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.55,
+        wireframe: true,
+      })
+      highlightMesh.traverse((child) => {
+        if (child instanceof THREE.Mesh) child.material = mat
+      })
+      original.parent.add(highlightMesh)
+      this._highlightMeshes.push(highlightMesh)
+    }
+  }
+
+  flyToNode(nodeId: string, duration = 1000): boolean {
+    const { nodes } = this.fg.graphData() as { nodes: Record<string, unknown>[] }
+    const node = nodes.find((n) => n.id === nodeId)
+    if (!node) return false
+    const distance = 150
+    const distRatio = 1 + distance / Math.max(1, Math.hypot(
+      (node.x as number) || 0,
+      (node.y as number) || 0,
+      (node.z as number) || 0,
+    ))
+    this.fg.cameraPosition(
+      {
+        x: ((node.x as number) || 0) * distRatio,
+        y: ((node.y as number) || 0) * distRatio,
+        z: ((node.z as number) || 0) * distRatio,
+      },
+      node,
+      duration,
+    )
+    return true
+  }
+
   refreshVisibility(): void {
     const { nodes, links } = this.fg.graphData() as {
       nodes: Record<string, unknown>[]
@@ -547,20 +758,37 @@ export class Graph3DEngine {
       n.__filterVisible = visible
       if (!this._inFocusMode) {
         const obj = n.__threeObj as THREE.Object3D | undefined
-        if (obj) obj.visible = visible
+        if (obj) {
+          obj.visible = true
+          this._applyNodeVisual(n, visible)
+        }
       }
     }
     for (const link of links) {
-      const visible = this.isLinkGraphVisible(link)
-      link.__filterVisible = visible
+      const src = link.source as Record<string, unknown>
+      const tgt = link.target as Record<string, unknown>
+      const srcOk = src && typeof src === 'object' && (src.__filterVisible !== false)
+      const tgtOk = tgt && typeof tgt === 'object' && (tgt.__filterVisible !== false)
+      const passes = this.isLinkGraphVisible(link) && srcOk && tgtOk
+      link.__filterVisible = passes
       if (!this._inFocusMode) {
         const lineObj = link.__lineObj as THREE.Object3D | undefined
         const arrowObj = link.__arrowObj as THREE.Object3D | undefined
-        if (lineObj) lineObj.visible = visible
-        if (arrowObj) arrowObj.visible = visible
+        if (lineObj) {
+          lineObj.visible = true
+          lineObj.traverse((child) => {
+            if (child instanceof THREE.Line && child.material) {
+              const m = child.material as THREE.Material
+              m.transparent = true
+              ;(m as THREE.LineBasicMaterial).opacity = passes ? 0.7 : 0.08
+            }
+          })
+        }
+        if (arrowObj) arrowObj.visible = passes
       }
     }
     this.updateParticleVisibility()
+    this._refreshHighlights()
   }
 
   setLayoutMode(mode: LayoutMode): void {
@@ -738,6 +966,8 @@ export class Graph3DEngine {
     const nodeCount = processedNodes.length
     this._lodNodeCount = nodeCount
     this.graphFilters = loadGraphFilters()
+    this.heatmapMode = getHeatmapMode()
+    this._recomputeHeatmapStats()
     const profile = this.getEffectiveProfile(nodeCount)
     this.minimapStride = profile.minimapStride
     this._lodSegHi = Math.max(4, profile.nodeSegments + 2)
@@ -767,6 +997,7 @@ export class Graph3DEngine {
       if (this._paused) return
       if (result.done) {
         this.refreshVisibility()
+        this.refreshHeatmapAppearance()
         this.onLoadProgress?.({ loaded: result.totalNodes, total: result.totalNodes })
         return
       }
@@ -780,6 +1011,7 @@ export class Graph3DEngine {
       setTimeout(pump, profile.chunkDelay)
     } else {
       this.refreshVisibility()
+      this.refreshHeatmapAppearance()
     }
   }
 
@@ -808,6 +1040,7 @@ export class Graph3DEngine {
 
     const links = g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
     this._lodNodeCount = nodes.length
+    this._recomputeHeatmapStats()
 
     const profile = this.getEffectiveProfile(nodes.length)
     this.minimapStride = profile.minimapStride
@@ -858,7 +1091,13 @@ export class Graph3DEngine {
     node.metadata = meta
     const degree = Number(node.degree) || 0
     node.weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
-    if (!this._inFocusMode) this.refreshVisibility()
+    meta.study_score = studyCount * 3 + Math.min(degree, 10)
+    node.metadata = meta
+    this._recomputeHeatmapStats()
+    if (!this._inFocusMode) {
+      this.refreshVisibility()
+      this.refreshHeatmapAppearance()
+    }
   }
 
   onNodeClick(handler: (node: Record<string, unknown>) => void): void {

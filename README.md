@@ -10,6 +10,8 @@ Explora en 3D un mapa de tus notas, documentos y proyectos: cada archivo es un p
 2. **Construye un grafo** a partir de enlaces entre archivos y relaciones detectadas.
 3. **Muestra el resultado** en un visor 3D en el navegador; puedes buscar, abrir contenido e importar material externo.
 
+**Capas de lectura (sin sustituir la carga del grafo):** heatmap de volumen/estudio, panel de cobertura colapsable, barra «Vista del agente» sincronizada con MCP (`publish_lens`), y filtros que atenúan nodos fuera del criterio.
+
 Todo corre en tu máquina. No hace falta instalar una base de datos aparte ni subir tus archivos a ningún servicio.
 
 ## Capturas

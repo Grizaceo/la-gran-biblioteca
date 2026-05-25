@@ -118,6 +118,273 @@
     .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .legend-label { color: rgba(255,255,255,0.5); }
 
+    .cap-banner {
+      display: none;
+      color: rgba(255, 183, 77, 0.85);
+      font-size: 10px;
+      max-width: 280px;
+      margin-left: 8px;
+    }
+    .cap-banner.active { display: inline; }
+
+    #top-overlays {
+      position: absolute;
+      top: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 26;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      max-width: min(92vw, 720px);
+      pointer-events: none;
+    }
+    #top-overlays > * { pointer-events: auto; }
+
+    .agent-lens-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 14px;
+      background: rgba(0, 0, 17, 0.92);
+      border: 1px solid rgba(79, 195, 247, 0.35);
+      border-radius: 8px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .agent-lens-bar.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .agent-lens-bar.pulse { box-shadow: 0 0 16px rgba(79, 195, 247, 0.45); }
+    .agent-lens-label { color: #4fc3f7; font-weight: 500; margin-left: 6px; }
+    .agent-lens-meta { color: rgba(255, 255, 255, 0.45); margin-left: 8px; }
+    .agent-lens-btn {
+      background: rgba(79, 195, 247, 0.15);
+      border: 1px solid rgba(79, 195, 247, 0.4);
+      color: #4fc3f7;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 10px;
+    }
+    .agent-lens-btn.subtle {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    :root { --config-dock-width: 0px; }
+
+    .dock-hint {
+      position: absolute;
+      top: 52px;
+      left: 12px;
+      z-index: 23;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.28);
+      pointer-events: none;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s ease;
+    }
+    body.config-dock-open .dock-hint { opacity: 0; }
+    .dock-hint kbd {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0 4px;
+      border-radius: 2px;
+      font-size: 9px;
+    }
+    #config-dock {
+      position: absolute;
+      top: 68px;
+      left: 12px;
+      z-index: 24;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 260px;
+      max-height: calc(100vh - 72px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      pointer-events: none;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(79, 195, 247, 0.25) transparent;
+    }
+    #config-dock > .dock-panel.is-open { pointer-events: auto; }
+
+    .dock-panel {
+      width: 260px;
+      flex-shrink: 0;
+      background: rgba(0, 0, 17, 0.92);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      display: grid;
+      grid-template-rows: 0fr;
+      max-height: 0;
+      margin: 0;
+      transition:
+        grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.22s ease,
+        transform 0.22s ease,
+        border-color 0.2s ease,
+        box-shadow 0.22s ease,
+        margin 0.22s ease;
+      opacity: 0;
+      transform: translateX(-10px) scale(0.98);
+      pointer-events: none;
+      overflow: hidden;
+      box-shadow: none;
+    }
+    .dock-panel.is-open {
+      grid-template-rows: auto 1fr;
+      max-height: min(48vh, 440px);
+      margin: 0;
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      pointer-events: auto;
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    }
+    .dock-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px 8px 12px;
+      background: rgba(79, 195, 247, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      flex-shrink: 0;
+    }
+    .dock-panel-title {
+      color: #4fc3f7;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .dock-panel-close {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .dock-panel-close:hover {
+      color: #4fc3f7;
+      background: rgba(79, 195, 247, 0.12);
+    }
+    .dock-panel-body {
+      min-height: 0;
+      overflow: hidden;
+    }
+    .dock-panel-body-inner {
+      overflow-y: auto;
+      max-height: min(42vh, 380px);
+      padding: 8px 10px 10px;
+    }
+    .dock-trigger-active {
+      border-color: rgba(79, 195, 247, 0.5) !important;
+      color: #4fc3f7 !important;
+      background: rgba(79, 195, 247, 0.12) !important;
+    }
+
+    .coverage-panel .dock-panel-body-inner { padding: 8px; }
+    .coverage-section {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin: 8px 0 4px;
+    }
+    .coverage-card {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      color: inherit;
+    }
+    .coverage-card:hover { border-color: rgba(79, 195, 247, 0.35); }
+    .coverage-card-title { color: rgba(255, 255, 255, 0.85); margin-bottom: 4px; }
+    .coverage-card-stats { color: rgba(255, 255, 255, 0.4); font-size: 10px; }
+    .coverage-bar-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      margin-top: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .coverage-bar-study {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #4fc3f7, #ff7043);
+    }
+    .coverage-bar-volume {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: rgba(255, 238, 88, 0.35);
+      mix-blend-mode: screen;
+    }
+    .coverage-hint { color: rgba(255, 255, 255, 0.4); padding: 8px; }
+
+    .heatmap-legend {
+      position: absolute;
+      bottom: 20px;
+      right: 200px;
+      display: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      background: rgba(0, 0, 17, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 20;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10px;
+    }
+    .heatmap-legend.active {
+      display: block;
+      animation: panelFadeIn 0.22s ease;
+    }
+    @keyframes panelFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .heatmap-legend h3 {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .heatmap-legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .heatmap-swatch { width: 28px; height: 8px; border-radius: 2px; }
+    .heatmap-swatch.cold { background: #4fc3f7; }
+    .heatmap-swatch.warm { background: #ff7043; }
+    .heatmap-legend-hint { color: rgba(255, 255, 255, 0.35); margin-top: 6px; }
+
     /* Loading overlay */
     #loading {
       position: absolute; inset: 0;
@@ -303,19 +570,24 @@
     /* Focus mode */
     #focus-banner {
       display: none;
-      position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,17,0.9);
       border: 1px solid rgba(79,195,247,0.3);
       border-radius: 6px;
       padding: 8px 16px;
-      z-index: 25;
       font-family: 'Helvetica Neue', Arial, sans-serif;
       font-size: 12px;
       color: rgba(255,255,255,0.7);
       align-items: center;
       gap: 12px;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
     }
-    #focus-banner.active { display: flex; }
+    #focus-banner.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
     #focus-banner .focus-name {
       color: #4fc3f7;
       font-weight: 500;
@@ -337,8 +609,10 @@
     /* Breadcrumb */
     #breadcrumb {
       display: none;
-      position: absolute; top: 50px; left: 20px;
-      z-index: 25;
+      position: absolute;
+      top: 52px;
+      left: calc(12px + var(--config-dock-width, 0px) + 8px);
+      z-index: 23;
       font-family: 'Helvetica Neue', Arial, sans-serif;
       font-size: 11px;
       color: rgba(255,255,255,0.4);
@@ -348,8 +622,16 @@
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 4px;
       padding: 4px 10px;
+      max-width: min(420px, calc(100vw - var(--config-dock-width, 0px) - 80px));
+      transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+      opacity: 0;
+      transform: translateY(-4px);
     }
-    #breadcrumb.active { display: flex; }
+    #breadcrumb.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
     .bc-item {
       cursor: pointer; color: rgba(255,255,255,0.5);
       transition: color 0.2s;
@@ -370,6 +652,14 @@
       z-index: 20;
       overflow: hidden;
       cursor: pointer;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    #minimap.minimap-hidden {
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
     }
     .minimap-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -545,22 +835,7 @@
       color: rgba(255,255,255,0.9);
     }
 
-    /* Visibility panel */
-    #visibility-panel {
-      display: none;
-      position: absolute; top: 60px; left: 20px;
-      width: 200px;
-      background: rgba(0,0,17,0.92);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 10px 0;
-      z-index: 25;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 12px;
-      max-height: calc(100vh - 200px);
-      overflow-y: auto;
-    }
-    #visibility-panel.active { display: block; }
+    /* Visibility panel (docked) */
     #visibility-list { display: flex; flex-direction: column; }
     .vis-all, .vis-item {
       display: flex; align-items: center; gap: 8px;
@@ -576,22 +851,8 @@
     .vis-name { flex: 1; }
     .vis-count { color: rgba(255,255,255,0.25); font-size: 10px; }
 
-    /* View options panel */
-    #view-options-panel {
-      display: none;
-      position: absolute; top: 60px; left: 240px;
-      width: 260px;
-      background: rgba(0,0,17,0.92);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 10px 0;
-      z-index: 25;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 12px;
-      max-height: calc(100vh - 120px);
-      overflow-y: auto;
-    }
-    #view-options-panel.active { display: block; }
+    /* View options panel (docked) */
+    #view-options-list { font-size: 12px; }
     .vo-section {
       padding: 8px 14px 4px;
       font-size: 10px;
@@ -639,8 +900,13 @@
       align-items: flex-start;
       justify-content: center;
       padding: 72px 20px 20px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
     }
-    #constellation-panel.active { display: flex; }
+    #constellation-panel.active {
+      display: flex;
+      opacity: 1;
+    }
     .constellation-panel-inner {
       width: min(420px, 100%);
       max-height: calc(100vh - 100px);
@@ -896,7 +1162,6 @@
     }
     .detail-constellation-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .detail-btn-muted { opacity: 0.75; }
-    #minimap.minimap-hidden { display: none !important; }
 
     /* Node detail panel — sidebar */
     #node-detail {
@@ -1142,6 +1407,19 @@
       display: flex;
       transform: translateY(0);
       opacity: 1;
+    }
+    .menu-section-label {
+      padding: 6px 16px 4px;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: rgba(255, 255, 255, 0.32);
+      pointer-events: none;
+      user-select: none;
+    }
+    .menu-option-strong {
+      color: #81d4fa;
+      font-weight: 500;
     }
     .menu-option {
       color: rgba(255, 255, 255, 0.75);
@@ -1461,10 +1739,14 @@
       <div class="menu-item" id="menu-view">
         <button type="button" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Ver</button>
         <div class="menu-dropdown" role="menu">
-          <div class="menu-option" data-action="reset-camera">Restablecer vista</div>
-          <div class="menu-option" data-action="focus-selected">Focus Selección (F)</div>
-          <div class="menu-option" data-action="toggle-types">Filtrar por Tipos</div>
-          <div class="menu-option" data-action="toggle-view-options">Opciones de visualización…</div>
+          <div class="menu-option menu-option-strong" data-action="reset-explorer">Restablecer todo (vista y filtros)</div>
+          <div class="menu-divider"></div>
+          <div class="menu-section-label">Explorar el grafo</div>
+          <div class="menu-option" data-action="toggle-coverage">Mapa de cobertura…</div>
+          <div class="menu-option" data-action="toggle-view-options">Filtros y heatmap…</div>
+          <div class="menu-option" data-action="toggle-types">Mostrar u ocultar tipos…</div>
+          <div class="menu-divider"></div>
+          <div class="menu-option" data-action="focus-selected">Enfocar nodo (F)</div>
           <div class="menu-divider"></div>
           <div class="menu-option" data-action="toggle-labels" id="menu-opt-labels">Etiquetas (OFF)</div>
           <div class="menu-option" data-action="toggle-minimap" id="menu-opt-minimap">Minimapa (ON)</div>
@@ -1484,9 +1766,14 @@
           <div class="menu-option" data-action="constellation-relayout">Recalcular layout astral (experimental)</div>
         </div>
       </div>
-      <!-- Licences -->
-      <div class="menu-item" id="menu-licences">
-        <button type="button" class="menu-trigger" data-action="show-licences">Licencias</button>
+      <!-- Otros: ayuda y licencias -->
+      <div class="menu-item" id="menu-others">
+        <button type="button" class="menu-trigger" aria-haspopup="true" aria-expanded="false">Otros</button>
+        <div class="menu-dropdown" role="menu">
+          <div class="menu-option" data-action="show-help">Ayuda del navegador…</div>
+          <div class="menu-divider"></div>
+          <div class="menu-option" data-action="show-licences">Licencias</div>
+        </div>
       </div>
     </div>
 
@@ -1516,19 +1803,70 @@
       <div id="search-results" role="listbox" aria-label="Resultados de búsqueda"></div>
     </div>
     <span class="stats" id="stats" aria-live="polite"></span>
+    <span id="cap-banner" class="cap-banner" role="status"></span>
   </div>
+
+  <div id="top-overlays">
+    <div id="agent-lens-bar" class="agent-lens-bar" aria-live="polite">
+      <div class="agent-lens-main">
+        <span class="agent-lens-title">Vista del agente</span>
+        <span id="agent-lens-label" class="agent-lens-label">—</span>
+        <span id="agent-lens-meta" class="agent-lens-meta"></span>
+      </div>
+      <div class="agent-lens-actions">
+        <button type="button" id="agent-lens-apply" class="agent-lens-btn">Aplicar</button>
+        <button type="button" id="agent-lens-copy" class="agent-lens-btn subtle">Copiar JSON</button>
+        <button type="button" id="agent-lens-dismiss" class="agent-lens-btn subtle">Descartar</button>
+      </div>
+    </div>
+    <div id="focus-banner">
+      <span>Focus:</span>
+      <span class="focus-name" id="focus-name"></span>
+      <button id="focus-back">← Volver</button>
+    </div>
+  </div>
+
+  <p id="dock-hint" class="dock-hint" title="Paneles opcionales del grafo">Paneles · <kbd>Esc</kbd> cierra</p>
+  <nav id="config-dock" class="config-dock" aria-label="Paneles de configuración">
+    <aside id="coverage-panel" class="coverage-panel dock-panel" data-panel="coverage" aria-hidden="true">
+      <div class="dock-panel-header">
+        <span class="dock-panel-title">Cobertura</span>
+        <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar cobertura">&times;</button>
+      </div>
+      <div class="dock-panel-body">
+        <div id="coverage-body" class="dock-panel-body-inner coverage-body">
+          <div class="coverage-hint">Abre el panel para cargar métricas de cobertura.</div>
+        </div>
+      </div>
+    </aside>
+
+    <div id="visibility-panel" class="dock-panel" data-panel="visibility" aria-hidden="true">
+      <div class="dock-panel-header">
+        <span class="dock-panel-title">Tipos de nodo</span>
+        <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar tipos">&times;</button>
+      </div>
+      <div class="dock-panel-body">
+        <div id="visibility-list" class="dock-panel-body-inner"></div>
+      </div>
+    </div>
+
+    <div id="view-options-panel" class="dock-panel" data-panel="view-options" aria-hidden="true">
+      <div class="dock-panel-header">
+        <span class="dock-panel-title">Visualización</span>
+        <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar opciones">&times;</button>
+      </div>
+      <div class="dock-panel-body">
+        <div id="view-options-list" class="dock-panel-body-inner"></div>
+      </div>
+    </div>
+  </nav>
 
   <div id="controls">
-    <button id="btn-reset" title="Reset cámara">Reset View</button>
+    <button id="btn-reset" title="Restablecer vista, búsqueda y filtros">Reset</button>
     <button id="btn-focus" title="Focus en nodo seleccionado (F)">Focus+</button>
-    <button id="btn-visibility" title="Mostrar/ocultar tipos de nodo">Tipos</button>
-  </div>
-  <div id="visibility-panel">
-    <div id="visibility-list"></div>
-  </div>
-
-  <div id="view-options-panel">
-    <div id="view-options-list"></div>
+    <button id="btn-visibility" class="dock-trigger" data-panel-trigger="visibility" title="Mostrar/ocultar tipos de nodo">Tipos</button>
+    <button type="button" id="btn-coverage-panel" class="dock-trigger" data-panel-trigger="coverage" title="Panel de cobertura">Cobertura</button>
+    <button type="button" id="btn-view-options" class="dock-trigger" data-panel-trigger="view-options" title="Opciones de visualización">Vista</button>
   </div>
 
   <div id="constellation-panel" role="dialog" aria-labelledby="constellation-panel-title" aria-hidden="true">
@@ -1539,12 +1877,6 @@
       </div>
       <div id="constellation-panel-body"></div>
     </div>
-  </div>
-
-  <div id="focus-banner">
-    <span>Focus:</span>
-    <span class="focus-name" id="focus-name"></span>
-    <button id="focus-back">← Volver</button>
   </div>
 
   <div id="breadcrumb"></div>
@@ -1601,6 +1933,17 @@
       <div id="node-detail-preview"></div>
     </div>
   </aside>
+
+  <div id="heatmap-legend" class="heatmap-legend" aria-hidden="true">
+    <h3>Heatmap</h3>
+    <div class="heatmap-legend-row">
+      <span class="heatmap-swatch cold"></span><span class="legend-label">Frío / poco estudio</span>
+    </div>
+    <div class="heatmap-legend-row">
+      <span class="heatmap-swatch warm"></span><span class="legend-label">Cálido / trabajado</span>
+    </div>
+    <p class="heatmap-legend-hint">Volumen: tamaño y color por grado de enlace.</p>
+  </div>
 
   <div id="legend">
     <h3>Tipos de nodo</h3>

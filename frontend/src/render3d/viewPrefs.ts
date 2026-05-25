@@ -4,6 +4,7 @@ export const GRAPH_FILTERS_KEY = 'lgb.graphFilters'
 export type QualityPreset = 'auto' | 'high' | 'low'
 export type StudyFilter = 'all' | 'studied' | 'unstudied'
 export type LayoutMode = 'tree' | 'constellation'
+export type HeatmapMode = 'off' | 'volume' | 'study'
 
 export interface ViewPrefs {
   starfield?: boolean
@@ -12,6 +13,7 @@ export interface ViewPrefs {
   labels?: boolean
   quality?: QualityPreset
   layoutMode?: LayoutMode
+  heatmap?: HeatmapMode
 }
 
 export interface GraphFiltersState {
@@ -64,4 +66,13 @@ export function saveGraphFilters(filters: GraphFiltersState): void {
 
 export function getLayoutMode(): LayoutMode {
   return loadViewPrefs().layoutMode === 'constellation' ? 'constellation' : 'tree'
+}
+
+export function getHeatmapMode(): HeatmapMode {
+  const mode = loadViewPrefs().heatmap
+  return mode === 'volume' || mode === 'study' ? mode : 'off'
+}
+
+export function saveHeatmapMode(mode: HeatmapMode): void {
+  saveViewPrefs({ ...loadViewPrefs(), heatmap: mode })
 }

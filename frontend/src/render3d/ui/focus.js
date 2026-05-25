@@ -21,20 +21,40 @@ export function initFocus(forceGraph, engine) {
     engine.setFocusMode(false)
   }
 
-  function enterFocusMode(nodeId) {
-    const { nodes, links } = forceGraph.graphData()
+  function collectNeighborsAtDepth(startId, depth) {
+    const { links } = forceGraph.graphData()
+    const neighborIds = new Set([startId])
+    let frontier = [startId]
+    const hops = Math.max(1, Math.min(3, depth || 1))
+    for (let d = 0; d < hops; d += 1) {
+      const next = []
+      for (const nid of frontier) {
+        for (const l of links) {
+          const src = typeof l.source === 'object' ? l.source.id : l.source
+          const tgt = typeof l.target === 'object' ? l.target.id : l.target
+          if (src === nid && !neighborIds.has(tgt)) {
+            neighborIds.add(tgt)
+            next.push(tgt)
+          }
+          if (tgt === nid && !neighborIds.has(src)) {
+            neighborIds.add(src)
+            next.push(src)
+          }
+        }
+      }
+      frontier = next
+    }
+    return neighborIds
+  }
+
+  function enterFocusMode(nodeId, depth = 1) {
+    const { nodes } = forceGraph.graphData()
     const node = nodes.find(n => n.id === nodeId)
     if (!node) return
 
     focusHistory.push({ nodeId, cameraPos: forceGraph.camera().position.clone() })
 
-    const neighborIds = new Set([nodeId])
-    for (const l of links) {
-      const src = typeof l.source === 'object' ? l.source.id : l.source
-      const tgt = typeof l.target === 'object' ? l.target.id : l.target
-      if (src === nodeId) neighborIds.add(tgt)
-      if (tgt === nodeId) neighborIds.add(src)
-    }
+    const neighborIds = collectNeighborsAtDepth(nodeId, depth)
 
     engine.setFocusMode(true)
 
@@ -78,6 +98,14 @@ export function initFocus(forceGraph, engine) {
     if (focusHistory.length > 0) {
       enterFocusMode(focusHistory[focusHistory.length - 1].nodeId)
     }
+    updateBreadcrumb()
+  }
+
+  function clearAllFocus() {
+    focusHistory = []
+    restoreAll()
+    focusBanner.classList.remove('active')
+    currentFocusNode = null
     updateBreadcrumb()
   }
 
@@ -151,5 +179,9 @@ export function initFocus(forceGraph, engine) {
   return {
     setHoveredNode(node) { lastHoveredNode = node },
     enterFocusMode,
+    clearAllFocus,
+    enterAgentFocus(nodeId, depth = 2) {
+      enterFocusMode(nodeId, depth)
+    },
   }
 }

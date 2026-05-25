@@ -85,6 +85,7 @@ export interface DetailPanelAPI {
   selectNode(nodeId: string, waitForCameraMs?: number): Promise<void>
   refreshNeighbors(nodeId: string): void
   getCurrentNodeId(): string | null
+  closePanel: () => void
 }
 
 export function setupDetailPanel(
@@ -459,5 +460,6 @@ export function setupDetailPanel(
     selectNode,
     refreshNeighbors: renderNeighbors,
     getCurrentNodeId: () => currentNodeId,
+    closePanel,
   }
 }

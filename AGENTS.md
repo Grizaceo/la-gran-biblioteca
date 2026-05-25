@@ -35,7 +35,10 @@ O en `~/.claude/claude_desktop_config.json`:
 
 | Tool | Qué hace |
 |------|----------|
-| `overview()` | **Empieza aquí.** Conteos por tipo, top workspaces, imports recientes |
+| `overview()` | **Empieza aquí.** Conteos por tipo, top workspaces, imports recientes, cobertura agregada |
+| `coverage()` | Métricas por workspace/carpeta/topic (`study_ratio`, `avg_degree`, …) |
+| `apply_lens(lens?, preset?)` | Valida lens + `search_preview` + nodo foco sugerido (no publica) |
+| `publish_lens(lens?, preset?, focus_node_id?, highlight_ids?)` | Publica vista para la barra UI (`GET /api/lens/current`) |
 | `list_workspaces()` | Workspaces de primer nivel con nodo-counts |
 | `search(query, node_type?, tag?, workspace?, limit?, offset?)` | Búsqueda texto/tag/tipo con paginación |
 | `get_node(id)` | Metadata + aristas de entrada/salida en una sola llamada |
@@ -56,11 +59,22 @@ O en `~/.claude/claude_desktop_config.json`:
 ### Explorar el grafo desde cero
 ```
 overview()                          # ¿cuántos nodos, tipos, workspaces?
+coverage()                          # ¿dónde hay huecos de estudio?
 list_workspaces()                   # ¿qué proyectos hay?
 search("machine learning")          # buscar por tema
 get_node("<id>")                    # ver metadata + vecinos
 read_node("<id>")                   # leer contenido
 ```
+
+### Agent-native: alinear criterio con el humano en la UI
+```
+coverage()                                    # orientación por workspace
+apply_lens(preset="gaps_unstudied")           # preview de búsqueda + foco
+publish_lens(preset="gaps_unstudied", focus_node_id="<id>", highlight_ids=[...])
+neighbors("<id>", depth=2)                    # mismo radio que foco depth=2 en UI
+```
+
+El humano ve la **barra «Vista del agente»** (poll de `GET /api/lens/current`) y pulsa **Aplicar** para filtros + heatmap + flyTo + resaltados **sin recargar** el grafo. Presets: `heatmap_study`, `heatmap_volume`, `gaps_unstudied`, `agent_default`.
 
 ### Encontrar todo lo relacionado con un tema
 ```
@@ -145,6 +159,10 @@ Por defecto el escáner **omite** subárboles cuyo directorio se llame exactamen
 
 ```
 GET  /api/overview          ← equivale a tool overview()
+GET  /api/coverage          ← estructura enriquecida (study_ratio, avg_degree, …)
+GET  /api/lens/current      ← lens publicado por agente o UI
+POST /api/lens/current      ← publicar lens (paridad con publish_lens)
+POST /api/lens/apply        ← preview búsqueda + foco sugerido
 GET  /api/graph             ← grafo completo (limitado 1000 nodos)
 GET  /api/node/{id}         ← nodo por ID
 GET  /api/node/{id}/content ← contenido del archivo
@@ -152,6 +170,16 @@ GET  /api/arxiv/search?q=…  ← búsqueda arXiv (sin API key; params: q, autho
 POST /api/study             ← marcar estudiado
 POST /api/rescan            ← re-escanear
 ```
+
+## Extensión de navegador (repo hermano)
+
+El repo hermano **`lgb-citation-spotter`** (extensión «LGB Citation Spotter») detecta en páginas web citas **arXiv**, **PubMed (PMID)** y repos públicos de **GitHub**, y puede importarlas al bridge local con:
+
+- `POST /api/create/arxiv` — body `{"id": "<arxiv_id o URL>"}`
+- `POST /api/create/pubmed` — body `{"id": "<pmid o URL>"}`
+- `POST /api/create/github` — body `{"url": "<https://github.com/owner/repo>"}`
+
+Health: `GET /api/overview`. Si el bridge exige API key, header `X-API-Key` (misma variable `LGB_API_KEY` que el backend).
 
 ## Documentación adicional
 

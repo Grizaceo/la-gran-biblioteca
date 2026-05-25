@@ -1,11 +1,12 @@
+import { getPanelDock } from '../../ui/panelDock.js'
+
 const STORAGE_KEY = 'lgb.hiddenTypes'
 
 export function initVisibility(engine) {
-  const btn   = document.getElementById('btn-visibility')
   const panel = document.getElementById('visibility-panel')
-  const list  = document.getElementById('visibility-list')
+  const list = document.getElementById('visibility-list')
+  const dock = getPanelDock()
 
-  // Restore persisted state before the graph loads
   const persisted = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   for (const type of persisted) engine.setTypeVisible(type, false)
 
@@ -42,7 +43,6 @@ export function initVisibility(engine) {
         const type = e.target.dataset.type
         engine.setTypeVisible(type, e.target.checked)
         persistState(stats)
-        // Update the "all" checkbox
         const allBox = document.getElementById('vis-check-all')
         if (allBox) allBox.checked = stats.every(s => engine.isTypeVisible(s.type))
       })
@@ -54,19 +54,13 @@ export function initVisibility(engine) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(hidden))
   }
 
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const open = panel.classList.toggle('active')
-    if (open) renderList()
+  dock.register({
+    id: 'visibility',
+    element: panel,
+    triggers: ['#btn-visibility'],
+    onOpen: () => renderList(),
   })
 
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#visibility-panel') && !e.target.closest('#btn-visibility')) {
-      panel.classList.remove('active')
-    }
-  })
-
-  // Re-render list when graph updates
   engine.onTypesChanged = renderList
 
   return { renderList }

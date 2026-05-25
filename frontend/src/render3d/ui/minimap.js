@@ -15,8 +15,22 @@ function modeLabel(mode) {
   return mode === 'folder' ? 'carpetas' : mode === 'topic' ? 'topics' : 'workspace'
 }
 
-function fillColor(mode, selected) {
+function studyIntensity(item) {
+  if (typeof item.study_ratio === 'number') return Math.min(1, Math.max(0, item.study_ratio))
+  const count = item.count || 0
+  if (!count) return 0
+  return Math.min(1, (item.studied_count || 0) / count)
+}
+
+function fillColor(mode, selected, item = null) {
   if (selected) return 'rgba(255, 255, 255, 0.95)'
+  if (item && (mode === 'workspace' || mode === 'folder')) {
+    const t = studyIntensity(item)
+    const r = Math.round(79 + (255 - 79) * t)
+    const g = Math.round(195 + (112 - 195) * t)
+    const b = Math.round(247 + (67 - 247) * t)
+    return `rgba(${r}, ${g}, ${b}, 0.88)`
+  }
   if (mode === 'topic') return 'rgba(102, 187, 106, 0.85)'
   if (mode === 'folder') return 'rgba(255, 167, 38, 0.85)'
   return 'rgba(79, 195, 247, 0.85)'
@@ -276,7 +290,7 @@ export function initMinimap(forceGraph, engine = null, hooks = {}) {
     const { item } = entry
     const selected = isSelected(item)
     const hovered = hoveredKey === item.key
-    ctx.fillStyle = fillColor(activeMode, selected || hovered)
+    ctx.fillStyle = fillColor(activeMode, selected || hovered, item)
     ctx.strokeStyle = strokeColor(activeMode, selected || hovered)
     ctx.lineWidth = selected || hovered ? 2 : 1
     ctx.globalAlpha = selected || hovered ? 0.98 : 0.62

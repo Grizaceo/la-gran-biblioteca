@@ -34,6 +34,9 @@ from .constants import WORKSPACE_ROOT
 from .graph_engine import GraphEngine, DB_PATH
 from .graph_queries import build_subgraph, search_graph
 from .overview import build_overview
+from .graph_enrichment import build_graph_structure_summary
+from .lens import lens_to_search_params, preset_lens, validate_lens
+from .lens_session import get_session_lens, publish_session_lens
 from .imports import (
     download_and_extract_github,
     import_arxiv as _import_arxiv,
@@ -147,7 +150,19 @@ def overview() -> dict:
         nodes = _graph["nodes"]
         edges = _graph["edges"]
         recent = list(_recent_imports)
-    return build_overview(nodes, edges, recent, WORKSPACE_ROOT)
+    overview_data = build_overview(nodes, edges, recent, WORKSPACE_ROOT)
+    overview_data["coverage"] = build_graph_structure_summary(
+        nodes, edges, WORKSPACE_ROOT
+    )
+    session = get_session_lens()
+    if session.get("lens"):
+        overview_data["published_lens"] = {
+            "label": session["lens"].get("label"),
+            "heatmap": session["lens"].get("heatmap"),
+            "updated_at": session.get("updated_at"),
+            "updated_by": session.get("updated_by"),
+        }
+    return overview_data
 
 
 @mcp.tool()
@@ -596,6 +611,86 @@ def open_in_os(node_id: str, reveal: bool = False) -> dict:
         return {"status": "ok", "path": path_str}
     except Exception as e:
         return {"error": str(e)}
+
+
+@mcp.tool()
+def coverage() -> dict:
+    """
+    Return workspace/folder/topic coverage metrics (study_ratio, avg_degree, counts).
+    Use to decide where to explore before apply_lens / publish_lens.
+    """
+    with _lock:
+        nodes = list(_graph["nodes"])
+        edges = list(_graph["edges"])
+    return build_graph_structure_summary(nodes, edges, WORKSPACE_ROOT)
+
+
+@mcp.tool()
+def apply_lens(lens: dict | None = None, preset: str = "") -> dict:
+    """
+    Validate an ExplorationLens (or preset id) and return search_preview + suggested focus.
+    Does not publish — call publish_lens after the human should see the same view.
+    """
+    try:
+        if preset:
+            validated = preset_lens(preset)
+        else:
+            validated = validate_lens(lens or {})
+    except ValueError as e:
+        return {"error": str(e)}
+
+    with _lock:
+        graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
+
+    params = lens_to_search_params(validated)
+    result = search_graph(
+        graph,
+        engine_search_results=[],
+        query=params.get("query", ""),
+        workspace=params.get("workspace", ""),
+        folder_prefix=params.get("folder_prefix", ""),
+        topic=params.get("topic", ""),
+        min_degree=params.get("min_degree", 0),
+        studied=params.get("studied", "all"),
+        mode=params.get("mode", "text"),
+        limit=params.get("limit", 20),
+        offset=params.get("offset", 0),
+    )
+    preview = result.get("results", [])[:20]
+    highlight_ids = [str(item["id"]) for item in preview if item.get("id")]
+    suggested = validated.get("focusNodeId") or (highlight_ids[0] if highlight_ids else None)
+    return {
+        "lens": validated,
+        "search_preview": preview,
+        "suggested_focus_node_id": suggested,
+        "highlight_node_ids": highlight_ids,
+    }
+
+
+@mcp.tool()
+def publish_lens(
+    lens: dict | None = None,
+    preset: str = "",
+    focus_node_id: str = "",
+    highlight_ids: list[str] | None = None,
+) -> dict:
+    """
+    Publish the current ExplorationLens for the UI agent bar (GET /api/lens/current).
+    """
+    try:
+        if preset:
+            validated = preset_lens(preset)
+        else:
+            validated = validate_lens(lens or {})
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return publish_session_lens(
+        validated,
+        updated_by="mcp",
+        focus_node_id=focus_node_id or None,
+        highlight_ids=highlight_ids,
+    )
 
 
 # ---------------------------------------------------------------------------

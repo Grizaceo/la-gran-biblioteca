@@ -15,11 +15,14 @@ import {
   TOAST_TREE_LAYOUT,
 } from './constellationCopy'
 import { createModalShell } from './modals/modalShell'
+import { getPanelDock } from './panelDock'
+import { HELP_GUIDE_HTML, mountHelpGuideStyles } from './helpGuide'
 
 export interface MenuBarOptions {
   openViewOptions?: () => void
   constellationSettings?: ConstellationSettingsAPI
   onRescanComplete?: () => void
+  resetExplorer?: () => void
 }
 
 export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): void {
@@ -131,9 +134,11 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
       case 'toggle-types':
         document.getElementById('btn-visibility')?.click()
         break
-      case 'reset-camera':
-        engine.fg.cameraPosition({ x: 0, y: 0, z: 400 }, null, 1000)
-        showNotification('Vista de cámara reestablecida', 'info')
+      case 'reset-explorer':
+        opts.resetExplorer?.()
+        break
+      case 'show-help':
+        openHelpGuideModal()
         break
       case 'toggle-starfield':
         toggleStarfieldRotation()
@@ -143,6 +148,9 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
         break
       case 'toggle-view-options':
         opts.openViewOptions?.()
+        break
+      case 'toggle-coverage':
+        getPanelDock().toggle('coverage')
         break
       case 'toggle-constellation-layout':
         toggleConstellationLayout()
@@ -742,6 +750,29 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
         engine.enqueuePendingFocus(res.path)
       }
     )
+  }
+
+  function openHelpGuideModal(): void {
+    mountHelpGuideStyles()
+    modalTitle.textContent = 'Ayuda — navegar La Gran Biblioteca'
+    modalConfirmBtn.disabled = false
+    modalConfirmBtn.textContent = 'Cerrar'
+    modalCancelBtn.style.display = 'none'
+    modalError.textContent = ''
+    modalBody.innerHTML = HELP_GUIDE_HTML
+
+    modalContainer.style.display = 'flex'
+    void modalContainer.offsetWidth
+    modalContainer.classList.add('active')
+
+    modalCloseBtn.onclick = () => {
+      closeModal()
+      modalCancelBtn.style.display = 'inline-block'
+    }
+    modalConfirmBtn.onclick = () => {
+      closeModal()
+      modalCancelBtn.style.display = 'inline-block'
+    }
   }
 
   function openLicencesModal(): void {

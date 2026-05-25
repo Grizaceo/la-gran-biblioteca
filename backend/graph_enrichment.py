@@ -268,6 +268,11 @@ def build_graph_structure_summary(
             return {"key": key, "label": label or key, "count": 0}
         degree_sum = sum(int(n.get("degree") or 0) for n in members)
         studied_count = sum(1 for n in members if int((n.get("metadata") or {}).get("study_count") or 0) > 0)
+        study_score_sum = sum(
+            int((n.get("metadata") or {}).get("study_score") or 0) for n in members
+        )
+        avg_degree = round(degree_sum / count, 2) if count else 0.0
+        study_ratio = round(studied_count / count, 4) if count else 0.0
         sample_node_ids = [str(n.get("id")) for n in sorted(
             members,
             key=lambda n: (int(n.get("degree") or 0), int((n.get("metadata") or {}).get("study_score") or 0)),
@@ -285,6 +290,9 @@ def build_graph_structure_summary(
             "count": count,
             "degree_sum": degree_sum,
             "studied_count": studied_count,
+            "study_ratio": study_ratio,
+            "avg_degree": avg_degree,
+            "study_score_sum": study_score_sum,
             "sample_node_ids": sample_node_ids,
             "centroid": centroid,
         }

@@ -255,5 +255,17 @@ export function initSearch(forceGraph, engine = null) {
     }
   })
 
-  return { setup, focusNode, setTab }
+  function resetSearch() {
+    searchInput.value = ''
+    activeTypeFilter = null
+    if (searchTypeDot) searchTypeDot.style.background = '#90a4ae'
+    if (searchTypeLabel) searchTypeLabel.textContent = 'Todos'
+    searchTypeDropdown?.classList.remove('active')
+    searchResults.classList.remove('active')
+    searchResults.innerHTML = ''
+    setTab('text')
+    if (searchModeSelect) searchModeSelect.value = 'text'
+  }
+
+  return { setup, focusNode, setTab, resetSearch }
 }

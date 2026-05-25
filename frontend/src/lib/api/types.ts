@@ -43,6 +43,9 @@ export interface StructureCluster {
   count: number
   degree_sum?: number
   studied_count?: number
+  study_ratio?: number
+  avg_degree?: number
+  study_score_sum?: number
   sample_node_ids?: string[]
   centroid?: { x: number; y: number }
 }
@@ -52,6 +55,7 @@ export interface OverviewStructure {
   total_nodes: number
   total_edges: number
   limited_count?: number
+  shown_count?: number
   pipeline?: {
     scan_ms: number
     finalize_ms: number

@@ -1,4 +1,11 @@
-import { loadGraphFilters, saveGraphFilters, DEFAULT_GRAPH_FILTERS } from '../viewPrefs.ts'
+import {
+  loadGraphFilters,
+  saveGraphFilters,
+  DEFAULT_GRAPH_FILTERS,
+  getHeatmapMode,
+  saveHeatmapMode,
+} from '../viewPrefs.ts'
+import { getPanelDock } from '../../ui/panelDock.js'
 
 const EDGE_TYPES = ['co-located', 'tagged', 'contains', 'references']
 
@@ -17,12 +24,24 @@ export function initViewOptions(engine) {
   if (!panel || !list) return { renderList: () => {} }
 
   engine.setGraphFilters(loadGraphFilters())
+  engine.setHeatmapMode(getHeatmapMode())
 
   function renderList() {
     const filters = engine.getGraphFilters()
     const workspaces = engine.getWorkspaceList()
+    const heatmap = engine.getHeatmapMode()
 
-    let html = `<div class="vo-section">Workspaces</div>`
+    let html = `<div class="vo-section">Heatmap</div>
+      <label class="vo-item">
+        <span>Codificación visual</span>
+        <select class="vo-heatmap" id="vo-heatmap-mode">
+          <option value="off" ${heatmap === 'off' ? 'selected' : ''}>Por tipo (default)</option>
+          <option value="volume" ${heatmap === 'volume' ? 'selected' : ''}>Volumen / densidad</option>
+          <option value="study" ${heatmap === 'study' ? 'selected' : ''}>Estudio / cobertura</option>
+        </select>
+      </label>`
+
+    html += `<div class="vo-section">Workspaces</div>`
     if (!workspaces.length) {
       html += `<div class="vo-hint">Sin workspaces detectados</div>`
     } else {
@@ -105,6 +124,17 @@ export function initViewOptions(engine) {
       })
     })
 
+    const heatmapSel = list.querySelector('.vo-heatmap')
+    if (heatmapSel) {
+      heatmapSel.addEventListener('change', (e) => {
+        const mode = e.target.value
+        engine.setHeatmapMode(mode)
+        saveHeatmapMode(mode)
+        const legend = document.getElementById('heatmap-legend')
+        if (legend) legend.classList.toggle('active', mode !== 'off')
+      })
+    }
+
     const studySel = list.querySelector('.vo-study')
     if (studySel) {
       studySel.addEventListener('change', (e) => {
@@ -148,17 +178,19 @@ export function initViewOptions(engine) {
     })
   }
 
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#view-options-panel') && !e.target.closest('[data-action="toggle-view-options"]')) {
-      panel.classList.remove('active')
-    }
+  const dock = getPanelDock()
+  dock.register({
+    id: 'view-options',
+    element: panel,
+    triggers: ['#btn-view-options'],
+    onOpen: () => renderList(),
   })
 
   return {
     renderList,
     openPanel() {
       renderList()
-      panel.classList.add('active')
+      dock.open('view-options')
     },
     resetFilters() {
       engine.setGraphFilters({ ...DEFAULT_GRAPH_FILTERS })

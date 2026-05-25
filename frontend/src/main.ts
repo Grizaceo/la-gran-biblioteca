@@ -12,6 +12,10 @@ import { setupTooltip } from './ui/tooltip'
 import { setupContextMenu } from './ui/contextMenu'
 import { initMenuBar } from './ui/menuBar'
 import { initConstellationSettings } from './ui/constellationSettings'
+import { initPanelDock } from './ui/panelDock'
+import { initAgentLensBar } from './ui/agentLensBar'
+import { initCoverageMap } from './ui/coverageMap'
+import { resetExplorerState } from './ui/navigationReset'
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +45,7 @@ async function init(): Promise<void> {
   let overview: Overview | null = null
   let overviewStructure: OverviewStructure | null = null
   let graphHydrated = false
+  let coverageMap: ReturnType<typeof initCoverageMap> | null = null
 
   function showError(msg: string, err?: Error): void {
     loadingText.style.display = 'none'
@@ -96,8 +101,22 @@ async function init(): Promise<void> {
   step('3/6 Conectando UI…')
   let panel!: ReturnType<typeof setupDetailPanel>
   let viewOptions!: ReturnType<typeof initViewOptions>
+  let focus!: ReturnType<typeof initFocus>
+  let search!: ReturnType<typeof initSearch>
+  let agentLensBar!: ReturnType<typeof initAgentLensBar>
+  const explorerActions = { reset: (): void => {} }
   try {
-    const focus = initFocus(engine.fg, engine)
+    initPanelDock()
+
+    focus = initFocus(engine.fg, engine)
+
+    coverageMap = initCoverageMap({
+      engine,
+      forceGraph: engine.fg,
+      showToast,
+      getGraphTotal: () => currentGraph?.total ?? overview?.total_nodes,
+      getGraphShown: () => currentGraph?.nodes.length,
+    })
     initVisibility(engine)
     viewOptions = initViewOptions(engine)
     const constellationSettings = initConstellationSettings(engine, showToast, () => currentGraph)
@@ -120,6 +139,7 @@ async function init(): Promise<void> {
       onRescanComplete: () => {
         statusEl.textContent = 'Sincronizando tras escaneo…'
       },
+      resetExplorer: () => explorerActions.reset(),
     })
 
     // Activity Log Collapsible & Global Logger initialization
@@ -156,10 +176,6 @@ async function init(): Promise<void> {
       await panel.selectNode(node.id as string)
     })
 
-    document.getElementById('btn-reset')!.addEventListener('click', () => {
-      engine.fg.cameraPosition({ x: 0, y: 0, z: 400 })
-    })
-
     window.addEventListener('resize', () => {
       const { width, height } = container.getBoundingClientRect()
       engine.fg.width(width).height(height)
@@ -179,6 +195,8 @@ async function init(): Promise<void> {
   }
 
   statsEl.textContent = formatStats(graph, overview)
+  coverageMap?.refreshCapBanner()
+
   statusEl.textContent = 'Conectado'
 
   if ((window as any).addActivityLog) {
@@ -199,7 +217,39 @@ async function init(): Promise<void> {
       invalidateBounds: () => void
       setStructure: (data: OverviewStructure | null) => void
     }
-    const search  = initSearch(engine.fg, engine)
+    search = initSearch(engine.fg, engine)
+
+    explorerActions.reset = () => {
+      resetExplorerState({
+        engine,
+        clearFocus: () => focus.clearAllFocus(),
+        resetSearch: () => search.resetSearch(),
+        resetViewOptions: () => {
+          viewOptions.resetFilters()
+          viewOptions.renderList()
+        },
+        closeDetailPanel: () => panel.closePanel(),
+        dismissAgentLens: () => agentLensBar.dismissAgentLensUi(),
+      })
+      showToast('Vista y filtros restablecidos', false)
+      if ((window as any).addActivityLog) {
+        (window as any).addActivityLog('Explorador restablecido (cámara, búsqueda, filtros).', 'info')
+      }
+    }
+
+    document.getElementById('btn-reset')!.addEventListener('click', () => {
+      explorerActions.reset()
+    })
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey
+        && !(e.target instanceof HTMLInputElement)
+        && !(e.target instanceof HTMLTextAreaElement)
+        && !(e.target instanceof HTMLSelectElement)) {
+        e.preventDefault()
+        explorerActions.reset()
+      }
+    })
 
     engine.onMinimapTick = () => minimap.update()
     engine.onStop = () => minimap.invalidateBounds()
@@ -209,12 +259,24 @@ async function init(): Promise<void> {
     minimap.update()
     viewOptions.renderList()
 
+    coverageMap?.refreshCapBanner()
+
+    agentLensBar = initAgentLensBar({
+      engine,
+      showToast,
+      selectNode: (id, delay) => panel.selectNode(id, delay),
+      enterAgentFocus: focus.enterAgentFocus,
+    })
+
     const unsubscribe = subscribeToUpdates((updated, event) => {
       currentGraph = updated
       processGraphUpdate(updated, event, {
         engine,
         getOverview: () => overview,
-        onStats: (g) => { statsEl.textContent = formatStats(g, overview) },
+        onStats: (g) => {
+          statsEl.textContent = formatStats(g, overview)
+          coverageMap?.refreshCapBanner()
+        },
         onSearchSetup: (nodes) => search.setup(nodes),
         onMinimapInvalidate: () => minimap.invalidateBounds(),
         onMinimapUpdate: () => minimap.update(),
