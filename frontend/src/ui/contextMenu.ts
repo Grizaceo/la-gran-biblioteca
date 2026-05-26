@@ -13,7 +13,7 @@ interface Engine {
   onNodeRightClick(cb: (node: Record<string, unknown>, event: MouseEvent) => void): void
 }
 
-function truncateLabel(text: string, max = 20): string {
+function truncateLabel(text: string, max = 18): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text
 }
 
@@ -27,11 +27,13 @@ export function setupContextMenu(
   function hideCtxMenu(): void {
     ctxMenu.style.display = 'none'
     ctxMenu.innerHTML = ''
+    ctxMenu.classList.remove('ctx-menu-flip')
   }
 
-  function makeBtn(text: string, onClick: () => void): HTMLButtonElement {
+  function makeBtn(text: string, onClick: () => void, className = ''): HTMLButtonElement {
     const btn = document.createElement('button')
     btn.type = 'button'
+    btn.className = `ctx-item${className ? ` ${className}` : ''}`
     btn.textContent = text
     btn.addEventListener('click', onClick)
     return btn
@@ -43,11 +45,57 @@ export function setupContextMenu(
     return sep
   }
 
-  function makeHeading(text: string): HTMLDivElement {
-    const h = document.createElement('div')
-    h.className = 'ctx-heading'
-    h.textContent = text
-    return h
+  function buildQuickAccessSubmenu(
+    node: Record<string, unknown>,
+    nodeId: string,
+    nodeType: string,
+  ): HTMLDivElement {
+    const wrap = document.createElement('div')
+    wrap.className = 'ctx-submenu-wrap'
+
+    const trigger = document.createElement('button')
+    trigger.type = 'button'
+    trigger.className = 'ctx-item ctx-item-has-submenu'
+    trigger.innerHTML = 'Acceso rápido<span class="ctx-chevron" aria-hidden="true">›</span>'
+
+    const submenu = document.createElement('div')
+    submenu.className = 'ctx-submenu'
+    submenu.setAttribute('role', 'menu')
+    submenu.setAttribute('aria-label', 'Asignar acceso rápido')
+
+    const slots = loadSlots()
+    for (let i = 0; i < SLOT_COUNT; i++) {
+      const occupied = slots[i]
+      let label = `Hueco ${i + 1}`
+      if (occupied) {
+        label = `${i + 1} · ${truncateLabel(occupied.label)}`
+      }
+      submenu.appendChild(makeBtn(label, () => {
+        hideCtxMenu()
+        assignSlot(i, {
+          id: nodeId,
+          name: node.name as string | undefined,
+          label: node.label as string | undefined,
+          type: nodeType,
+        })
+        onQuickAccessChange()
+        showToast(`Asignado a acceso ${i + 1}`)
+      }, occupied ? 'ctx-slot-occupied' : 'ctx-slot-empty'))
+    }
+
+    if (isNodeInSlots(nodeId)) {
+      submenu.appendChild(makeSep())
+      submenu.appendChild(makeBtn('Quitar de accesos', () => {
+        hideCtxMenu()
+        clearAllSlotsForNode(nodeId)
+        onQuickAccessChange()
+        showToast('Eliminado de accesos rápidos')
+      }, 'ctx-item-danger'))
+    }
+
+    wrap.appendChild(trigger)
+    wrap.appendChild(submenu)
+    return wrap
   }
 
   function showCtxMenu(
@@ -60,40 +108,9 @@ export function setupContextMenu(
     const nodePath = node.path as string | undefined
 
     ctxMenu.innerHTML = ''
-    ctxMenu.style.left = `${x}px`
-    ctxMenu.style.top = `${y}px`
-    ctxMenu.style.display = 'block'
+    ctxMenu.classList.remove('ctx-menu-flip')
 
-    ctxMenu.appendChild(makeHeading('Acceso rápido'))
-    const slots = loadSlots()
-    for (let i = 0; i < SLOT_COUNT; i++) {
-      const occupied = slots[i]
-      let label = `Asignar a ${i + 1}`
-      if (occupied) {
-        label = `Asignar a ${i + 1} (reemplaza «${truncateLabel(occupied.label)}»)`
-      }
-      ctxMenu.appendChild(makeBtn(label, () => {
-        hideCtxMenu()
-        assignSlot(i, {
-          id: nodeId,
-          name: node.name as string | undefined,
-          label: node.label as string | undefined,
-          type: nodeType,
-        })
-        onQuickAccessChange()
-        showToast(`Asignado a acceso ${i + 1}`)
-      }))
-    }
-
-    if (isNodeInSlots(nodeId)) {
-      ctxMenu.appendChild(makeSep())
-      ctxMenu.appendChild(makeBtn('Quitar de accesos', () => {
-        hideCtxMenu()
-        clearAllSlotsForNode(nodeId)
-        onQuickAccessChange()
-        showToast('Eliminado de accesos rápidos')
-      }))
-    }
+    ctxMenu.appendChild(buildQuickAccessSubmenu(node, nodeId, nodeType))
 
     const canOpen = !NON_OPENABLE_TYPES.has(nodeType) && !!nodePath
     if (canOpen) {
@@ -121,6 +138,29 @@ export function setupContextMenu(
         }))
       }
     }
+
+    ctxMenu.style.display = 'block'
+    ctxMenu.style.left = `${x}px`
+    ctxMenu.style.top = `${y}px`
+
+    requestAnimationFrame(() => {
+      const rect = ctxMenu.getBoundingClientRect()
+      let left = x
+      let top = y
+      if (rect.right > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - rect.width - 8)
+      }
+      if (rect.bottom > window.innerHeight - 8) {
+        top = Math.max(8, window.innerHeight - rect.height - 8)
+      }
+      ctxMenu.style.left = `${left}px`
+      ctxMenu.style.top = `${top}px`
+
+      const updated = ctxMenu.getBoundingClientRect()
+      if (updated.right > window.innerWidth - 160) {
+        ctxMenu.classList.add('ctx-menu-flip')
+      }
+    })
   }
 
   engine.onNodeRightClick((node, event) => {
