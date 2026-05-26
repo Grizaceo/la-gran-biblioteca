@@ -11,6 +11,7 @@ export interface SyncGraphContext {
   onMinimapUpdate: () => void
   refreshStructure?: () => Promise<void>
   onViewOptionsRender: () => void
+  onQuickAccessRefresh?: () => void
   getCurrentNodeId: () => string | null
   refreshNeighbors: (nodeId: string) => void
   selectNode: (id: string, delay?: number) => Promise<void>
@@ -35,6 +36,7 @@ export function processGraphUpdate(
   void ctx.refreshStructure?.()
   ctx.onSearchSetup(updated.nodes)
   ctx.onViewOptionsRender()
+  ctx.onQuickAccessRefresh?.()
   const nodeId = ctx.getCurrentNodeId()
   if (nodeId) ctx.refreshNeighbors(nodeId)
 

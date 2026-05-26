@@ -17,6 +17,7 @@ import {
 import { createModalShell } from './modals/modalShell'
 import { getPanelDock } from './panelDock'
 import { HELP_GUIDE_HTML, mountHelpGuideStyles } from './helpGuide'
+import { syncMinimapHudLayout } from './legendDock'
 
 export interface MenuBarOptions {
   openViewOptions?: () => void
@@ -277,7 +278,7 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
   }
 
   function setMinimapVisible(visible: boolean): void {
-    document.getElementById('minimap')?.classList.toggle('minimap-hidden', !visible)
+    syncMinimapHudLayout(visible)
   }
 
   applyViewPrefs()

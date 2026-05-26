@@ -10,6 +10,8 @@ import { initViewOptions } from './render3d/ui/viewOptions.js'
 import { setupDetailPanel } from './ui/detailPanel'
 import { setupTooltip } from './ui/tooltip'
 import { setupContextMenu } from './ui/contextMenu'
+import { initQuickAccessBar, refreshQuickAccessLabels } from './ui/quickAccessBar'
+import { initLegendDock } from './ui/legendDock'
 import { initMenuBar } from './ui/menuBar'
 import { initConstellationSettings } from './ui/constellationSettings'
 import { initPanelDock } from './ui/panelDock'
@@ -105,6 +107,7 @@ async function init(): Promise<void> {
   let focus!: ReturnType<typeof initFocus>
   let search!: ReturnType<typeof initSearch>
   let agentLensBar!: ReturnType<typeof initAgentLensBar>
+  let quickAccess!: ReturnType<typeof initQuickAccessBar>
   const explorerActions = { reset: (): void => {} }
   try {
     initPanelDock()
@@ -132,7 +135,11 @@ async function init(): Promise<void> {
 
     setupTooltip(engine, container, (node) => focus.setHoveredNode(node))
 
-    setupContextMenu(engine, showToast)
+    let quickAccessRender = (): void => {}
+    setupContextMenu(engine, showToast, () => quickAccessRender())
+    quickAccess = initQuickAccessBar({ engine, showToast })
+    quickAccessRender = quickAccess.render
+    initLegendDock()
 
     initMenuBar(engine, {
       openViewOptions: () => viewOptions?.openPanel?.(),
@@ -297,6 +304,10 @@ async function init(): Promise<void> {
           }
         },
         onViewOptionsRender: () => viewOptions.renderList(),
+        onQuickAccessRefresh: () => {
+          refreshQuickAccessLabels(engine)
+          quickAccess.render()
+        },
         getCurrentNodeId: () => panel.getCurrentNodeId(),
         refreshNeighbors: (id) => { panel.refreshNeighbors(id) },
         selectNode: (id, delay) => panel.selectNode(id, delay),

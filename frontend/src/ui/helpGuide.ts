@@ -35,6 +35,16 @@ export const HELP_GUIDE_HTML = `
   </section>
 
   <section class="help-block">
+    <h3>Acceso rápido</h3>
+    <p>Panel <strong>Tipos y acceso</strong> abajo a la derecha: accesos rápidos en columna junto a la leyenda de tipos. Puedes <strong>arrastrar</strong> el panel por la cabecera y <strong>minimizarlo</strong> con el botón −/+.</p>
+    <ul>
+      <li><strong>Clic derecho en un nodo</strong> — asigna a uno de los 6 huecos.</li>
+      <li><strong>Clic o <kbd>1</kbd>…<kbd>6</kbd></strong> — vuela al nodo sin abrir el panel de detalle.</li>
+      <li><strong>Clic derecho en un hueco</strong> — libera ese acceso.</li>
+    </ul>
+  </section>
+
+  <section class="help-block">
     <h3>Focus y atajos</h3>
     <ul>
       <li><kbd>F</kbd> — modo focus (solo vecinos del nodo).</li>

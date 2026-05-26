@@ -39,6 +39,144 @@
       margin-left: auto;
     }
 
+    /* Legend dock (quick access + node types) */
+    .legend-dock {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 20;
+      min-width: 0;
+      max-width: min(92vw, 360px);
+      background: rgba(0, 0, 17, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      pointer-events: auto;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    }
+    .legend-dock-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: grab;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .legend-dock-header:active { cursor: grabbing; }
+    .legend-dock-drag {
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+      letter-spacing: -2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .legend-dock-title {
+      flex: 1;
+      font-size: 10px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .legend-dock-toggle {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.65);
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .legend-dock-toggle:hover {
+      border-color: rgba(79, 195, 247, 0.4);
+      color: #4fc3f7;
+    }
+    .legend-dock-body {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 12px 12px;
+    }
+    .legend-dock.collapsed .legend-dock-body { display: none; }
+    .legend-dock.collapsed .legend-dock-header { border-bottom: none; }
+    #quick-access-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .quick-slot {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      min-width: 26px;
+      max-width: 72px;
+      height: 23px;
+      padding: 0 6px 0 5px;
+      border-radius: 5px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      cursor: pointer;
+      background: rgba(0, 0, 17, 0.88);
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .quick-slot.empty {
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      color: rgba(255, 255, 255, 0.35);
+      justify-content: center;
+      padding: 0;
+      width: 26px;
+      max-width: 26px;
+    }
+    .quick-slot.empty .qa-label,
+    .quick-slot.empty .qa-dot { display: none; }
+    .quick-slot.empty:hover {
+      border-color: rgba(79, 195, 247, 0.45);
+      color: rgba(79, 195, 247, 0.7);
+    }
+    .quick-slot.filled {
+      border: 1px solid rgba(79, 195, 247, 0.28);
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .quick-slot.filled:hover {
+      border-color: rgba(79, 195, 247, 0.55);
+      background: rgba(79, 195, 247, 0.1);
+    }
+    .quick-slot .qa-num {
+      font-size: 9px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+      width: 10px;
+      text-align: center;
+    }
+    .quick-slot.empty .qa-num {
+      color: inherit;
+      width: auto;
+    }
+    .quick-slot .qa-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .quick-slot .qa-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      flex: 1;
+      font-size: 9px;
+    }
+
     /* Info message (search highlight) */
     #info-msg {
       position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -66,6 +204,20 @@
       font-family: 'Helvetica Neue', Arial, sans-serif;
     }
     #ctx-menu button:hover { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+    #ctx-menu .ctx-heading {
+      padding: 6px 16px 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(79, 195, 247, 0.75);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      pointer-events: none;
+    }
+    #ctx-menu .ctx-sep {
+      height: 1px;
+      margin: 4px 8px;
+      background: rgba(255, 255, 255, 0.08);
+    }
 
     /* Floating hover tooltip */
     #node-tooltip {
@@ -95,15 +247,10 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* Legend */
+    /* Legend (inside dock) */
     #legend {
-      position: absolute; bottom: 20px; right: 20px;
-      background: rgba(0,0,17,0.85);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 12px 16px;
-      z-index: 20;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
+      flex: 1;
+      min-width: 0;
       font-size: 11px;
     }
     #legend h3 {
@@ -180,7 +327,15 @@
       color: rgba(255, 255, 255, 0.55);
     }
 
-    :root { --config-dock-width: 0px; }
+    :root {
+      --config-dock-width: 0px;
+      --minimap-width: 220px;
+      --minimap-margin: 20px;
+      --hud-gap: 16px;
+    }
+    body.minimap-hidden {
+      --minimap-width: 0;
+    }
 
     .dock-hint {
       position: absolute;
@@ -1636,8 +1791,9 @@
     #activity-log {
       position: absolute;
       bottom: 20px;
-      left: 220px;
+      left: calc(var(--minimap-margin) + var(--minimap-width) + var(--hud-gap));
       width: 340px;
+      max-width: calc(100vw - var(--minimap-margin) - var(--minimap-width) - var(--hud-gap) - var(--minimap-margin) - 280px);
       height: 30px;
       background: rgba(0, 0, 17, 0.85);
       backdrop-filter: blur(12px);
@@ -1914,10 +2070,7 @@
   <div id="node-tooltip" role="tooltip" aria-hidden="true"></div>
   <div id="info-msg" aria-live="polite"></div>
 
-  <div id="ctx-menu">
-    <button id="ctx-open-folder">Revelar en Explorador</button>
-    <button id="ctx-open-file">Abrir archivo</button>
-  </div>
+  <div id="ctx-menu" role="menu" aria-label="Menú contextual del nodo"></div>
 
   <aside id="node-detail">
     <div id="node-detail-header">
@@ -1945,17 +2098,46 @@
     <p class="heatmap-legend-hint">Volumen: tamaño y color por grado de enlace.</p>
   </div>
 
-  <div id="legend">
-    <h3>Tipos de nodo</h3>
-    <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div><span class="legend-label">file</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffa726"></div><span class="legend-label">folder</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#66bb6a"></div><span class="legend-label">document</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff7043"></div><span class="legend-label">config</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ab47bc"></div><span class="legend-label">workspace</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ef5350"></div><span class="legend-label">project</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ffee58"></div><span class="legend-label">tag</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#546e7a"></div><span class="legend-label">otros</span></div>
-  </div>
+  <aside id="legend-dock" class="legend-dock">
+    <header class="legend-dock-header">
+      <span class="legend-dock-drag" title="Arrastrar">⋮⋮</span>
+      <span class="legend-dock-title">Tipos y acceso</span>
+      <button type="button" class="legend-dock-toggle" aria-expanded="true" aria-label="Contraer panel">−</button>
+    </header>
+    <div class="legend-dock-body">
+      <nav id="quick-access-bar" role="toolbar" aria-label="Acceso rápido a nodos">
+        <button type="button" class="quick-slot empty" id="quick-slot-0" aria-label="Acceso 1 vacío">
+          <span class="qa-num">1</span><span class="qa-dot" hidden></span><span class="qa-label"></span>
+        </button>
+        <button type="button" class="quick-slot empty" id="quick-slot-1" aria-label="Acceso 2 vacío">
+          <span class="qa-num">2</span><span class="qa-dot" hidden></span><span class="qa-label"></span>
+        </button>
+        <button type="button" class="quick-slot empty" id="quick-slot-2" aria-label="Acceso 3 vacío">
+          <span class="qa-num">3</span><span class="qa-dot" hidden></span><span class="qa-label"></span>
+        </button>
+        <button type="button" class="quick-slot empty" id="quick-slot-3" aria-label="Acceso 4 vacío">
+          <span class="qa-num">4</span><span class="qa-dot" hidden></span><span class="qa-label"></span>
+        </button>
+        <button type="button" class="quick-slot empty" id="quick-slot-4" aria-label="Acceso 5 vacío">
+          <span class="qa-num">5</span><span class="qa-dot" hidden></span><span class="qa-label"></span>
+        </button>
+        <button type="button" class="quick-slot empty" id="quick-slot-5" aria-label="Acceso 6 vacío">
+          <span class="qa-num">6</span><span class="qa-dot" hidden></span><span class="qa-label"></span>
+        </button>
+      </nav>
+      <div id="legend">
+        <h3>Tipos de nodo</h3>
+        <div class="legend-item"><div class="legend-dot" style="background:#4fc3f7"></div><span class="legend-label">file</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffa726"></div><span class="legend-label">folder</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#66bb6a"></div><span class="legend-label">document</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff7043"></div><span class="legend-label">config</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ab47bc"></div><span class="legend-label">workspace</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef5350"></div><span class="legend-label">project</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffee58"></div><span class="legend-label">tag</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#546e7a"></div><span class="legend-label">otros</span></div>
+      </div>
+    </div>
+  </aside>
 
   <!-- Dynamic Ingest Modal -->
   <div class="modal-overlay" id="modal-container" aria-hidden="true">
