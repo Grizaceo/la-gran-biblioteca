@@ -137,11 +137,12 @@ def _project_constellation_stars(constellation: Dict[str, Any]) -> List[Dict[str
     out: List[Dict[str, float]] = []
     for p in projected:
         mag = p["mag"]
-        z = (6.0 - min(mag, 6.0)) * 12.0
+        # Keep figure flat (z=0) so the constellation shape reads correctly from any
+        # camera angle.  Magnitude is preserved for guide-star sizing in the frontend.
         out.append({
             "x": p["x"] * scale,
             "y": p["y"] * scale,
-            "z": z,
+            "z": 0.0,
             "mag": mag,
         })
     return out
@@ -271,14 +272,29 @@ def _layout_anchor_subtree(
     scale: float,
     nodes_by_id: Dict[str, Dict[str, Any]],
     parent_edges: Dict[str, str],
-) -> Dict[str, Tuple[float, float, float]]:
-    """Return node_id -> (x,y,z) for nodes under anchor."""
+) -> Tuple[Dict[str, Tuple[float, float, float]], List[Dict[str, float]]]:
+    """Return (node_positions, star_world_positions).
+
+    node_positions: node_id -> (x, y, z) for all nodes under anchor.
+    star_world_positions: list of {x, y, z, mag} for each catalog star in world coords.
+    """
     const = catalog.get(constellation_id)
     if not const:
-        return {}
+        return {}, []
 
-    stars = _project_constellation_stars(const)
-    stars.sort(key=lambda s: s["mag"])
+    stars = _project_constellation_stars(const)  # local coords, flat (z=0)
+    n_stars = len(stars)
+    ox, oy, oz = origin
+
+    # Compute star world positions (same transform applied to nodes later)
+    star_world: List[Dict[str, float]] = []
+    for s in stars:
+        star_world.append({
+            "x": ox + s["x"] * scale,
+            "y": oy + s["y"] * scale,
+            "z": oz + s["z"] * scale,
+            "mag": s["mag"],
+        })
 
     folders, files = _collect_subtree_nodes(graph, anchor_path)
     folders.sort(key=lambda n: (
@@ -287,19 +303,19 @@ def _layout_anchor_subtree(
     ))
 
     positions: Dict[str, Tuple[float, float, float]] = {}
-    ox, oy, oz = origin
 
+    # Round-robin assignment: folder[i] → star[i % n_stars] + small jitter so
+    # multiple folders can sit near the same star without overlap.
     for idx, folder in enumerate(folders):
-        if idx < len(stars):
-            sx, sy, sz = stars[idx]["x"], stars[idx]["y"], stars[idx]["z"]
-        else:
-            sx, sy, sz = _spiral_offset(idx - len(stars))
-        x = ox + sx * scale
-        y = oy + sy * scale
-        z = oz + sz * scale
+        star = stars[idx % n_stars] if n_stars else {"x": 0.0, "y": 0.0, "z": 0.0}
+        jitter_angle = (idx // n_stars) * 2.399963 if n_stars else 0.0
+        jitter_r = (idx // n_stars) * _FILE_ORBIT_RADIUS * 0.5 * scale if n_stars else 0.0
+        x = ox + star["x"] * scale + jitter_r * math.cos(jitter_angle)
+        y = oy + star["y"] * scale + jitter_r * math.sin(jitter_angle)
+        z = oz + star["z"] * scale
         positions[folder["id"]] = (x, y, z)
 
-    # Files orbit parent folder position
+    # Files cluster near their parent folder's assigned star
     folder_path_to_id = {
         _normalize_folder_path(n.get("path", "")): n["id"]
         for n in folders
@@ -322,10 +338,10 @@ def _layout_anchor_subtree(
             positions[fnode["id"]] = (
                 cx + r * math.cos(angle),
                 cy + r * math.sin(angle),
-                cz + (i % 3) * 6.0 * scale,
+                cz + (i % 3) * 4.0 * scale,
             )
 
-    return positions
+    return positions, star_world
 
 
 def _build_parent_map(graph: Dict[str, Any]) -> Dict[str, str]:
@@ -351,6 +367,9 @@ def apply_constellation_layout(
     then the scene is recentered at the origin with optional uniform scale-down.
     Nodes outside any anchor are placed on a peripheral Fibonacci cloud so zoomToFit
     is not stretched by the scan tree layout.
+
+    Adds ``graph["constellations"]`` — list of figure descriptors (star world positions
+    and line index pairs) for the frontend overlay renderer.
     """
     catalog = catalog_by_id()
     prefs_by_path: Dict[str, Dict[str, Any]] = {}
@@ -376,6 +395,12 @@ def apply_constellation_layout(
     all_positions: Dict[str, Tuple[float, float, float]] = {}
     anchor_world: Dict[str, Tuple[float, float, float]] = {}
 
+    # Per-anchor star world positions (pre-recenter) and lines
+    # Stored with sentinel keys so _recenter_positions transforms them identically.
+    # Key format: "__star__<anchor_idx>__<star_idx>"
+    star_sentinel_keys: List[Tuple[str, str, int]] = []  # (sentinel_key, anchor_path, star_idx)
+    anchor_figures_raw: Dict[str, Dict[str, Any]] = {}   # anchor_path -> raw figure info
+
     top_level_paths = sorted(
         [p for p in anchor_paths if _is_top_level_anchor(p, anchor_paths)],
     )
@@ -384,7 +409,7 @@ def apply_constellation_layout(
         for i, path in enumerate(top_level_paths)
     }
 
-    for anchor_path in anchor_paths:
+    for anchor_idx, anchor_path in enumerate(anchor_paths):
         pref = prefs_by_path[anchor_path]
         cid = pref.get("constellation_id")
         if not cid or cid not in catalog:
@@ -415,7 +440,7 @@ def apply_constellation_layout(
             origin = top_level_origins.get(anchor_path, (0.0, 0.0, 0.0))
             scale = 1.0
 
-        subtree_pos = _layout_anchor_subtree(
+        subtree_pos, star_world = _layout_anchor_subtree(
             graph,
             anchor_path,
             cid,
@@ -427,6 +452,22 @@ def apply_constellation_layout(
         )
         all_positions.update(subtree_pos)
         anchor_world[anchor_path] = origin
+
+        # Insert star positions under sentinel keys so they ride the recenter transform
+        const = catalog.get(cid, {})
+        lines = const.get("lines") or []
+        for si, sw in enumerate(star_world):
+            skey = f"__star__{anchor_idx}__{si}"
+            all_positions[skey] = (sw["x"], sw["y"], sw["z"])
+            star_sentinel_keys.append((skey, anchor_path, si))
+        anchor_figures_raw[anchor_path] = {
+            "id": cid,
+            "name": const.get("name", cid),
+            "name_es": const.get("name_es", cid),
+            "lines": lines,
+            "star_mags": [sw["mag"] for sw in star_world],
+            "sentinel_start": len(star_sentinel_keys) - len(star_world),
+        }
 
     has_confirmed = any(p.get("status") == "confirmed" for p in prefs_by_path.values())
     cloud_radius = (
@@ -462,6 +503,29 @@ def apply_constellation_layout(
             meta["constellation_status"] = pref.get("status")
         node["metadata"] = meta
 
+    # Build constellation figure descriptors from sentinel positions (post-recenter)
+    figures: List[Dict[str, Any]] = []
+    for anchor_path, fig_raw in anchor_figures_raw.items():
+        pref = prefs_by_path[anchor_path]
+        cid = pref.get("constellation_id", "")
+        stars_out: List[Dict[str, float]] = []
+        for skey, ap, si in star_sentinel_keys:
+            if ap != anchor_path:
+                continue
+            pos = all_positions.get(skey)
+            if pos:
+                x, y, z = pos
+                stars_out.append({"x": x, "y": y, "z": z, "mag": fig_raw["star_mags"][si]})
+        figures.append({
+            "constellation_id": cid,
+            "anchor": anchor_path,
+            "name": fig_raw["name"],
+            "name_es": fig_raw["name_es"],
+            "stars": stars_out,
+            "lines": fig_raw["lines"],
+        })
+
+    graph["constellations"] = figures
     return graph
 
 

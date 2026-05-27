@@ -11,8 +11,15 @@ from pydantic import BaseModel
 from ..app_deps import engine
 from ..constellation_layout import catalog_by_id, load_catalog
 from ..bridge_tasks import force_graph_update
+from .. import graph_state
 
 router = APIRouter(prefix="/api/constellation", tags=["constellation"])
+
+
+@router.get("/figures")
+async def get_constellation_figures():
+    """Current world-space figure geometry for the frontend overlay renderer."""
+    return {"figures": graph_state.get_constellation_figures()}
 
 
 @router.get("/catalog")

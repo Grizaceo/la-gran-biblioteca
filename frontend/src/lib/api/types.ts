@@ -7,6 +7,22 @@ export interface Node {
   position: { x: number; y: number; z?: number }
 }
 
+export interface ConstellationFigureStar {
+  x: number
+  y: number
+  z: number
+  mag: number
+}
+
+export interface ConstellationFigure {
+  constellation_id: string
+  anchor: string
+  name: string
+  name_es: string
+  stars: ConstellationFigureStar[]
+  lines: [number, number][]
+}
+
 export interface Edge {
   source: string
   target: string

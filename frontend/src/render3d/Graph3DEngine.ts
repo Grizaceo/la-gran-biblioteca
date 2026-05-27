@@ -2,7 +2,9 @@
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { Node, Edge, Graph } from '../lib/bridge'
+import type { ConstellationFigure } from '../lib/api/types'
 import { PALETTE } from './palette.js'
+import { buildFiguresGroup, disposeFiguresGroup } from './constellationFigures'
 import {
   getRenderProfile,
   createProgressiveLoader,
@@ -238,6 +240,7 @@ export class Graph3DEngine {
   private _savedStarfieldRotation = true
   private _savedPhotonsEnabled = true
   private _savedCooldownTicks = 0
+  private _figuresGroup: THREE.Group | null = null
   private _tick!: () => void
   private _lodNodeCount = 0
   private _progressivePump: (() => void) | null = null
@@ -793,7 +796,21 @@ export class Graph3DEngine {
 
   setLayoutMode(mode: LayoutMode): void {
     this.layoutMode = mode
+    if (mode !== 'constellation') this.setConstellationFigures(null)
     if (this._apiGraph) this.setGraph(this._apiGraph)
+  }
+
+  setConstellationFigures(figures: ConstellationFigure[] | null): void {
+    const scene = this.fg.scene() as THREE.Scene
+    if (this._figuresGroup) {
+      scene.remove(this._figuresGroup)
+      disposeFiguresGroup(this._figuresGroup)
+      this._figuresGroup = null
+    }
+    if (figures?.length) {
+      this._figuresGroup = buildFiguresGroup(figures)
+      scene.add(this._figuresGroup)
+    }
   }
 
   private getCurrentGraphSnapshot(): Graph | null {
@@ -1087,7 +1104,7 @@ export class Graph3DEngine {
   updateNodeStudyCount(nodeId: string, studyCount: number): void {
     const node = this.nodeIndex.get(nodeId)
     if (!node) return
-    const meta = { ...(node.metadata as Record<string, unknown>), study_count: studyCount }
+    const meta: Record<string, unknown> = { ...(node.metadata as Record<string, unknown>), study_count: studyCount }
     node.metadata = meta
     const degree = Number(node.degree) || 0
     node.weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
@@ -1118,6 +1135,7 @@ export class Graph3DEngine {
 
   destroy(): void {
     cancelAnimationFrame(this._rafId)
+    this.setConstellationFigures(null)
     sphereGeoCache.forEach(g => g.dispose())
     sphereGeoCache.clear()
     ringGeoCache.forEach(g => g.dispose())

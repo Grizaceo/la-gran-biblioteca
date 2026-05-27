@@ -8,6 +8,7 @@ import {
 import {
   confirmPref,
   loadCatalog,
+  loadFigures,
   loadPrefs,
   triggerConstellationRelayout,
 } from '../services/constellationService'
@@ -88,6 +89,11 @@ export function initConstellationSettings(
     saveViewPrefs({ ...loadViewPrefs(), layoutMode: mode })
     engine.setLayoutMode(mode)
     syncMenuLabel()
+    if (enabled) {
+      loadFigures()
+        .then((figs) => engine.setConstellationFigures(figs.length ? figs : null))
+        .catch((err) => console.warn('[LGB] constellation figures fetch failed', err))
+    }
   }
 
   function syncMenuLabel(): void {
@@ -253,6 +259,8 @@ export function initConstellationSettings(
     relayoutBtn?.addEventListener('click', async () => {
       try {
         await triggerConstellationRelayout()
+        const figs = await loadFigures()
+        engine.setConstellationFigures(figs.length ? figs : null)
         showToast?.('Layout recalculado')
       } catch (err) {
         showToast?.(`Error: ${(err as Error).message}`, true)

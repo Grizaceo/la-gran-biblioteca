@@ -19,6 +19,7 @@ _graph_state: dict = {
         "modes": {"workspace": [], "folder": [], "topic": []},
         "legend": {"workspaces": [], "topics": [], "roles": {}},
     },
+    "constellation_figures": [],
 }
 _node_index: dict[str, dict] = {}
 recently_imported_paths: list[str] = []
@@ -37,6 +38,14 @@ def set_current_graph(g: dict) -> None:
         g.get("edges", []),
         WORKSPACE_ROOT,
     )
+
+
+def get_constellation_figures() -> list:
+    return _graph_state["constellation_figures"]
+
+
+def set_constellation_figures(figures: list) -> None:
+    _graph_state["constellation_figures"] = figures or []
 
 
 def get_node_by_id(node_id: str) -> dict | None:

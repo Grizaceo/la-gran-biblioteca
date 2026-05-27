@@ -2,6 +2,7 @@ import { apiFetch, apiHeaders, handleResponseError } from './client'
 import type {
   ConstellationCatalogEntry,
   ConstellationDetail,
+  ConstellationFigure,
   ConstellationPref,
 } from './types'
 
@@ -53,6 +54,14 @@ export async function deleteConstellationPref(folderPath: string): Promise<{ sta
     headers: apiHeaders(),
   })
   if (!res.ok) await handleResponseError(res, 'No se pudo quitar la asignación')
+  return res.json()
+}
+
+export async function fetchConstellationFigures(): Promise<{
+  figures: ConstellationFigure[]
+}> {
+  const res = await apiFetch('/constellation/figures')
+  if (!res.ok) throw new Error(`Failed to fetch constellation figures: ${res.status}`)
   return res.json()
 }
 

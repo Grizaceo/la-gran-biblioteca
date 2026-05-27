@@ -2,6 +2,7 @@ import {
   deleteConstellationPref,
   fetchConstellationCatalog,
   fetchConstellationDetail,
+  fetchConstellationFigures,
   fetchConstellationPrefs,
   saveConstellationPref,
   triggerConstellationRelayout,
@@ -9,6 +10,7 @@ import {
 import type {
   ConstellationCatalogEntry,
   ConstellationDetail,
+  ConstellationFigure,
   ConstellationPref,
 } from '../lib/api/types'
 
@@ -59,6 +61,11 @@ export async function confirmPref(
 
 export async function removePref(folderPath: string): Promise<{ status: string }> {
   return deleteConstellationPref(folderPath)
+}
+
+export async function loadFigures(): Promise<ConstellationFigure[]> {
+  const data = await fetchConstellationFigures()
+  return data.figures || []
 }
 
 export { triggerConstellationRelayout }

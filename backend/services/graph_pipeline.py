@@ -12,6 +12,7 @@ from ..constants import WORKSPACE_ROOT
 from ..constellation_layout import apply_constellation_layout
 from ..graph_enrichment import enrich_graph_metadata
 from ..graph_engine import GraphEngine
+from .. import graph_state as _gs
 from ..scan_workspaces import (
     merge_scan_graphs,
     scan_import_paths,
@@ -82,8 +83,11 @@ def finalize_raw_graph(raw: dict[str, Any], engine: GraphEngine) -> dict[str, An
     prefs = engine.list_constellation_prefs()
     confirmed = [p for p in prefs if p.get("status") == "confirmed"]
     if not confirmed:
+        _gs.set_constellation_figures([])
         return raw
     graph = apply_constellation_layout(raw, prefs, only_confirmed=True)
+    figures = graph.pop("constellations", [])
+    _gs.set_constellation_figures(figures)
     return enrich_graph_metadata(graph, WORKSPACE_ROOT)
 
 
