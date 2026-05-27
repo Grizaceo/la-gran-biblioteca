@@ -82,6 +82,9 @@ O en `~/.claude/claude_desktop_config.json`:
 | `search_arxiv(query?, author?, category?, max_results?, sort?)` | Busca papers en arXiv (solo lectura; respeta ~1 req/3 s) |
 | `import_arxiv(arxiv_id)` | Importa paper de arXiv como Markdown |
 | `import_pubmed(pmid)` | Importa paper de PubMed como Markdown |
+| `import_doi(doi)` | Importa DOI como Markdown (`imports/doi/`) |
+| `import_pmc(pmcid)` | Importa referencia PMC (`imports/pmc/`) |
+| `import_preprint` (medRxiv/bioRxiv vía HTTP) | `POST /api/create/medrxiv` o `/api/create/biorxiv` con `{"id":"..."}` |
 | `explore(query, workspace?, depth=1)` | Búsqueda + subgrafo + previews truncados en una llamada |
 | `impact_files(paths[])` | BFS inverso: qué nodos referencian o dependen de esas rutas |
 | `get_tour(workspace)` | Pasos del tour generados desde `index.md` (wiki Karpathy) |

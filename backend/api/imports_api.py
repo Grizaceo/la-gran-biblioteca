@@ -14,6 +14,9 @@ from ..constants import WORKSPACE_ROOT
 from ..imports import (
     download_and_extract_github,
     import_arxiv,
+    import_doi,
+    import_pmc,
+    import_preprint,
     import_pubmed,
     search_arxiv,
 )
@@ -33,6 +36,18 @@ class ImportArxivRequest(BaseModel):
 
 
 class ImportPubmedRequest(BaseModel):
+    id: str
+
+
+class ImportDoiRequest(BaseModel):
+    doi: str
+
+
+class ImportPmcRequest(BaseModel):
+    pmcid: str
+
+
+class ImportPreprintRequest(BaseModel):
     id: str
 
 
@@ -128,4 +143,71 @@ async def create_pubmed(req: ImportPubmedRequest):
         }
     except Exception as e:
         logger.error("Error importando de PubMed: %s", e)
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
+
+
+def _import_file_response(file_path, workspace_root) -> dict:
+    rel_path = str(file_path.relative_to(workspace_root))
+    node_id = node_id_for_import_path(file_path, workspace_root)
+    return {
+        "status": "ok",
+        "path": rel_path,
+        "node_id": node_id,
+        "workspace_root": str(workspace_root.resolve()),
+    }
+
+
+@router.post("/create/doi")
+async def create_doi(req: ImportDoiRequest):
+    try:
+        file_path = await asyncio.to_thread(import_doi, req.doi, WORKSPACE_ROOT)
+        graph_state.register_recently_imported(file_path)
+        asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
+        return _import_file_response(file_path, WORKSPACE_ROOT)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Error importando DOI: %s", e)
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
+
+
+@router.post("/create/pmc")
+async def create_pmc(req: ImportPmcRequest):
+    try:
+        file_path = await asyncio.to_thread(import_pmc, req.pmcid, WORKSPACE_ROOT)
+        graph_state.register_recently_imported(file_path)
+        asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
+        return _import_file_response(file_path, WORKSPACE_ROOT)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Error importando PMC: %s", e)
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
+
+
+@router.post("/create/medrxiv")
+async def create_medrxiv(req: ImportPreprintRequest):
+    try:
+        file_path = await asyncio.to_thread(import_preprint, "medrxiv", req.id, WORKSPACE_ROOT)
+        graph_state.register_recently_imported(file_path)
+        asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
+        return _import_file_response(file_path, WORKSPACE_ROOT)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Error importando medRxiv: %s", e)
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
+
+
+@router.post("/create/biorxiv")
+async def create_biorxiv(req: ImportPreprintRequest):
+    try:
+        file_path = await asyncio.to_thread(import_preprint, "biorxiv", req.id, WORKSPACE_ROOT)
+        graph_state.register_recently_imported(file_path)
+        asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
+        return _import_file_response(file_path, WORKSPACE_ROOT)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Error importando bioRxiv: %s", e)
         raise HTTPException(status_code=500, detail=safe_error_detail(e))

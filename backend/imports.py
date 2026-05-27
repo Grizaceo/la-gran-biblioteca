@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import re
 import zipfile
@@ -533,4 +534,208 @@ type: "paper"
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(md_content)
         
+    return file_path
+
+
+_DOI_CORE = re.compile(r"10\.\d{4,9}/[-._;()/:A-Za-z0-9]+", re.I)
+
+
+def _normalize_doi(raw: str) -> str:
+    s = raw.strip()
+    if not s:
+        raise ValueError("DOI vacio.")
+    lower = s.lower()
+    if lower.startswith("doi:"):
+        s = s[4:].strip()
+    if "doi.org/" in lower:
+        idx = lower.index("doi.org/")
+        s = s[idx + len("doi.org/") :]
+    elif "dx.doi.org/" in lower:
+        idx = lower.index("dx.doi.org/")
+        s = s[idx + len("dx.doi.org/") :]
+    s = s.split("?")[0].split("#")[0].rstrip("/")
+    s = re.sub(r"[.,;)\]]+$", "", s)
+    m = _DOI_CORE.search(s)
+    if not m:
+        raise ValueError(f"DOI invalido: {raw!r}")
+    return m.group(0).lower()
+
+
+def _doi_filename_stem(doi: str) -> str:
+    safe = re.sub(r'[<>:"/\\|?*]', "_", doi.replace("/", "_"))
+    return safe[:120] or "doi_paper"
+
+
+def _normalize_pmcid(raw: str) -> str:
+    s = raw.strip().upper()
+    m = re.search(r"PMC(\d+)", s, re.I)
+    if not m:
+        raise ValueError(f"PMC ID invalido: {raw!r}")
+    return f"PMC{m.group(1)}"
+
+
+def _normalize_preprint_doi(raw: str) -> str:
+    s = raw.strip()
+    m = re.search(r"10\.1101/\S+", s, re.I)
+    if m:
+        return re.sub(r"v\d+$", "", m.group(0), flags=re.I).lower()
+    path_m = re.search(r"([\d]{4}\.[\d]{2}\.[\d]{2}\.[\d]+)(?:v\d+)?", s)
+    if path_m:
+        return f"10.1101/{path_m.group(1)}"
+    raise ValueError(f"ID de preprint invalido: {raw!r}")
+
+
+def _fetch_json(url: str) -> dict:
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "LaGranBiblioteca/1.0 (Python urllib)", "Accept": "application/json"},
+    )
+    try:
+        data = _urlopen(req)
+    except Exception as e:
+        logger.error("Error al obtener JSON %s: %s", url, e)
+        raise RuntimeError(f"Error al consultar {url}: {e}") from e
+    try:
+        return json.loads(data.decode("utf-8"))
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Respuesta JSON invalida de {url}") from e
+
+
+def _fetch_crossref_work(doi: str) -> tuple[str, list[str]]:
+    url = f"https://api.crossref.org/works/{quote(doi, safe='')}"
+    data = _fetch_json(url)
+    msg = data.get("message") or {}
+    titles = msg.get("title") or []
+    title = (titles[0] if titles else "").strip() or f"DOI {doi}"
+    authors: list[str] = []
+    for author in msg.get("author") or []:
+        if isinstance(author, dict):
+            name = (author.get("name") or "").strip()
+            if not name:
+                parts = [author.get("given"), author.get("family")]
+                name = " ".join(p for p in parts if p).strip()
+            if name:
+                authors.append(name)
+    return title, authors
+
+
+def _fetch_pmc_title(pmcid: str) -> str | None:
+    query = quote(f"PMCID:{pmcid}")
+    url = (
+        "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+        f"?query={query}&format=json&pageSize=1"
+    )
+    try:
+        data = _fetch_json(url)
+    except RuntimeError:
+        return None
+    results = (data.get("resultList") or {}).get("result") or []
+    if not results:
+        return None
+    title = (results[0].get("title") or "").strip()
+    return title or None
+
+
+def _fetch_preprint_title(kind: str, doi: str) -> str | None:
+    suffix = re.sub(r"^10\.1101/", "", doi, flags=re.I)
+    server = "medrxiv" if kind == "medrxiv" else "biorxiv"
+    url = f"https://api.biorxiv.org/details/{server}/{quote(suffix, safe='')}/na/json"
+    try:
+        data = _fetch_json(url)
+    except RuntimeError:
+        return None
+    collection = data.get("collection") or []
+    if not collection:
+        return None
+    title = (collection[0].get("title") or "").strip()
+    return title or None
+
+
+def import_doi(doi_input: str, workspace_root: Path) -> Path:
+    """Import a DOI as Markdown under imports/doi/."""
+    doi = _normalize_doi(doi_input)
+    url = f"https://doi.org/{doi}"
+    try:
+        title, authors = _fetch_crossref_work(doi)
+    except RuntimeError:
+        title, authors = f"DOI {doi}", []
+
+    dest_dir = workspace_root / "imports" / "doi"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    file_path = dest_dir / f"{_doi_filename_stem(doi)}.md"
+
+    authors_yaml = "\n".join(f"  - {_yaml_double_quoted(a)}" for a in authors) or "  []"
+    md_content = f"""---
+title: {_yaml_double_quoted(title)}
+doi: {_yaml_double_quoted(doi)}
+url: {_yaml_double_quoted(url)}
+type: "paper"
+tags: [{_yaml_double_quoted("doi")}, {_yaml_double_quoted("paper")}]
+authors:
+{authors_yaml}
+---
+
+# {title}
+
+{(", ".join(authors) + chr(10) + chr(10)) if authors else ""}[{url}]({url})
+"""
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    return file_path
+
+
+def import_pmc(pmc_input: str, workspace_root: Path) -> Path:
+    """Import a PMC article reference as Markdown under imports/pmc/."""
+    pmcid = _normalize_pmcid(pmc_input)
+    url = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
+    title = _fetch_pmc_title(pmcid) or pmcid
+
+    dest_dir = workspace_root / "imports" / "pmc"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    file_path = dest_dir / f"{pmcid}.md"
+
+    md_content = f"""---
+title: {_yaml_double_quoted(title)}
+pmcid: {_yaml_double_quoted(pmcid)}
+url: {_yaml_double_quoted(url)}
+type: "paper"
+tags: [{_yaml_double_quoted("pmc")}, {_yaml_double_quoted("paper")}]
+---
+
+# {title}
+
+[{url}]({url})
+"""
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    return file_path
+
+
+def import_preprint(kind: str, raw_id: str, workspace_root: Path) -> Path:
+    """Import a medRxiv or bioRxiv preprint as Markdown."""
+    if kind not in ("medrxiv", "biorxiv"):
+        raise ValueError(f"Tipo de preprint no soportado: {kind}")
+    doi = _normalize_preprint_doi(raw_id)
+    host = "www.medrxiv.org" if kind == "medrxiv" else "www.biorxiv.org"
+    url = f"https://{host}/content/{doi}v1"
+    title = _fetch_preprint_title(kind, doi) or f"{kind}: {doi}"
+
+    dest_dir = workspace_root / "imports" / kind
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    file_path = dest_dir / f"{_doi_filename_stem(doi)}.md"
+
+    md_content = f"""---
+title: {_yaml_double_quoted(title)}
+doi: {_yaml_double_quoted(doi)}
+url: {_yaml_double_quoted(url)}
+type: "preprint"
+tags: [{_yaml_double_quoted(kind)}, {_yaml_double_quoted("preprint")}]
+---
+
+# {title}
+
+[{url}]({url})
+"""
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
     return file_path

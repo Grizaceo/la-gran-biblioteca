@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 
 from backend.imports import (
     import_arxiv,
+    import_doi,
+    import_pmc,
+    import_preprint,
     import_pubmed,
     download_and_extract_github,
     _safe_extract_zip,
@@ -380,3 +383,112 @@ def test_api_create_endpoints(mock_urlopen):
             assert data["path"] == "imports/arxiv/2303.08774.md"
             assert data["node_id"] == "file_imports/arxiv/2303.08774.md"
             assert (workspace_root / "imports" / "arxiv" / "2303.08774.md").exists()
+
+
+MOCK_CROSSREF_JSON = {
+    "message": {
+        "title": ["Example Paper via DOI"],
+        "author": [{"given": "Jane", "family": "Doe"}],
+    }
+}
+
+MOCK_EUROPE_PMC_JSON = {
+    "resultList": {"result": [{"title": "PMC Example Article"}]}
+}
+
+MOCK_PREPRINT_JSON = {
+    "collection": [{"title": "A medRxiv Preprint Title"}]
+}
+
+
+@patch("backend.imports._fetch_json")
+def test_import_doi(mock_fetch_json):
+    mock_fetch_json.return_value = MOCK_CROSSREF_JSON
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        workspace_root = Path(tmp_dir)
+        file_path = import_doi("doi:10.1038/nature12373", workspace_root)
+        assert file_path.exists()
+        assert file_path.parent.name == "doi"
+        content = file_path.read_text(encoding="utf-8")
+        assert "10.1038/nature12373" in content
+        assert "Example Paper via DOI" in content
+        assert "Jane Doe" in content
+
+
+@patch("backend.imports._fetch_json")
+def test_import_doi_stub_on_network_error(mock_fetch_json):
+    mock_fetch_json.side_effect = RuntimeError("network")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        workspace_root = Path(tmp_dir)
+        file_path = import_doi("10.1038/nature12373", workspace_root)
+        content = file_path.read_text(encoding="utf-8")
+        assert "DOI 10.1038/nature12373" in content
+
+
+@patch("backend.imports._fetch_json")
+def test_import_pmc(mock_fetch_json):
+    mock_fetch_json.return_value = MOCK_EUROPE_PMC_JSON
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        workspace_root = Path(tmp_dir)
+        file_path = import_pmc("PMC1234567", workspace_root)
+        assert file_path.name == "PMC1234567.md"
+        content = file_path.read_text(encoding="utf-8")
+        assert "PMC Example Article" in content
+        assert "PMC1234567" in content
+
+
+@patch("backend.imports._fetch_json")
+def test_import_preprint_medrxiv(mock_fetch_json):
+    mock_fetch_json.return_value = MOCK_PREPRINT_JSON
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        workspace_root = Path(tmp_dir)
+        file_path = import_preprint(
+            "medrxiv",
+            "https://www.medrxiv.org/content/10.1101/2024.01.01.12345678v1",
+            workspace_root,
+        )
+        assert file_path.parent.name == "medrxiv"
+        content = file_path.read_text(encoding="utf-8")
+        assert "10.1101/2024.01.01.12345678" in content
+        assert "A medRxiv Preprint Title" in content
+
+
+@patch("backend.imports._fetch_json")
+def test_api_create_doi_pmc_preprint(mock_fetch_json):
+    def fetch_side_effect(url: str) -> dict:
+        if "crossref.org" in url:
+            return MOCK_CROSSREF_JSON
+        if "europepmc" in url:
+            return MOCK_EUROPE_PMC_JSON
+        if "biorxiv.org" in url:
+            return MOCK_PREPRINT_JSON
+        raise RuntimeError(f"unexpected url {url}")
+
+    mock_fetch_json.side_effect = fetch_side_effect
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        workspace_root = Path(tmp_dir)
+        with patch("backend.constants.WORKSPACE_ROOT", workspace_root), patch(
+            "backend.api.imports_api.WORKSPACE_ROOT", workspace_root
+        ):
+            client = TestClient(bridge.app)
+
+            resp = client.post("/api/create/doi", json={"doi": "10.1038/nature12373"})
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "ok"
+            assert "imports/doi/" in resp.json()["path"]
+
+            resp = client.post("/api/create/pmc", json={"pmcid": "PMC999"})
+            assert resp.status_code == 200
+            assert (workspace_root / "imports" / "pmc" / "PMC999.md").exists()
+
+            resp = client.post(
+                "/api/create/biorxiv",
+                json={"id": "10.1101/2024.01.01.99999999"},
+            )
+            assert resp.status_code == 200
+            assert (workspace_root / "imports" / "biorxiv").is_dir()
