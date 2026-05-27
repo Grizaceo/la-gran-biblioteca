@@ -15,6 +15,17 @@ export const HELP_GUIDE_HTML = `
   </section>
 
   <section class="help-block">
+    <h3>Barra de búsqueda (tres pestañas)</h3>
+    <p>El botón de <strong>tipo</strong> (a la izquierda del campo) filtra por markdown, carpeta, código, etc.</p>
+    <ul>
+      <li><strong>Buscar</strong> — texto en nombre, ruta, temas o tags. Escribe y elige un resultado.</li>
+      <li><strong>Relacionados</strong> — escribe un tema o nota de partida; lista <em>nodos enlazados</em> en el grafo (wikilinks y otras aristas). No muestra la nota buscada, sino sus vecinos.</li>
+      <li><strong>Hubs</strong> — nodos con más enlaces. Puedes dejar el campo vacío: al cambiar a esta pestaña verás los más conectados del vault (útil para ver «centros» del conocimiento).</li>
+    </ul>
+    <p class="help-note">En cada resultado, la línea gris (<em>why</em>) explica el motivo: coincidencia de texto, <code>hub grado=N</code> o tipos de enlace. Detalle técnico: <code>docs/search-bar.md</code> en el repo.</p>
+  </section>
+
+  <section class="help-block">
     <h3>Paneles izquierdos (Ver → o botones Tipos / Cobertura / Vista)</h3>
     <ul>
       <li><strong>Cobertura</strong> — resumen por workspace (volumen y estudio). Clic en una tarjeta aplica filtro + acerca la cámara.</li>

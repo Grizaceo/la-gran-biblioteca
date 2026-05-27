@@ -1,9 +1,25 @@
+/**
+ * Barra de búsqueda del grafo 3D.
+ *
+ * Modos (pestañas → GET /api/search?mode=…):
+ * - text: FTS en etiqueta, ruta, topics y tags.
+ * - related: vecinos de hasta 10 semillas (wikilinks pesan más).
+ * - hub: ranking por grado de enlace (consulta vacía = top hubs).
+ *
+ * Ver docs/search-bar.md y la ayuda in-app (helpGuide.ts).
+ */
 import MiniSearch from 'minisearch'
 import * as THREE from 'three'
 import { PALETTE } from '../palette.js'
 import { fetchSearch } from '../../lib/api/search'
 
 const DEBOUNCE_MS = 160
+
+const PLACEHOLDERS = {
+  text: 'Nombre, ruta o tema… (Ctrl+K)',
+  related: 'Término de partida (nota o tema)…',
+  hub: 'Opcional: acota por texto; vacío = top enlazados',
+}
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
@@ -19,7 +35,6 @@ export function initSearch(forceGraph, engine = null) {
   const searchTypeDropdown = document.getElementById('search-type-dropdown')
   const searchTypeDot = document.getElementById('search-type-dot')
   const searchTypeLabel = document.getElementById('search-type-label')
-  const searchModeSelect = document.getElementById('search-mode-select')
   const searchTabs = [...document.querySelectorAll('[data-search-tab]')]
 
   let allNodes = []
@@ -27,7 +42,12 @@ export function initSearch(forceGraph, engine = null) {
   let debounceTimer = null
   let miniSearch = null
   let lastNodeIds = ''
+  /** @type {'text'|'related'|'hub'} */
   let activeTab = 'text'
+
+  function currentMode() {
+    return activeTab
+  }
 
   function setup(nodes) {
     const ids = nodes.map((n) => n.id).join(',')
@@ -88,7 +108,7 @@ export function initSearch(forceGraph, engine = null) {
     searchTypeDropdown.querySelectorAll('.type-filter-item').forEach((item) => {
       item.classList.toggle('active', item.dataset.type === type)
     })
-    if (searchInput.value.trim()) void doSearch()
+    if (searchInput.value.trim() || currentMode() === 'hub') void doSearch()
   }
 
   function focusNode(nodeId) {
@@ -152,9 +172,14 @@ export function initSearch(forceGraph, engine = null) {
     searchResults.classList.add('active')
   }
 
+  function showSearchHint(message) {
+    searchResults.innerHTML = `<div class="search-no-results">${escapeHtml(message)}</div>`
+    searchResults.classList.add('active')
+  }
+
   async function doSearch() {
     const query = searchInput.value.trim()
-    const mode = searchModeSelect.value || (activeTab === 'related' ? 'related' : 'text')
+    const mode = currentMode()
     const params = {
       q: query,
       mode,
@@ -167,6 +192,11 @@ export function initSearch(forceGraph, engine = null) {
       return
     }
 
+    if (!query && mode === 'related') {
+      showSearchHint('Escribe un término: se listan nodos enlazados en el grafo (no la nota en sí).')
+      return
+    }
+
     try {
       const response = await fetchSearch(params)
       renderResults(response.results)
@@ -175,8 +205,12 @@ export function initSearch(forceGraph, engine = null) {
       // Fallback to local search over the visible graph when the backend search fails.
     }
 
-    if (!query || !allNodes.length || !miniSearch) {
-      searchResults.classList.remove('active')
+    if (mode !== 'text' || !query || !allNodes.length || !miniSearch) {
+      if (mode === 'hub') {
+        showSearchHint('Modo Hubs requiere el servidor; comprueba que el backend esté activo.')
+      } else {
+        searchResults.classList.remove('active')
+      }
       return
     }
     let hits = miniSearch.search(query, { limit: 40 })
@@ -191,12 +225,15 @@ export function initSearch(forceGraph, engine = null) {
   }
 
   function setTab(tab) {
-    activeTab = tab
-    searchTabs.forEach((button) => button.classList.toggle('active', button.dataset.searchTab === tab))
-    searchModeSelect.value = tab === 'related' ? 'related' : 'text'
-    searchInput.placeholder = tab === 'related'
-      ? 'Explorar conexiones, hubs o nodos puente…'
-      : 'Buscar… (Ctrl+K)'
+    const mode = tab === 'related' || tab === 'hub' ? tab : 'text'
+    activeTab = mode
+    searchTabs.forEach((button) => {
+      const isActive = button.dataset.searchTab === mode
+      button.classList.toggle('active', isActive)
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false')
+    })
+    searchInput.placeholder = PLACEHOLDERS[mode] || PLACEHOLDERS.text
+    void doSearch()
   }
 
   searchResults.addEventListener('click', (e) => {
@@ -223,7 +260,6 @@ export function initSearch(forceGraph, engine = null) {
   })
 
   searchBtn.addEventListener('click', () => { void doSearch() })
-  searchModeSelect.addEventListener('change', () => { if (searchInput.value.trim()) void doSearch() })
 
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); void doSearch() }
@@ -264,7 +300,6 @@ export function initSearch(forceGraph, engine = null) {
     searchResults.classList.remove('active')
     searchResults.innerHTML = ''
     setTab('text')
-    if (searchModeSelect) searchModeSelect.value = 'text'
   }
 
   return { setup, focusNode, setTab, resetSearch }
