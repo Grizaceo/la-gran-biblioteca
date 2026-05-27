@@ -42,20 +42,46 @@ export async function fetchSubgraph(params: {
   return res.json()
 }
 
+const SSE_MAX_DELAY_MS = 30_000
+
 export function subscribeToUpdates(
   onUpdate: (graph: Graph, event: GraphUpdateEvent) => void,
   onError?: (err: Error) => void,
 ): () => void {
-  const evtSource = new EventSource(streamUrl())
+  let evtSource: EventSource | null = null
+  let retryDelay = 1000
+  let retryTimer: ReturnType<typeof setTimeout> | null = null
+  let stopped = false
 
-  evtSource.addEventListener('init', (e: MessageEvent) => {
-    onUpdate(JSON.parse(e.data), 'init')
-  })
-  evtSource.addEventListener('update', (e: MessageEvent) => {
-    onUpdate(JSON.parse(e.data), 'update')
-  })
-  evtSource.onerror = () => {
-    onError?.(new Error('SSE connection error'))
+  function connect(): void {
+    evtSource = new EventSource(streamUrl())
+
+    evtSource.addEventListener('init', (e: MessageEvent) => {
+      retryDelay = 1000
+      onUpdate(JSON.parse(e.data), 'init')
+    })
+    evtSource.addEventListener('update', (e: MessageEvent) => {
+      retryDelay = 1000
+      onUpdate(JSON.parse(e.data), 'update')
+    })
+    evtSource.onerror = () => {
+      evtSource?.close()
+      evtSource = null
+      onError?.(new Error('SSE connection error'))
+      if (!stopped) {
+        retryTimer = setTimeout(() => {
+          if (!stopped) connect()
+        }, retryDelay)
+        retryDelay = Math.min(retryDelay * 2, SSE_MAX_DELAY_MS)
+      }
+    }
   }
-  return () => evtSource.close()
+
+  connect()
+
+  return () => {
+    stopped = true
+    if (retryTimer) clearTimeout(retryTimer)
+    evtSource?.close()
+  }
 }

@@ -23,15 +23,7 @@ import {
 } from './constellationCopy'
 import { findFolderNodeId, flyCameraToNode } from './constellationFlyTo'
 import { openConstellationPickerModal } from './constellationPicker'
-
-function escapeHtml(s: string): string {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+import { escapeHtml } from '../lib/utils'
 
 function folderLabelFromPath(folderPath: string): string {
   const parts = folderPath.replace(/\\/g, '/').split('/').filter(Boolean)

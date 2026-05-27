@@ -23,11 +23,11 @@ export function setupTooltip(
   let mouseY = 0
   let isHovering = false
 
-  document.addEventListener('mousemove', (e) => {
+  function onMouseMove(e: MouseEvent): void {
     mouseX = e.clientX
     mouseY = e.clientY
-    if (isHovering) positionTooltip()
-  })
+    positionTooltip()
+  }
 
   function positionTooltip(): void {
     const tw = tooltip.offsetWidth
@@ -73,6 +73,9 @@ export function setupTooltip(
         ttPath.textContent = pathShort
         tooltip.appendChild(ttPath)
       }
+      if (!isHovering) {
+        document.addEventListener('mousemove', onMouseMove, { passive: true })
+      }
       isHovering = true
       tooltip.classList.add('active')
       tooltip.setAttribute('aria-hidden', 'false')
@@ -80,6 +83,9 @@ export function setupTooltip(
       container.style.cursor = 'pointer'
       onHover?.(node)
     } else {
+      if (isHovering) {
+        document.removeEventListener('mousemove', onMouseMove)
+      }
       isHovering = false
       tooltip.classList.remove('active')
       tooltip.setAttribute('aria-hidden', 'true')

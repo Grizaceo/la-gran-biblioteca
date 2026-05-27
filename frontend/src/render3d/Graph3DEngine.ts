@@ -227,6 +227,7 @@ export class Graph3DEngine {
   private _lodSegLow = 4
   private _inFocusMode = false
   private starfield: THREE.Points
+  private _starfieldOuterRadius = 0
   private hiddenTypes = new Set<string>()
   private _zoomOnStop = false
   private _rafId = 0
@@ -845,11 +846,14 @@ export class Graph3DEngine {
   private _rebuildStarfield(
     nodes: Record<string, unknown>[],
     profile: RenderProfile,
+    force = false,
   ): void {
-    const config = buildStarfieldConfig(
-      computeGraphBounds3D(nodes),
-      profile.starCount,
-    )
+    const bounds = computeGraphBounds3D(nodes)
+    const delta = Math.abs(bounds.radius - this._starfieldOuterRadius) / Math.max(1, this._starfieldOuterRadius)
+    if (!force && this.starfield && delta < 0.1) return
+
+    this._starfieldOuterRadius = bounds.radius
+    const config = buildStarfieldConfig(bounds, profile.starCount)
     const scene = this.fg.scene()
     if (this.starfield) {
       scene.remove(this.starfield)
@@ -992,7 +996,7 @@ export class Graph3DEngine {
     this._lodSegLow = Math.max(2, Math.floor(profile.nodeSegments * 0.6))
 
     this._applyLayoutForces(profile)
-    this._rebuildStarfield(processedNodes, profile)
+    this._rebuildStarfield(processedNodes, profile, true)
 
     // Optimize link geometry (Tube vs Simple Line) based on graph scale
     if (nodeCount >= 800) {
@@ -1010,6 +1014,7 @@ export class Graph3DEngine {
 
     this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
 
+    let pumpFrame = 0
     const pump = () => {
       if (this._paused) return
       if (result.done) {
@@ -1021,15 +1026,17 @@ export class Graph3DEngine {
       result = loader.append(profile.batchSize)
       this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
       this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
-      setTimeout(pump, profile.chunkDelay)
+      pumpFrame = requestAnimationFrame(pump)
     }
 
     if (!result.done) {
-      setTimeout(pump, profile.chunkDelay)
+      pumpFrame = requestAnimationFrame(pump)
     } else {
       this.refreshVisibility()
       this.refreshHeatmapAppearance()
     }
+    // expose cancel handle so pause() can stop in-flight loading
+    ;(this as Record<string, unknown>)._pumpFrame = pumpFrame
   }
 
   applyUpdate(g: Graph): void {
@@ -1091,11 +1098,11 @@ export class Graph3DEngine {
       result = loader.append(profile.batchSize)
       this.fg.graphData({ nodes: result.data.nodes, links: result.data.links })
       this.onLoadProgress?.({ loaded: result.loadedNodes, total: result.totalNodes })
-      setTimeout(pump, profile.chunkDelay)
+      requestAnimationFrame(pump)
     }
     this._progressivePump = pump
     if (!result.done) {
-      setTimeout(pump, profile.chunkDelay)
+      requestAnimationFrame(pump)
     } else {
       this.refreshVisibility()
     }

@@ -19,6 +19,7 @@ import { initAgentLensBar } from './ui/agentLensBar'
 import { initIndexTour } from './ui/indexTour'
 import { initCoverageMap } from './ui/coverageMap'
 import { resetExplorerState } from './ui/navigationReset'
+import { addActivityLog } from './lib/activityLog'
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ async function init(): Promise<void> {
       resetExplorer: () => explorerActions.reset(),
     })
 
-    // Activity Log Collapsible & Global Logger initialization
+    // Activity Log Collapsible
     const logPanel = document.getElementById('activity-log')
     const logHeader = document.getElementById('activity-log-header')
     if (logPanel && logHeader) {
@@ -159,34 +160,13 @@ async function init(): Promise<void> {
       })
     }
 
-    (window as any).addActivityLog = (msg: string, type: 'info' | 'success' | 'error' | 'warn' = 'info') => {
-      const content = document.getElementById('activity-log-content')
-      if (!content) return
-      const entry = document.createElement('div')
-      entry.className = `log-entry log-${type}`
-
-      const timeSpan = document.createElement('span')
-      timeSpan.className = 'log-time'
-      const now = new Date()
-      timeSpan.textContent = now.toTimeString().split(' ')[0]
-
-      const textSpan = document.createElement('span')
-      textSpan.className = 'log-text'
-      textSpan.textContent = msg
-
-      entry.appendChild(timeSpan)
-      entry.appendChild(textSpan)
-      content.appendChild(entry)
-      content.scrollTop = content.scrollHeight
-    }
-
     engine.onNodeClick(async (node) => {
       await panel.selectNode(node.id as string)
     })
 
     window.addEventListener('resize', () => {
       const { width, height } = container.getBoundingClientRect()
-      engine.fg.width(width).height(height)
+      if (width > 0 && height > 0) engine.fg.width(width).height(height)
     })
   } catch (err) {
     showError(`Error UI: ${(err as Error).message}`, err as Error)
@@ -207,13 +187,8 @@ async function init(): Promise<void> {
 
   statusEl.textContent = 'Conectado'
 
-  if ((window as any).addActivityLog) {
-    (window as any).addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success')
-    ;(window as any).addActivityLog(
-      `Grafo inicial cargado: ${graph.nodes.length} nodos y ${graph.edges.length} enlaces.`,
-      'info',
-    )
-  }
+  addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success')
+  addActivityLog(`Grafo inicial cargado: ${graph.nodes.length} nodos y ${graph.edges.length} enlaces.`, 'info')
 
   step('5/6 Iniciando minimap y búsqueda…')
   try {
@@ -240,9 +215,7 @@ async function init(): Promise<void> {
         dismissAgentLens: () => agentLensBar.dismissAgentLensUi?.(),
       })
       showToast('Vista y filtros restablecidos', false)
-      if ((window as any).addActivityLog) {
-        (window as any).addActivityLog('Explorador restablecido (cámara, búsqueda, filtros).', 'info')
-      }
+      addActivityLog('Explorador restablecido (cámara, búsqueda, filtros).', 'info')
     }
 
     document.getElementById('btn-reset')!.addEventListener('click', () => {
@@ -311,12 +284,15 @@ async function init(): Promise<void> {
         getCurrentNodeId: () => panel.getCurrentNodeId(),
         refreshNeighbors: (id) => { panel.refreshNeighbors(id) },
         selectNode: (id, delay) => panel.selectNode(id, delay),
-        addActivityLog: (window as any).addActivityLog,
+        addActivityLog,
         isGraphHydrated: () => graphHydrated,
         setGraphHydrated: (v) => { graphHydrated = v },
       })
     })
-    window.addEventListener('beforeunload', unsubscribe)
+    window.addEventListener('beforeunload', () => {
+      unsubscribe()
+      agentLensBar.destroy()
+    })
   } catch (err) {
     showError(`Error minimap/búsqueda: ${(err as Error).message}`, err as Error)
     return
@@ -327,7 +303,9 @@ async function init(): Promise<void> {
   setTimeout(() => { loadingEl.style.display = 'none' }, 500)
 
   document.title = 'La Gran Biblioteca'
-  console.log('[LGB] Ready —', graph.nodes.length, 'nodes,', graph.edges.length, 'edges')
+  if (import.meta.env.DEV) {
+    console.log('[LGB] Ready —', graph.nodes.length, 'nodes,', graph.edges.length, 'edges')
+  }
 }
 
 init().catch(err => console.error('[LGB] Init failed:', err))

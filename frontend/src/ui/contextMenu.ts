@@ -23,8 +23,10 @@ export function setupContextMenu(
   onQuickAccessChange: () => void,
 ): void {
   const ctxMenu = document.getElementById('ctx-menu')!
+  let repositionRafId = 0
 
   function hideCtxMenu(): void {
+    cancelAnimationFrame(repositionRafId)
     ctxMenu.style.display = 'none'
     ctxMenu.innerHTML = ''
     ctxMenu.classList.remove('ctx-menu-flip')
@@ -143,7 +145,7 @@ export function setupContextMenu(
     ctxMenu.style.left = `${x}px`
     ctxMenu.style.top = `${y}px`
 
-    requestAnimationFrame(() => {
+    repositionRafId = requestAnimationFrame(() => {
       const rect = ctxMenu.getBoundingClientRect()
       let left = x
       let top = y

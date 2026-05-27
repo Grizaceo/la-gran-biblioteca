@@ -1,20 +1,57 @@
 :root {
+  /* ── Backgrounds ─────────────────────────────────────────────────── */
   --color-bg-deep: #000011;
-  --color-accent: #4fc3f7;
-  --color-error: #e57373;
   --panel-bg: rgba(0, 0, 17, 0.92);
+  --panel-bg-medium: rgba(0, 0, 17, 0.85);
   --panel-bg-strong: rgba(0, 0, 17, 0.97);
+  --surface-subtle: rgba(255, 255, 255, 0.05);
+  --surface-low: rgba(255, 255, 255, 0.08);
+  --surface-mid: rgba(255, 255, 255, 0.15);
+
+  /* ── Borders ─────────────────────────────────────────────────────── */
   --panel-border: rgba(255, 255, 255, 0.1);
+  --border-faint: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.25);
+
+  /* ── Text ────────────────────────────────────────────────────────── */
   --text-primary: rgba(255, 255, 255, 0.85);
+  --text-secondary: rgba(255, 255, 255, 0.6);
   --text-muted: rgba(255, 255, 255, 0.4);
+  --text-faint: rgba(255, 255, 255, 0.3);
+  --text-bright: rgba(255, 255, 255, 0.9);
+
+  /* ── Accent (sky blue) ───────────────────────────────────────────── */
+  --color-accent: #4fc3f7;
+  --accent-glow-strong: rgba(79, 195, 247, 0.4);
+  --accent-glow-mid: rgba(79, 195, 247, 0.25);
+  --accent-glow-faint: rgba(79, 195, 247, 0.12);
+
+  /* ── Semantic ────────────────────────────────────────────────────── */
+  --color-error: #e57373;
+  --color-success: #66bb6a;
+  --color-warn: #ffa726;
+
+  /* ── Spacing ─────────────────────────────────────────────────────── */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
   --space-lg: 16px;
   --space-xl: 24px;
+
+  /* ── Layout ──────────────────────────────────────────────────────── */
   --detail-panel-width: min(480px, 100vw);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* ── Typography ──────────────────────────────────────────────────── */
   --font-ui: 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Courier New', monospace;
+  --font-size-sm: 11px;
+  --font-size-md: 13px;
+  --font-size-lg: 15px;
+
+  /* ── Motion ──────────────────────────────────────────────────────── */
   --transition-fast: 0.15s ease;
   --transition-panel: 0.25s ease;
 }

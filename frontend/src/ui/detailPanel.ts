@@ -16,6 +16,7 @@ import { findFolderNodeId, flyCameraToNode } from './constellationFlyTo'
 import type { ConstellationSettingsAPI } from './constellationSettings'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { escapeHtml } from '../lib/utils'
 
 let hljsPromise: Promise<typeof import('highlight.js').default> | null = null
 
@@ -29,11 +30,6 @@ async function getHljs() {
   return hljsPromise
 }
 
-const ESC_RE = /[&<>"']/g
-const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
-function escapeHtml(s: string | null | undefined): string {
-  return String(s ?? '').replace(ESC_RE, c => ESC_MAP[c])
-}
 function escapeAttr(s: string | null | undefined): string {
   return escapeHtml(s)
 }
