@@ -11,7 +11,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:css-colors": "node scripts/lint-css-colors.mjs"
   },
   "dependencies": {
     "3d-force-graph": "^1.73.0",

@@ -1,0 +1,208 @@
+/* @component: minimap */
+    /* Breadcrumb */
+    #breadcrumb {
+      display: none;
+      position: absolute;
+      top: 52px;
+      left: calc(12px + var(--config-dock-width, 0px) + 8px);
+      z-index: 23;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      align-items: center;
+      gap: 4px;
+      background: rgba(0,0,17,0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px;
+      padding: 4px 10px;
+      max-width: min(420px, calc(100vw - var(--config-dock-width, 0px) - 80px));
+      transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    #breadcrumb.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .bc-item {
+      cursor: pointer; color: rgba(255,255,255,0.5);
+      transition: color 0.2s;
+      max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .bc-item:hover { color: #4fc3f7; }
+    .bc-item:last-child { color: rgba(255,255,255,0.8); cursor: default; }
+    .bc-sep { color: rgba(255,255,255,0.15); margin: 0 2px; }
+
+    /* Minimap */
+    #minimap {
+      position: absolute; bottom: 20px; left: 20px;
+      width: 220px; min-height: 156px;
+      max-height: calc(100vh - 48px);
+      background: rgba(0,0,17,0.85);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      z-index: 20;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    #minimap.minimap-hidden {
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+    }
+    .minimap-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 10px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: rgba(255,255,255,0.7);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .minimap-controls { display: flex; gap: 4px; padding: 6px 8px 0; }
+    .minimap-chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: rgba(255,255,255,0.5);
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .minimap-chip.active {
+      color: #dff5ff;
+      border-color: rgba(79,195,247,0.4);
+      background: rgba(79,195,247,0.16);
+    }
+    .minimap-meta {
+      padding: 4px 10px 0;
+      color: rgba(255,255,255,0.35);
+      font-size: 10px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    #minimap-canvas-wrap { position: relative; width: 220px; height: 120px; margin-top: 4px; }
+    #minimap-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+    #minimap-viewbox {
+      position: absolute;
+      border: 1px solid rgba(79,195,247,0.5);
+      background: rgba(79,195,247,0.05);
+      pointer-events: none;
+    }
+    #minimap-tooltip {
+      position: absolute;
+      z-index: 3;
+      max-width: 200px;
+      padding: 4px 7px;
+      border-radius: 4px;
+      background: rgba(0, 0, 17, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: rgba(255, 255, 255, 0.82);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      line-height: 1.35;
+      pointer-events: none;
+      transform: translate(-50%, -100%);
+      display: none;
+    }
+    #minimap-tooltip.active { display: block; }
+    #minimap-picker {
+      position: absolute;
+      z-index: 4;
+      min-width: 160px;
+      max-width: 210px;
+      max-height: 140px;
+      overflow-y: auto;
+      padding: 6px;
+      border-radius: 6px;
+      background: rgba(0, 0, 17, 0.97);
+      border: 1px solid rgba(79, 195, 247, 0.35);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+      transform: translate(-50%, 4px);
+      display: none;
+    }
+    #minimap-picker.active { display: block; }
+    .minimap-picker-title {
+      padding: 2px 4px 6px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+    }
+    .minimap-picker-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 5px 6px;
+      margin-bottom: 2px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      color: rgba(255, 255, 255, 0.78);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .minimap-picker-item:hover {
+      border-color: rgba(79, 195, 247, 0.35);
+      background: rgba(79, 195, 247, 0.14);
+      color: #dff5ff;
+    }
+    #minimap-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 6px 8px 8px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    #minimap-list.minimap-list-dense {
+      max-height: 180px;
+    }
+    .minimap-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.65);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .minimap-list-item:hover {
+      background: rgba(79,195,247,0.12);
+      color: rgba(255,255,255,0.9);
+    }
+    .minimap-list-item.active {
+      border-color: rgba(79,195,247,0.45);
+      background: rgba(79,195,247,0.16);
+      color: #dff5ff;
+    }
+    .minimap-list-item.hovered {
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .minimap-list-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .minimap-list-count {
+      color: rgba(255,255,255,0.35);
+      font-family: 'Courier New', monospace;
+      flex-shrink: 0;
+    }

@@ -1,0 +1,23 @@
+/* @component: animations */
+@keyframes ctx-menu-in {
+      from { opacity: 0; transform: scale(0.96) translateY(4px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+@keyframes panelFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(79, 195, 247, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(79, 195, 247, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(79, 195, 247, 0); }
+    }
+
+@keyframes logFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }

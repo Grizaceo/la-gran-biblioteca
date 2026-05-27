@@ -70,7 +70,7 @@ O en `~/.claude/claude_desktop_config.json`:
 | `apply_lens(lens?, preset?)` | Valida lens + `search_preview` + nodo foco sugerido (no publica) |
 | `publish_lens(lens?, preset?, focus_node_id?, highlight_ids?)` | Publica vista para la barra UI (`GET /api/lens/current`) |
 | `list_workspaces()` | Workspaces de primer nivel con nodo-counts |
-| `search(query, node_type?, tag?, workspace?, limit?, offset?)` | Búsqueda texto/tag/tipo con paginación |
+| `search(query, mode?, node_type?, …)` | Búsqueda con `mode`: `text` (FTS), `related` (vecinos de semillas), `hub` (top por grado; `query` vacío OK). Ver `docs/search-bar.md` |
 | `get_node(id)` | Metadata + aristas de entrada/salida en una sola llamada |
 | `read_node(id, max_chars?)` | Contenido del archivo (truncado con `truncated=true` si es grande) |
 | `neighbors(id, direction?, depth?, limit?)` | BFS desde un nodo (`out`/`in`/`both`, depth≤3) |
@@ -112,6 +112,8 @@ El humano ve la **barra «Vista del agente»** (poll de `GET /api/lens/current`)
 ### Encontrar todo lo relacionado con un tema
 ```
 search("transformers", workspace="papers")
+search("transformers", mode="related", workspace="papers")   # vecinos en grafo (UI: pestaña Relacionados)
+search("", mode="hub", limit=15)                            # top nodos enlazados (UI: pestaña Hubs)
 neighbors("<id>", direction="both", depth=2)
 ```
 
@@ -166,8 +168,11 @@ frontend/src/
   lib/api/                   # client, graph, nodes, imports, constellation
   lib/bridge.ts              # Barrel re-export
   services/constellationService.ts
-  render3d/Graph3DEngine.ts  # WebGL 3D + d3-force
+  render3d/Graph3DEngine.ts  # orquestador WebGL 3D (LOD/Filter/Particle/Layout managers)
+  render3d/{LODManager,FilterManager,ParticleManager,LayoutManager,gpuCache}.ts
   render3d/renderOptimizations.ts  # perfiles adaptativos, carga progresiva
+  AppController.ts           # bootstrap UI (main.ts solo instancia)
+  styles/{base,layout,panels,search,...}.css  # módulos CSS (@component); tokens.css
   render3d/ui/               # search, minimap, focus, visibility
   ui/                        # detailPanel, menuBar, tooltip, contextMenu
 ```
