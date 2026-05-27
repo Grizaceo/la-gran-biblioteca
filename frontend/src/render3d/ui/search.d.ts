@@ -5,4 +5,7 @@ export function initSearch(
   engine?: Graph3DEngine | null,
 ): {
   setup: (nodes: unknown[]) => void
+  focusNode: (id: string) => void
+  setTab: (tab: string) => void
+  resetSearch: () => void
 }

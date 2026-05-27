@@ -149,7 +149,7 @@ export function initPanelDock(opts: PanelDockOptions = {}): PanelDockAPI {
     const closeBtn = (e.target as HTMLElement).closest('[data-panel-close]')
     if (!closeBtn) return
     e.stopPropagation()
-    const id = closeBtn.closest('.dock-panel')?.dataset.panel as ConfigPanelId | undefined
+    const id = (closeBtn.closest('.dock-panel') as HTMLElement | null)?.dataset.panel as ConfigPanelId | undefined
     if (id && PANEL_IDS.includes(id)) close(id)
   })
 

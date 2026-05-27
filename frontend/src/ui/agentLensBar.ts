@@ -17,7 +17,7 @@ export interface AgentLensBarHooks {
   enterAgentFocus?: (nodeId: string, depth: number) => void
 }
 
-export function initAgentLensBar(hooks: AgentLensBarHooks): { destroy: () => void } {
+export function initAgentLensBar(hooks: AgentLensBarHooks): { destroy: () => void; dismissAgentLensUi?: () => void } {
   const bar = document.getElementById('agent-lens-bar')
   if (!bar) return { destroy: () => {} }
 
@@ -42,12 +42,12 @@ export function initAgentLensBar(hooks: AgentLensBarHooks): { destroy: () => voi
   function render(session: SessionLensResponse): void {
     const lens = session.lens
     if (!lens) {
-      bar.classList.remove('active')
+      bar!.classList.remove('active')
       pending = null
       return
     }
 
-    bar.classList.add('active')
+    bar!.classList.add('active')
     pending = session
     if (labelEl) {
       labelEl.textContent = lens.label || lens.id || 'Vista del agente'
@@ -84,14 +84,14 @@ export function initAgentLensBar(hooks: AgentLensBarHooks): { destroy: () => voi
     }
 
     hooks.showToast('Vista del agente aplicada', false)
-    bar.classList.remove('pulse')
+    bar!.classList.remove('pulse')
   }
 
   async function poll(): Promise<void> {
     try {
       const session = await fetchLensCurrent()
       if (!session.lens) {
-        if (pending) bar.classList.remove('active')
+        if (pending) bar!.classList.remove('active')
         pending = null
         return
       }
@@ -99,7 +99,7 @@ export function initAgentLensBar(hooks: AgentLensBarHooks): { destroy: () => voi
       render(session)
       if (changed) {
         lastUpdatedAt = session.updated_at
-        bar.classList.add('pulse')
+        bar!.classList.add('pulse')
         if (autoApplyEnabled()) applyLens(session.lens)
       }
     } catch (err) {
@@ -131,7 +131,7 @@ export function initAgentLensBar(hooks: AgentLensBarHooks): { destroy: () => voi
   pollTimer = setInterval(() => { void poll() }, POLL_MS)
 
   function dismissAgentLensUi(): void {
-    bar.classList.remove('active', 'pulse')
+    bar!.classList.remove('active', 'pulse')
     pending = null
     lastUpdatedAt = null
     hooks.engine.setHighlightNodeIds([])

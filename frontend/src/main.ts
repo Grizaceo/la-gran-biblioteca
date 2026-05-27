@@ -233,11 +233,11 @@ async function init(): Promise<void> {
         clearFocus: () => focus.clearAllFocus(),
         resetSearch: () => search.resetSearch(),
         resetViewOptions: () => {
-          viewOptions.resetFilters()
+          viewOptions.resetFilters?.()
           viewOptions.renderList()
         },
         closeDetailPanel: () => panel.closePanel(),
-        dismissAgentLens: () => agentLensBar.dismissAgentLensUi(),
+        dismissAgentLens: () => agentLensBar.dismissAgentLensUi?.(),
       })
       showToast('Vista y filtros restablecidos', false)
       if ((window as any).addActivityLog) {
