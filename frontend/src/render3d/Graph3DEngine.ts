@@ -71,7 +71,6 @@ export class Graph3DEngine implements Graph3DEngineHost {
   private layout!: LayoutManager
 
   private starfield: THREE.Points
-  private _starfieldOuterRadius = 0
   private _zoomOnStop = false
   private _rafId = 0
   private _rafFrame = 0
@@ -507,7 +506,7 @@ export class Graph3DEngine implements Graph3DEngineHost {
     this._applyLodProfile(profile)
 
     this.layout.applyLayoutForces(profile)
-    this._rebuildStarfield(processedNodes, profile, true)
+    this._rebuildStarfield(processedNodes, profile)
 
     if (nodeCount >= 800) {
       this.fg.linkResolution(0)
@@ -659,15 +658,8 @@ export class Graph3DEngine implements Graph3DEngineHost {
   private _rebuildStarfield(
     nodes: Record<string, unknown>[],
     profile: RenderProfile,
-    force = false,
   ): void {
-    const bounds = computeGraphBounds3D(nodes)
-    const delta = Math.abs(bounds.radius - this._starfieldOuterRadius)
-      / Math.max(1, this._starfieldOuterRadius)
-    if (!force && this.starfield && delta < 0.1) return
-
-    this._starfieldOuterRadius = bounds.radius
-    const config = buildStarfieldConfig(bounds, profile.starCount)
+    const config = buildStarfieldConfig(computeGraphBounds3D(nodes), profile.starCount)
     const scene = this.fg.scene()
     if (this.starfield) {
       scene.remove(this.starfield)
