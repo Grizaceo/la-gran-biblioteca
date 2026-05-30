@@ -14,5 +14,9 @@ export const PALETTE = {
   note:      '#78909c',
   annotates: '#4fc3f7',
   concept:   '#ce93d8',
-  default:   '#546e7a',
+  contains:  '#9575cd',
+  tagged:    '#c778dd',
+  references:'#80cbc4',
+  'co-located':'#7e57c2',
+  default:   '#bcaaa4',
 }

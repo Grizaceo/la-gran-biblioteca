@@ -266,7 +266,7 @@ export class Graph3DEngine implements Graph3DEngineHost {
       })
       .linkOpacity((link: Record<string, unknown>) => {
         const type = (link.type as string) || 'default'
-        return type === 'annotates' ? 0.9 : 0.7
+        return type === 'annotates' ? 1.0 : 0.85
       })
       .linkWidth((link: Record<string, unknown>) => {
         const type = (link.type as string) || 'default'
@@ -516,7 +516,7 @@ export class Graph3DEngine implements Graph3DEngineHost {
     this._rebuildStarfield(processedNodes, profile)
 
     if (nodeCount >= 800) {
-      this.fg.linkResolution(0)
+      this.fg.linkResolution(2)
     } else {
       this.fg.linkResolution(6)
     }
@@ -585,7 +585,7 @@ export class Graph3DEngine implements Graph3DEngineHost {
     this.layout.applyLayoutForces(profile)
     this._rebuildStarfield(nodes, profile)
     if (nodes.length >= 800) {
-      this.fg.linkResolution(0)
+      this.fg.linkResolution(2)
     } else {
       this.fg.linkResolution(6)
     }
