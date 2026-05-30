@@ -1,4 +1,4 @@
-export function initFocus(forceGraph, engine) {
+export function initFocus(forceGraph, engine, getCurrentNodeId) {
   const focusBanner = document.getElementById('focus-banner')
   const focusName   = document.getElementById('focus-name')
   const focusBack   = document.getElementById('focus-back')
@@ -159,9 +159,14 @@ export function initFocus(forceGraph, engine) {
     } else if (lastHoveredNode) {
       enterFocusMode(lastHoveredNode.id)
     } else {
-      focusName.textContent = 'Hover a node first'
-      focusBanner.classList.add('active')
-      setTimeout(() => { if (!currentFocusNode) focusBanner.classList.remove('active') }, 2000)
+      const panelNodeId = getCurrentNodeId?.()
+      if (panelNodeId) {
+        enterFocusMode(panelNodeId)
+      } else {
+        focusName.textContent = 'Hover a node first'
+        focusBanner.classList.add('active')
+        setTimeout(() => { if (!currentFocusNode) focusBanner.classList.remove('active') }, 2000)
+      }
     }
   })
 

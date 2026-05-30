@@ -145,6 +145,18 @@ def get_limited_graph() -> dict:
         selected_nodes = ranked[:GRAPH_NODE_CAP]
         selected_ids = {n["id"] for n in selected_nodes}
 
+        # Ensure note orbit anchors are always included so annotates edges survive
+        for n in nodes:
+            if n["id"] in selected_ids:
+                continue
+            if n.get("type") != "note":
+                continue
+            meta = n.get("metadata") or {}
+            anchor = meta.get("orbit_anchor") or meta.get("source_node_id")
+            if anchor and anchor in selected_ids:
+                selected_nodes.append(n)
+                selected_ids.add(n["id"])
+
         for n in nodes:
             if n["id"] in selected_ids:
                 continue

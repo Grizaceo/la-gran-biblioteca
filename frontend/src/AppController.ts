@@ -214,7 +214,7 @@ export class AppController {
   private wireUi(): void {
     initPanelDock()
 
-    this.focus = initFocus(this.engine.fg, this.engine)
+    this.focus = initFocus(this.engine.fg, this.engine, () => this.panel.getCurrentNodeId())
 
     this.coverageMap = initCoverageMap({
       engine: this.engine,
