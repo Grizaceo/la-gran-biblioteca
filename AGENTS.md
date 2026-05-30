@@ -39,7 +39,7 @@ LGB ofrece `impact_files()` a nivel **archivo** (wikilinks + `depends_on` heurí
 Usa el MCP server `la-gran-biblioteca` en lugar de leer código o llamar a `curl`.
 Es más rápido, más seguro (path-validated) y no gasta tokens parseando JSON a mano.
 
-Tras **cualquier mutación MCP** (`create_file`, `import_arxiv`, `import_github`, …) llama `rescan()` antes de confiar en `search()` o `overview()` — el proceso MCP mantiene su propia copia del grafo en RAM (ver bridge vs MCP más abajo).
+Tras **cualquier mutación MCP** (`create_file`, `import_arxiv`, `import_github`, `create_note`, `delete_note`, …) llama `rescan()` antes de confiar en `search()` o `overview()` si el grafo parece desactualizado — `create_note` / `delete_note` ya ejecutan `_rescan_and_reload()` inline; en sesiones largas un `rescan()` extra no hace daño. El proceso MCP mantiene su propia copia del grafo en RAM (ver bridge vs MCP más abajo).
 
 ### Configurar el MCP en Claude Code
 
@@ -71,13 +71,19 @@ O en `~/.claude/claude_desktop_config.json`:
 | `publish_lens(lens?, preset?, focus_node_id?, highlight_ids?)` | Publica vista para la barra UI (`GET /api/lens/current`) |
 | `list_workspaces()` | Workspaces de primer nivel con nodo-counts |
 | `search(query, mode?, node_type?, …)` | Búsqueda con `mode`: `text` (FTS), `related` (vecinos de semillas), `hub` (top por grado; `query` vacío OK). Ver `docs/search-bar.md` |
-| `get_node(id)` | Metadata + aristas de entrada/salida en una sola llamada |
+| `get_node(id)` | Metadata + aristas + `attached_notes` (preview) cuando el nodo es documento fuente |
 | `read_node(id, max_chars?)` | Contenido del archivo (truncado con `truncated=true` si es grande) |
 | `neighbors(id, direction?, depth?, limit?)` | BFS desde un nodo (`out`/`in`/`both`, depth≤3) |
 | `mark_studied(id)` | Incrementa `study_count` en el nodo |
 | `rescan()` | Fuerza re-escaneo del workspace |
 | `create_file(relative_path, content?)` | Crea archivo dentro del workspace |
 | `create_folder(relative_path)` | Crea carpeta dentro del workspace |
+| `create_note(source_node_id, body, title?, labels?, selected_text?, storage?)` | Crea nota ligada a un nodo: `storage=vault` (default MCP, `_notes/`) o `storage=inline` (bloque `<!-- lgb-note -->` en el `.md` fuente); rescanea el grafo MCP |
+| `get_note(note_id)` | Lee una nota por id corto (inline o vault) |
+| `update_note(note_id, title?, body?, labels?)` | Actualiza nota inline o vault; rescanea el grafo MCP |
+| `search_notes(query?, label?, source_node_id?, limit?)` | Busca notas en todo el vault (inline + `_notes/`) |
+| `list_notes(source_node_id)` | Lista notas inline + vault de un nodo fuente |
+| `delete_note(note_id)` | Borra nota por id corto (8 chars); rescanea el grafo MCP |
 | `import_github(repo_url)` | Descarga repo público de GitHub |
 | `search_arxiv(query?, author?, category?, max_results?, sort?)` | Busca papers en arXiv (solo lectura; respeta ~1 req/3 s) |
 | `import_arxiv(arxiv_id)` | Importa paper de arXiv como Markdown |
@@ -147,7 +153,7 @@ Hay **dos procesos independientes** que comparten `backend/library.db` y `WORKSP
 
 1. **Cambios en la UI o por watchdog** (rescan automático, imports desde el menú): el MCP sigue con datos viejos hasta que llames `rescan()` en el MCP o **reinicies** el proceso MCP.
 2. **Mutaciones por MCP** (`create_file`, `import_arxiv`, etc.): escriben en disco y en SQLite solo tras `rescan()`; la UI no muestra nodos nuevos hasta `POST /api/rescan`, un rescan por watchdog, o reiniciar el bridge.
-3. **`create_file` / imports no llaman `rescan()` solos** — el agente debe ejecutar `rescan()` antes de `search()` si quiere ver el nodo nuevo.
+3. **`create_file` / imports no llaman `rescan()` solos** — el agente debe ejecutar `rescan()` antes de `search()` si quiere ver el nodo nuevo. **`create_note` / `delete_note` sí rescanean inline**; usa `rescan()` si aún ves datos viejos.
 4. **`overview().recent_imports`** en MCP solo lista imports hechos **en esa sesión MCP**; los de la UI viven en `graph_state` del bridge.
 
 Ambos usan el mismo pipeline (`rebuild_graph` en `services/graph_pipeline.py`) cuando rescanean.

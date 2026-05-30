@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["graph"])
 
 
+@router.get("/health")
+async def health():
+    return {"status": "ok", "service": "la-gran-biblioteca"}
+
+
 @router.get("/graph")
 async def get_graph():
     return graph_state.get_limited_graph()

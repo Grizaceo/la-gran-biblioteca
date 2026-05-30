@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from backend.graph_enrichment import build_graph_structure_summary, enrich_graph_metadata
 from backend.lens import (
     DEFAULT_LENS,

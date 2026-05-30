@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .layout import file_node_id
-from .markdown import extract_wikilinks, parse_markdown_file
+from .markdown import extract_wikilinks
 
 logger = logging.getLogger(__name__)
 

@@ -87,8 +87,10 @@ mcp = FastMCP(
     instructions=(
         "La Gran Biblioteca is a knowledge graph of files scanned from "
         f"{WORKSPACE_ROOT}. A 'node' is a file or folder; an 'edge' represents "
-        "a link (wikilink, import, etc.). Always start with `overview` to get "
-        "the big picture, then use `search` or `get_node` to zoom in."
+        "a link (wikilink, import, annotates, etc.). Notes may live inline in "
+        "source markdown (<!-- lgb-note --> blocks) or under _notes/ (vault). "
+        "Use get_node(source) → attached_notes or list_notes / search_notes for "
+        "annotations. Always start with overview, then search or get_node."
     ),
 )
 
@@ -276,7 +278,20 @@ def get_node(node_id: str) -> dict:
         ins = list(_adj_in.get(node_id, []))
     if n is None:
         return {"error": f"Node {node_id!r} not found"}
-    return {**n, "out_edges": out, "in_edges": ins}
+    result = {**n, "out_edges": out, "in_edges": ins}
+    meta = n.get("metadata") or {}
+    if n.get("type") not in ("folder", "workspace", "project") and n.get("path"):
+        from .services.note_service import attached_notes_preview
+
+        try:
+            result["attached_notes"] = attached_notes_preview(node_id)
+        except Exception:
+            pass
+    elif n.get("type") == "note":
+        anchor = meta.get("source_node_id") or meta.get("orbit_anchor")
+        if anchor:
+            result["source_anchor_id"] = anchor
+    return result
 
 
 @mcp.tool()
@@ -433,6 +448,16 @@ def explore(
         workspace=workspace,
         limit=120,
     )
+
+    with _lock:
+        for e in _graph["edges"]:
+            if e.get("type") == "annotates" and e.get("target") == focus_id:
+                note_id = e.get("source")
+                if note_id and note_id not in {n.get("id") for n in sub.get("nodes", [])}:
+                    note_node = _node_index.get(note_id)
+                    if note_node:
+                        sub.setdefault("nodes", []).append(_node_summary(note_node))
+                        sub.setdefault("edges", []).append(e)
 
     previews: list[dict] = []
     for hit in hits[:2]:
@@ -809,6 +834,155 @@ def publish_lens(
         focus_node_id=focus_node_id or None,
         highlight_ids=highlight_ids,
     )
+
+
+@mcp.tool()
+def create_note(
+    source_node_id: str,
+    body: str,
+    title: str = "",
+    labels: list[str] | None = None,
+    selected_text: str = "",
+    source_path: str = "",
+    storage: str = "vault",
+) -> dict:
+    """
+    Create a note linked to a graph node.
+
+    storage: 'vault' (default, _notes/*.md) or 'inline' (<!-- lgb-note --> in source .md/.txt).
+
+    After creation the MCP graph is rescanned. For long sessions you may still
+    call rescan() before search if results look stale.
+    """
+    from .services.note_service import (
+        NoteValidationError,
+        SourceNodeNotFoundError,
+        create_note as _create_note,
+    )
+
+    kind = storage if storage in ("inline", "vault") else "vault"
+    try:
+        note, path = _create_note(
+            title=title,
+            body=body,
+            labels=labels,
+            source_node_id=source_node_id,
+            selected_text=selected_text,
+            source_path=source_path,
+            storage=kind,
+        )
+        _recent_imports.append(str(path.resolve()))
+        if len(_recent_imports) > 50:
+            _recent_imports.pop(0)
+        _rescan_and_reload()
+        return {"status": "ok", **note}
+    except SourceNodeNotFoundError as e:
+        return {"error": str(e)}
+    except NoteValidationError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def list_notes(source_node_id: str) -> dict:
+    """List all notes (inline + vault) associated with a source graph node."""
+    from .services.note_service import list_notes_for_source
+
+    try:
+        notes = list_notes_for_source(source_node_id)
+        return {"notes": notes, "total": len(notes)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def get_note(note_id: str) -> dict:
+    """Read a note by short id (vault file or inline block)."""
+    from .services.note_service import NoteNotFoundError, get_note as _get_note
+
+    try:
+        return _get_note(note_id)
+    except NoteNotFoundError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def update_note(
+    note_id: str,
+    title: str = "",
+    body: str = "",
+    labels: list[str] | None = None,
+) -> dict:
+    """Update a note by id (inline or vault). Rescans the MCP graph."""
+    from .services.note_service import (
+        NoteNotFoundError,
+        NoteValidationError,
+        update_note as _update_note,
+    )
+
+    try:
+        kwargs: dict = {}
+        if title:
+            kwargs["title"] = title
+        if body:
+            kwargs["body"] = body
+        if labels is not None:
+            kwargs["labels"] = labels
+        note, path = _update_note(note_id, **kwargs)
+        _recent_imports.append(str(path.resolve()))
+        if len(_recent_imports) > 50:
+            _recent_imports.pop(0)
+        _rescan_and_reload()
+        return {"status": "ok", **note}
+    except NoteNotFoundError as e:
+        return {"error": str(e)}
+    except NoteValidationError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def search_notes(
+    query: str = "",
+    label: str = "",
+    source_node_id: str = "",
+    limit: int = 20,
+) -> dict:
+    """Search notes across the vault (inline blocks and _notes/ files)."""
+    from .services.note_service import search_notes as _search_notes
+
+    try:
+        notes = _search_notes(
+            query=query,
+            label=label,
+            source_node_id=source_node_id,
+            limit=limit,
+        )
+        return {"notes": notes, "total": len(notes)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def delete_note(note_id: str) -> dict:
+    """Delete a note by its short id (filename stem under _notes/)."""
+    from .services.note_service import NoteNotFoundError, delete_note as _delete_note
+
+    try:
+        path = _delete_note(note_id)
+        _recent_imports.append(str(path.resolve()))
+        if len(_recent_imports) > 50:
+            _recent_imports.pop(0)
+        _rescan_and_reload()
+        return {"status": "ok", "id": note_id}
+    except NoteNotFoundError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ---------------------------------------------------------------------------

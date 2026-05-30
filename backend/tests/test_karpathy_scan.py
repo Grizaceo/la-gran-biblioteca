@@ -1,11 +1,7 @@
 """Karpathy wiki scan tests."""
 
 from backend.graph_engine import GraphEngine
-from backend.scan.karpathy import (
-    apply_karpathy_scan,
-    detect_karpathy_workspace,
-    consume_karpathy_stats,
-)
+from backend.scan.karpathy import detect_karpathy_workspace
 from backend.services.graph_pipeline import get_last_scan_stats, scan_raw_graph
 
 

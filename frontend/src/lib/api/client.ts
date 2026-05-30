@@ -24,22 +24,38 @@ export function apiHeaders(extra: Record<string, string> = {}): Record<string, s
   return headers
 }
 
+function shouldTryNextBase(base: string, res: Response, bases: string[]): boolean {
+  if (base === bases[bases.length - 1]) return false
+  if (res.status === 502 || res.status === 503 || res.status === 504) return true
+  // Vite proxy up but backend down → HTML/JSON 404/500 on /api/*
+  if (base.startsWith('/') && res.status >= 500) return true
+  return false
+}
+
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const bases =
     API_BASE === '/api' && import.meta.env.DEV ? [API_BASE, API_DIRECT] : [API_BASE]
 
   let lastErr: unknown
+  let lastRes: Response | null = null
   for (const base of bases) {
+    const url = joinApi(path, base)
     try {
-      return await fetch(joinApi(path, base), init)
+      const res = await fetch(url, init)
+      if (shouldTryNextBase(base, res, bases)) {
+        lastRes = res
+        continue
+      }
+      return res
     } catch (err) {
       lastErr = err
       if (base !== bases[bases.length - 1]) continue
     }
   }
+  if (lastRes) return lastRes
   const hint =
     lastErr instanceof TypeError
-      ? ' (¿proxy caído? Reinicia: npm run dev en frontend/; backend en :3001)'
+      ? ' (¿backend en :3001? En WSL: source backend/venv/bin/activate && python -m backend.library_bridge)'
       : ''
   throw new Error(`${lastErr instanceof Error ? lastErr.message : String(lastErr)}${hint}`)
 }

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from .. import graph_state
 from ..bridge_tasks import force_graph_update
 from ..constants import WORKSPACE_ROOT
+from ..path_utils import validate_path_under_workspace
 from ..os_dialog import (
     import_selected_file,
     import_selected_folder,
@@ -26,14 +27,10 @@ router = APIRouter(prefix="/api/create", tags=["create"])
 
 
 def _validate_new_path(path_str: str) -> Path:
-    p = Path(path_str)
-    if not p.is_absolute():
-        p = Path(WORKSPACE_ROOT) / p
-    p = p.resolve()
-    root = Path(str(WORKSPACE_ROOT)).resolve()
-    if not p.is_relative_to(root):
-        raise HTTPException(status_code=403, detail="Path outside workspace")
-    return p
+    try:
+        return validate_path_under_workspace(path_str, Path(WORKSPACE_ROOT))
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Path outside workspace") from None
 
 
 class CreateFileRequest(BaseModel):

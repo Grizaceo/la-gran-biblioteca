@@ -20,6 +20,7 @@ MUTATING_PREFIXES = (
     "/api/rollback",
     "/api/study",
     "/api/create/",
+    "/api/notes",
     "/api/open",
 )
 

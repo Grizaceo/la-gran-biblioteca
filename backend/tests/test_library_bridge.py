@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 # We need to import the app after setting up a temporary DB
 _IMPORT_TMP = tempfile.mkdtemp()
 os.environ.setdefault("DB_PATH", str(Path(_IMPORT_TMP) / "import-test.db"))
-from backend.graph_engine import GraphEngine
-import backend.app_deps as app_deps
-import backend.library_bridge as bridge
+from backend.graph_engine import GraphEngine  # noqa: E402
+import backend.app_deps as app_deps  # noqa: E402
+import backend.library_bridge as bridge  # noqa: E402
 
 
 def _use_engine(db: Path) -> GraphEngine:

@@ -230,3 +230,94 @@ def test_get_tour_missing(isolated_mcp):
     srv, ws = isolated_mcp
     result = srv.get_tour("nonexistent")
     assert "error" in result
+
+
+def test_mcp_create_list_delete_note(isolated_mcp, monkeypatch):
+    srv, ws = isolated_mcp
+    source_id = "n1"
+    with srv._lock:
+        srv._node_index[source_id] = {
+            "id": source_id,
+            "type": "markdown",
+            "label": "note.md",
+            "path": str(ws / "alpha" / "note.md"),
+            "metadata": {},
+        }
+
+    import backend.constants as constants
+    import backend.services.note_service as note_svc
+
+    monkeypatch.setattr(constants, "WORKSPACE_ROOT", ws)
+    monkeypatch.setattr(note_svc, "WORKSPACE_ROOT", ws)
+    import backend.graph_state as gs
+
+    monkeypatch.setattr(
+        gs,
+        "get_node_by_id",
+        lambda nid: srv._node_index.get(nid),
+    )
+
+    created = srv.create_note(source_id, body="MCP body", title="MCP title", labels=["idea"])
+    assert created.get("status") == "ok"
+    note_id = created["id"]
+    note_path = ws / "_notes" / source_id.replace("/", "__") / f"{note_id}.md"
+    assert note_path.is_file()
+
+    listed = srv.list_notes(source_id)
+    assert listed["total"] >= 1
+    assert any(n["id"] == note_id for n in listed["notes"])
+
+    deleted = srv.delete_note(note_id)
+    assert deleted.get("status") == "ok"
+    assert not note_path.exists()
+
+
+def test_mcp_get_update_search_notes(isolated_mcp, monkeypatch):
+    srv, ws = isolated_mcp
+    source_id = "n1"
+    with srv._lock:
+        srv._node_index[source_id] = {
+            "id": source_id,
+            "type": "markdown",
+            "label": "note.md",
+            "path": str(ws / "alpha" / "note.md"),
+            "metadata": {},
+        }
+
+    import backend.constants as constants
+    import backend.services.note_service as note_svc
+
+    monkeypatch.setattr(constants, "WORKSPACE_ROOT", ws)
+    monkeypatch.setattr(note_svc, "WORKSPACE_ROOT", ws)
+    import backend.graph_state as gs
+
+    monkeypatch.setattr(gs, "get_node_by_id", lambda nid: srv._node_index.get(nid))
+    monkeypatch.setattr(gs, "get_current_graph", lambda: {"nodes": list(srv._node_index.values()), "edges": []})
+
+    created = srv.create_note(
+        source_id,
+        body="Searchable body",
+        title="Find me",
+        labels=["pregunta"],
+        storage="vault",
+    )
+    assert created.get("status") == "ok"
+    note_id = created["id"]
+
+    got = srv.get_note(note_id)
+    assert got.get("title") == "Find me"
+    assert got.get("storage") == "vault"
+
+    updated = srv.update_note(note_id, body="Updated via MCP")
+    assert updated.get("status") == "ok"
+    assert updated.get("body") == "Updated via MCP"
+
+    found = srv.search_notes(query="Updated via MCP")
+    assert found.get("total", 0) >= 1
+    assert any(n["id"] == note_id for n in found["notes"])
+
+    node = srv.get_node(source_id)
+    assert "attached_notes" in node
+    assert node["attached_notes"]["total"] >= 1
+
+    srv.delete_note(note_id)

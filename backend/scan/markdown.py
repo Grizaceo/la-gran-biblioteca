@@ -5,11 +5,19 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from .. import constants
 from ..constants import SCAN_EXTENSIONS
 
 
 def get_node_type(filepath: Path) -> str:
     ext = filepath.suffix.lower()
+    try:
+        root = Path(constants.WORKSPACE_ROOT).resolve()
+        rel = filepath.resolve().relative_to(root)
+        if "_notes" in rel.parts and ext == ".md":
+            return "note"
+    except ValueError:
+        pass
     if filepath.name.lower() == "readme.md":
         return "index"
     type_map = {

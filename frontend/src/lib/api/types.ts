@@ -181,3 +181,33 @@ export interface ConstellationDetail {
   star_count: number
   stars: ConstellationStar[]
 }
+
+export interface Note {
+  id: string
+  title: string
+  body: string
+  labels: string[]
+  source_node_id: string
+  selected_text: string
+  created_at: string
+  path: string
+  storage?: 'inline' | 'vault'
+  line_start?: number | null
+  line_end?: number | null
+}
+
+export interface CreateNoteRequest {
+  title?: string
+  body: string
+  labels?: string[]
+  source_node_id: string
+  selected_text?: string
+  /** Filesystem path from Node.path — helps resolve source when graph index is stale */
+  source_path?: string
+  storage?: 'inline' | 'vault'
+}
+
+export interface NoteListResponse {
+  notes: Note[]
+  total: number
+}

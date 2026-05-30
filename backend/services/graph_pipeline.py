@@ -11,6 +11,7 @@ from typing import Any
 from ..constants import WORKSPACE_ROOT
 from ..constellation_layout import apply_constellation_layout
 from ..graph_enrichment import enrich_graph_metadata
+from ..note_layout import apply_note_graph_enrichment
 from ..graph_engine import GraphEngine
 from .. import graph_state as _gs
 from ..scan_workspaces import (
@@ -82,9 +83,14 @@ def finalize_raw_graph(raw: dict[str, Any], engine: GraphEngine) -> dict[str, An
     engine.sync_folder_constellation_suggestions(raw)
     prefs = engine.list_constellation_prefs()
     confirmed = [p for p in prefs if p.get("status") == "confirmed"]
+    raw = apply_note_graph_enrichment(
+        raw,
+        WORKSPACE_ROOT,
+        apply_orbit=not confirmed,
+    )
     if not confirmed:
         _gs.set_constellation_figures([])
-        return raw
+        return enrich_graph_metadata(raw, WORKSPACE_ROOT)
     graph = apply_constellation_layout(raw, prefs, only_confirmed=True)
     figures = graph.pop("constellations", [])
     _gs.set_constellation_figures(figures)

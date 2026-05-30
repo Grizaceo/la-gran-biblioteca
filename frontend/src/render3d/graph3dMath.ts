@@ -47,7 +47,10 @@ export function nodeDisplaySize(
   const degree = Number(node.degree) || Number(meta.degree_hint) || 0
   const childCount = Number(meta.child_count) || 0
   const studyCount = Number(meta.study_count) || 0
-  const base = nodeSize(node.weight as number)
+  let base = nodeSize(node.weight as number)
+  if ((node.type as string) === 'note') {
+    base *= 0.7
+  }
 
   if (heatmapMode === 'volume') {
     return volumeNodeSize(degree, childCount)

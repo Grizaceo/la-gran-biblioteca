@@ -26,6 +26,18 @@ def is_windows_path(path_str: str) -> bool:
     return bool(_WIN_PATH_RE.match(path_str.strip()))
 
 
+def validate_path_under_workspace(path_str: str, workspace_root: Path) -> Path:
+    """Resolve path under workspace_root; raise ValueError if outside."""
+    p = Path(path_str)
+    if not p.is_absolute():
+        p = workspace_root / p
+    p = p.resolve()
+    root = workspace_root.resolve()
+    if not p.is_relative_to(root):
+        raise ValueError("Path outside workspace")
+    return p
+
+
 def _safe_resolve(root: Path, rel: str) -> Path | None:
     """Resolve a relative path under root, rejecting traversal escapes."""
     try:

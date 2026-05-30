@@ -8,15 +8,33 @@ export function hydrateNodeForLayout(
   layoutMode: LayoutMode,
 ): Record<string, unknown> {
   const studyCount = (n.metadata?.study_count as number | undefined) ?? 0
-  const weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
+  let weight = 1 + studyCount * 0.3 + Math.sqrt(degree) * 1.5
+  if (n.type === 'note') {
+    weight *= 0.7
+  }
   const h: Record<string, unknown> = { ...n, name: n.label, weight, degree }
+
+  const meta = n.metadata || {}
+  const p = n.position
+  const orbitAnchor = meta.orbit_anchor as string | undefined
+
+  // Note nodes with orbit_anchor: always fix position so they appear
+  // near their source regardless of layout mode.
+  if (n.type === 'note' && orbitAnchor && p != null
+      && typeof p.x === 'number' && typeof p.y === 'number' && typeof p.z === 'number') {
+    h.x = p.x
+    h.y = p.y
+    h.z = p.z
+    h.fx = h.x
+    h.fy = h.y
+    h.fz = h.z
+    return h
+  }
 
   if (layoutMode !== 'constellation') {
     return h
   }
 
-  const meta = n.metadata || {}
-  const p = n.position
   const hasConstellationMeta = Boolean(meta.constellation_id)
   const hasValid3D =
     p != null

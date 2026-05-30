@@ -518,3 +518,252 @@
     /* hljs theme (dark) */
     .hljs { background: rgba(0,0,0,0.4) !important; border-radius: 6px; padding: 12px; overflow-x: auto; }
     pre.hljs { margin: 10px 0; border: 1px solid rgba(255,255,255,0.08); }
+
+    /* ── Note creator popup ─────────────────────────────────── */
+    .note-creator-popup {
+      position: absolute;
+      z-index: 120;
+      background: rgba(0, 0, 17, 0.95);
+      border: 1px solid rgba(79, 195, 247, 0.3);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: rgba(79, 195, 247, 0.9);
+      cursor: pointer;
+      white-space: nowrap;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      transition: transform 0.12s ease, border-color 0.2s ease;
+    }
+    .note-creator-popup:hover {
+      background: rgba(79, 195, 247, 0.15);
+      border-color: rgba(79, 195, 247, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* ── Note editor ───────────────────────────────────────── */
+    .node-detail-notes {
+      margin-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      padding-top: 12px;
+    }
+    .note-saved-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .note-saved-row {
+      display: flex;
+      gap: 4px;
+      align-items: stretch;
+    }
+    .note-saved-row .note-saved-item {
+      flex: 1;
+    }
+    .note-saved-delete {
+      background: rgba(239, 83, 80, 0.1);
+      border: 1px solid rgba(239, 83, 80, 0.25);
+      color: rgba(239, 83, 80, 0.85);
+      border-radius: 4px;
+      width: 28px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .note-saved-delete:hover {
+      background: rgba(239, 83, 80, 0.2);
+    }
+    .note-anchor-bar {
+      margin-bottom: 10px;
+    }
+    .note-edit-hint {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-bottom: 6px;
+    }
+    .note-saved-item {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.75);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .note-saved-item:hover {
+      border-color: rgba(79, 195, 247, 0.35);
+      background: rgba(79, 195, 247, 0.05);
+    }
+    .note-saved-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .note-saved-label {
+      flex: 1;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .note-saved-date {
+      flex-shrink: 0;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+    }
+    .note-storage-tag {
+      flex-shrink: 0;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(79, 195, 247, 0.65);
+      background: rgba(79, 195, 247, 0.08);
+      border: 1px solid rgba(79, 195, 247, 0.2);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .note-saved-chips {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .note-chip {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 8px;
+      background: rgba(79, 195, 247, 0.1);
+      border: 1px solid rgba(79, 195, 247, 0.2);
+      color: rgba(79, 195, 247, 0.75);
+    }
+    .note-chip-more {
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.3);
+    }
+    .note-editor-toggle {
+      background: none;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.4);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+    }
+    .note-editor-toggle:hover {
+      border-color: rgba(79, 195, 247, 0.3);
+      color: rgba(79, 195, 247, 0.7);
+    }
+    .note-editor-form { margin-top: 8px; }
+    .note-editor-title {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .note-editor-title:focus {
+      border-color: rgba(79, 195, 247, 0.4);
+      box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.12);
+    }
+    .note-labels {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .note-label {
+      background: rgba(79, 195, 247, 0.08);
+      border: 1px solid rgba(79, 195, 247, 0.22);
+      color: rgba(79, 195, 247, 0.85);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+    .note-label:hover { transform: translateY(-1px); }
+    .note-label.active {
+      background: rgba(79, 195, 247, 0.25);
+      border-color: rgba(79, 195, 247, 0.5);
+    }
+    .note-label-add {
+      background: none;
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.4);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+    .note-label-add:hover {
+      border-color: rgba(79, 195, 247, 0.35);
+      color: rgba(79, 195, 247, 0.7);
+    }
+    .note-label-add-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.9);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      width: 80px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .note-label-add-input:focus {
+      border-color: rgba(79, 195, 247, 0.35);
+      box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.1);
+    }
+    .note-label-error {
+      font-size: 10px;
+      color: #ef9a9a;
+      width: 100%;
+    }
+    .note-citation {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 2px solid rgba(79, 195, 247, 0.4);
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.5);
+      border-radius: 0 4px 4px 0;
+    }
+    .note-editor-body {
+      width: 100%;
+      min-height: 80px;
+      max-height: 320px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.85);
+      padding: 8px 10px;
+      border-radius: 4px;
+      resize: vertical;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .note-editor-body:focus {
+      border-color: rgba(79, 195, 247, 0.3);
+      box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.1);
+    }
+    .note-editor-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 8px;
+    }

@@ -44,6 +44,17 @@ def build_overview(
                 rel = p
             recent.append(rel)
 
+    note_inline = 0
+    note_vault = 0
+    for node in nodes:
+        if node.get("type") != "note":
+            continue
+        meta = node.get("metadata") or {}
+        if meta.get("storage") == "inline":
+            note_inline += 1
+        else:
+            note_vault += 1
+
     return {
         "total_nodes": len(nodes),
         "total_edges": len(edges),
@@ -51,4 +62,9 @@ def build_overview(
         "top_workspaces": top_workspaces,
         "recent_imports": recent,
         "workspace_root": str(root),
+        "notes": {
+            "inline": note_inline,
+            "vault": note_vault,
+            "total": note_inline + note_vault,
+        },
     }

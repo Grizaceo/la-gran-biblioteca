@@ -6,8 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .layout import file_node_id
-
 _PY_FROM = re.compile(r"^\s*from\s+([\w.]+)\s+import", re.MULTILINE)
 _PY_IMPORT = re.compile(r"^\s*import\s+([\w.]+)", re.MULTILINE)
 _TS_IMPORT = re.compile(
