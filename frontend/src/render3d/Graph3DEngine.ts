@@ -264,7 +264,10 @@ export class Graph3DEngine implements Graph3DEngineHost {
         const type = (link.type as string) || 'default'
         return (PALETTE as Record<string, string>)[type] ?? PALETTE.default
       })
-      .linkOpacity(0.7)
+      .linkOpacity((link: Record<string, unknown>) => {
+        const type = (link.type as string) || 'default'
+        return type === 'annotates' ? 0.9 : 0.7
+      })
       .linkWidth((link: Record<string, unknown>) => {
         const type = (link.type as string) || 'default'
         return type === 'annotates' ? 1.6 : 0.8

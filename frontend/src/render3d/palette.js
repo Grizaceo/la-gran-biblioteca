@@ -12,7 +12,7 @@ export const PALETTE = {
   tag:       '#ffee58',
   person:    '#ff8a65',
   note:      '#78909c',
-  annotates: '#b0bec5',
+  annotates: '#4fc3f7',
   concept:   '#ce93d8',
   default:   '#546e7a',
 }

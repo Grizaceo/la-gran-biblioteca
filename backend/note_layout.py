@@ -9,7 +9,7 @@ from typing import Any
 from .scan.inline_notes import INLINE_EXTENSIONS, parse_inline_blocks_from_file
 from .services.note_service import inline_note_node_id, normalize_source_node_id
 
-NOTE_ORBIT_RADIUS = 28.0
+NOTE_ORBIT_RADIUS = 55.0
 GOLDEN_ANGLE = math.pi * (3.0 - math.sqrt(5.0))
 
 
