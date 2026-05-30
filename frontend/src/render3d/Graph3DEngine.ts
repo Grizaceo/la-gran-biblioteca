@@ -271,12 +271,7 @@ export class Graph3DEngine implements Graph3DEngineHost {
       .linkWidth((link: Record<string, unknown>) => {
         const type = (link.type as string) || 'default'
         return type === 'annotates' ? 1.6 : 0.8
-      })
-      .linkVisibility((link: Record<string, unknown>) => {
-        const type = (link.type as string) || 'default'
-        return type !== 'annotates'
-      })
-  }
+      })\n  }
 
   setWorkspaceRoot(root: string): void {
     this.workspaceRoot = root.replace(/\\/g, '/').replace(/\/$/, '')
@@ -501,11 +496,13 @@ export class Graph3DEngine implements Graph3DEngineHost {
       this.nodeIndex.set(n.id, h)
       return h
     })
-    const processedLinks = g.edges.map((e: Edge) => ({
-      source: e.source,
-      target: e.target,
-      type: e.type,
-    }))
+    const processedLinks = g.edges
+      .map((e: Edge) => ({
+        source: e.source,
+        target: e.target,
+        type: e.type,
+      }))
+      .filter(l => l.type !== 'annotates')
 
     const nodeCount = processedNodes.length
     this.lod.setLodNodeCount(nodeCount)
@@ -580,7 +577,9 @@ export class Graph3DEngine implements Graph3DEngineHost {
       if (!newIds.has(id)) this.nodeIndex.delete(id)
     }
 
-    const links = g.edges.map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
+    const links = g.edges
+      .map((e: Edge) => ({ source: e.source, target: e.target, type: e.type }))
+      .filter(l => l.type !== 'annotates')
     this.lod.setLodNodeCount(nodes.length)
     this.filter.recomputeHeatmapStats()
 
