@@ -272,6 +272,10 @@ export class Graph3DEngine implements Graph3DEngineHost {
         const type = (link.type as string) || 'default'
         return type === 'annotates' ? 1.6 : 0.8
       })
+      .linkVisibility((link: Record<string, unknown>) => {
+        const type = (link.type as string) || 'default'
+        return type !== 'annotates'
+      })
   }
 
   setWorkspaceRoot(root: string): void {
