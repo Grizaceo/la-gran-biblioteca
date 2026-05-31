@@ -271,7 +271,8 @@ export class Graph3DEngine implements Graph3DEngineHost {
       .linkWidth((link: Record<string, unknown>) => {
         const type = (link.type as string) || 'default'
         return type === 'annotates' ? 1.6 : 0.8
-      })\n  }
+      })
+  }
 
   setWorkspaceRoot(root: string): void {
     this.workspaceRoot = root.replace(/\\/g, '/').replace(/\/$/, '')

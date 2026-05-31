@@ -9,6 +9,7 @@ export function initFocus(forceGraph, engine, getCurrentNodeId) {
   let focusHistory     = []
   let currentFocusNode = null
   let lastHoveredNode  = null
+  let isMouseOverNode  = false
 
   function restoreAll() {
     const { nodes, links } = forceGraph.graphData()
@@ -77,12 +78,7 @@ export function initFocus(forceGraph, engine, getCurrentNodeId) {
     currentFocusNode = nodeId
 
     setTimeout(() => {
-      const dist  = 120
-      const ratio = 1 + dist / Math.hypot(node.x || 0, node.y || 0, node.z || 0)
-      forceGraph.cameraPosition(
-        { x: (node.x || 0) * ratio, y: (node.y || 0) * ratio, z: (node.z || 0) * ratio },
-        node, 800,
-      )
+      engine.flyToNode(nodeId, 800)
     }, 100)
 
     updateBreadcrumb()
@@ -156,12 +152,14 @@ export function initFocus(forceGraph, engine, getCurrentNodeId) {
   btnFocus.addEventListener('click', () => {
     if (currentFocusNode) {
       exitFocusMode()
-    } else if (lastHoveredNode) {
+    } else if (isMouseOverNode && lastHoveredNode) {
       enterFocusMode(lastHoveredNode.id)
     } else {
       const panelNodeId = getCurrentNodeId?.()
       if (panelNodeId) {
         enterFocusMode(panelNodeId)
+      } else if (lastHoveredNode) {
+        enterFocusMode(lastHoveredNode.id)
       } else {
         focusName.textContent = 'Hover a node first'
         focusBanner.classList.add('active')
@@ -171,7 +169,10 @@ export function initFocus(forceGraph, engine, getCurrentNodeId) {
   })
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'f' && !e.ctrlKey && !e.metaKey && document.activeElement !== searchInput) {
+    if (e.key === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey
+      && !(e.target instanceof HTMLInputElement)
+      && !(e.target instanceof HTMLTextAreaElement)
+      && !(e.target instanceof HTMLSelectElement)) {
       e.preventDefault()
       btnFocus.click()
     }
@@ -182,7 +183,10 @@ export function initFocus(forceGraph, engine, getCurrentNodeId) {
   })
 
   return {
-    setHoveredNode(node) { lastHoveredNode = node },
+    setHoveredNode(node) {
+      lastHoveredNode = node
+      isMouseOverNode = !!node
+    },
     enterFocusMode,
     clearAllFocus,
     enterAgentFocus(nodeId, depth = 2) {
