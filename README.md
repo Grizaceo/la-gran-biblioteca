@@ -127,7 +127,9 @@ Desde la raíz del repositorio:
 bash scripts/health.sh
 ```
 
-Ejecuta revisión de código, tests del backend y comprobación de tipos del frontend.
+Ejecuta revisión de código, comprobación de tipos y **tests rápidos** del backend.
+
+Suite completa: `VERBOSE=1 pytest -v` dentro de `backend/`, o con `-m "not slow"` para excluir escaneos largos del vault.
 
 ## UI, API y MCP
 

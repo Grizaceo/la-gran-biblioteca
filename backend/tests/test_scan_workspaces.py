@@ -2,6 +2,8 @@ import tempfile
 from pathlib import Path
 from backend.scan_workspaces import scan_workspaces
 
+pytestmark = pytest.mark.slow
+
 
 def test_scan_empty_directory():
     with tempfile.TemporaryDirectory() as tmp:

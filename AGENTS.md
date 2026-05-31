@@ -242,7 +242,8 @@ Ejecutar todo: `./scripts/health.sh` (desde la raíz del repo, en WSL/Linux).
 
 - **typecheck**: `cd frontend && npx tsc --noEmit`
 - **lint**: `ruff check backend/`
-- **test**: `cd backend && python -m pytest tests/ -v`
+- **test**: `cd backend && python -m pytest -m "not slow" -q` (suite rápida)  
+  Para suite completa: `VERBOSE=1 pytest -v -m "not slow"` y en CI `pytest -v`
 - **deadcode (opcional)**: `vulture backend/` — símbolos Python sin usar; `cd frontend && npx knip` — exports TS muertos tras splits de `bridge.ts`
 
 ## Skill routing

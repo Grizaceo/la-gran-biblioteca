@@ -4,6 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 from backend.graph_engine import GraphEngine
 from backend.services.graph_pipeline import (
     finalize_raw_graph,
