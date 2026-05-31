@@ -55,7 +55,7 @@ def test_orbit_layout_places_notes_around_source(tmp_path: Path):
     out = apply_note_orbit_layout(graph)
     n1 = next(n for n in out["nodes"] if n["id"].endswith("aaa11111"))
     n2 = next(n for n in out["nodes"] if n["id"].endswith("bbb22222"))
-    sx, sy, sz = 100, 200, 0
+    sx, sy = 100, 200
     d1 = ((n1["position"]["x"] - sx) ** 2 + (n1["position"]["y"] - sy) ** 2) ** 0.5
     d2 = ((n2["position"]["x"] - sx) ** 2 + (n2["position"]["y"] - sy) ** 2) ** 0.5
     assert 40 < d1 < 55

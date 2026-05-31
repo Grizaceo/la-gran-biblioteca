@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -112,7 +111,7 @@ def parse_inline_blocks_from_file(
         content = path.read_text(encoding="utf-8")
     except OSError:
         return []
-    rel = source_path = str(path)
+    rel = str(path)
     if workspace_root is not None:
         try:
             rel = str(path.resolve().relative_to(workspace_root.resolve()))
