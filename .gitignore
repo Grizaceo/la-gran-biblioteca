@@ -39,3 +39,4 @@ export/
 .gstack/
 
 # Test/scratch files
+frontend/.env.development
