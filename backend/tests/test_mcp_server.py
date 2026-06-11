@@ -41,7 +41,11 @@ def isolated_mcp(tmp_path, monkeypatch):
     engine.build_graph(raw)
 
     # Re-import mcp_server with patched env
+    import backend.constants as constants
     import backend.mcp_server as srv
+
+    constants.WORKSPACE_ROOT = ws
+    monkeypatch.setattr(constants, "get_workspace_root", lambda: ws)
     # Re-point to a fresh engine (so _load() doesn't double-count edges)
     srv._engine = GraphEngine(db_path=db)
     srv.WORKSPACE_ROOT = ws
@@ -247,8 +251,8 @@ def test_mcp_create_list_delete_note(isolated_mcp, monkeypatch):
     import backend.constants as constants
     import backend.services.note_service as note_svc
 
-    monkeypatch.setattr(constants, "WORKSPACE_ROOT", ws)
-    monkeypatch.setattr(note_svc, "WORKSPACE_ROOT", ws)
+    monkeypatch.setattr(constants, "get_workspace_root", lambda: ws)
+    monkeypatch.setattr(note_svc, "get_workspace_root", lambda: ws)
     import backend.graph_state as gs
 
     monkeypatch.setattr(
@@ -287,12 +291,13 @@ def test_mcp_get_update_search_notes(isolated_mcp, monkeypatch):
     import backend.constants as constants
     import backend.services.note_service as note_svc
 
-    monkeypatch.setattr(constants, "WORKSPACE_ROOT", ws)
-    monkeypatch.setattr(note_svc, "WORKSPACE_ROOT", ws)
+    monkeypatch.setattr(constants, "get_workspace_root", lambda: ws)
+    monkeypatch.setattr(note_svc, "get_workspace_root", lambda: ws)
     import backend.graph_state as gs
 
     monkeypatch.setattr(gs, "get_node_by_id", lambda nid: srv._node_index.get(nid))
     monkeypatch.setattr(gs, "get_current_graph", lambda: {"nodes": list(srv._node_index.values()), "edges": []})
+    monkeypatch.setattr(srv, "_rescan_and_reload", lambda: srv._graph)
 
     created = srv.create_note(
         source_id,

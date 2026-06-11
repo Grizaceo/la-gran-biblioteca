@@ -28,9 +28,8 @@ def _setup_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Test
     import backend.constants as constants
     import backend.services.note_service as note_svc
 
-    constants.WORKSPACE_ROOT = ws
-    note_svc.WORKSPACE_ROOT = ws
-    bridge.WORKSPACE_ROOT = ws
+    monkeypatch.setattr(constants, "get_workspace_root", lambda: ws)
+    monkeypatch.setattr(note_svc, "get_workspace_root", lambda: ws)
 
     ge = GraphEngine(db_path=db)
     bridge.engine = ge
@@ -64,6 +63,7 @@ def test_create_and_get_note(tmp_path, monkeypatch):
             "labels": ["idea"],
             "source_node_id": source_id,
             "selected_text": "quoted bit",
+            "storage": "vault",
         },
     )
     assert res.status_code == 200
@@ -105,8 +105,8 @@ def test_create_note_with_source_path_without_graph_node(tmp_path, monkeypatch):
     import backend.constants as constants
     import backend.services.note_service as note_svc
 
-    constants.WORKSPACE_ROOT = ws
-    note_svc.WORKSPACE_ROOT = ws
+    constants.get_workspace_root = lambda: ws
+    note_svc.get_workspace_root = lambda: ws
     import backend.library_bridge as bridge
 
     bridge.WORKSPACE_ROOT = ws
@@ -122,6 +122,7 @@ def test_create_note_with_source_path_without_graph_node(tmp_path, monkeypatch):
             "body": "from path only",
             "source_node_id": source_id,
             "source_path": str(source_file),
+            "storage": "vault",
         },
     )
     assert res.status_code == 200, res.text

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from .constants import WORKSPACE_ROOT
+from .constants import get_workspace_root
 from .graph_enrichment import build_graph_structure_summary
 
 GRAPH_NODE_CAP = 1000
@@ -13,7 +13,7 @@ GRAPH_NODE_CAP = 1000
 _graph_state: dict = {
     "graph": {"nodes": [], "edges": []},
     "overview_structure": {
-        "workspace_root": str(WORKSPACE_ROOT),
+        "workspace_root": str(get_workspace_root()),
         "total_nodes": 0,
         "total_edges": 0,
         "modes": {"workspace": [], "folder": [], "topic": []},
@@ -36,7 +36,7 @@ def set_current_graph(g: dict) -> None:
     _graph_state["overview_structure"] = build_graph_structure_summary(
         g.get("nodes", []),
         g.get("edges", []),
-        WORKSPACE_ROOT,
+        get_workspace_root(),
     )
 
 
@@ -136,7 +136,7 @@ def get_limited_graph() -> dict:
             degree[e["source"]] = degree.get(e["source"], 0) + 1
             degree[e["target"]] = degree.get(e["target"], 0) + 1
 
-        root = Path(str(WORKSPACE_ROOT)).resolve()
+        root = get_workspace_root().resolve()
         ranked = sorted(
             nodes,
             key=lambda n: _node_priority_key(n, degree.get(n["id"], 0), root),

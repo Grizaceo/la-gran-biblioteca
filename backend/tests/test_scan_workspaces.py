@@ -1,3 +1,4 @@
+import pytest
 import tempfile
 from pathlib import Path
 from backend.scan_workspaces import scan_workspaces

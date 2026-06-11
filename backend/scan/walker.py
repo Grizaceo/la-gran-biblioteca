@@ -7,7 +7,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ..constants import WORKSPACE_ROOT, get_archive_policy, get_exclude_dirs, is_archive_dir_name
+from ..constants import get_archive_policy, get_exclude_dirs, get_workspace_root, is_archive_dir_name
 from .layout import (
     attach_tags_to_node,
     file_node_id,
@@ -160,12 +160,14 @@ def _append_file_node(
 
 
 def scan_workspaces(
-    root: Path = WORKSPACE_ROOT,
+    root: Path | None = None,
     max_files: int = 5000,
     max_children: int = 50,
 ) -> Dict[str, Any]:
     global _scan_stats
     _scan_stats = {"skipped_archive_dirs": 0}
+
+    root = (root or get_workspace_root()).resolve()
 
     graph: Dict[str, Any] = {"nodes": [], "edges": []}
     node_map: Dict[str, str] = {}

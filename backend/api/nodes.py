@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from .. import graph_state
 from .. import app_deps
-from ..constants import WORKSPACE_ROOT
+from ..constants import get_workspace_root
 from ..os_open import open_in_os
 from ..path_utils import is_windows_path, resolve_node_path
 from ..preview import read_preview
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api", tags=["nodes"])
 
 
 def _validate_path(node_id: str, path_str: str) -> Path:
-    root = Path(str(WORKSPACE_ROOT)).resolve()
+    root = get_workspace_root()
     p = resolve_node_path(node_id, path_str, root)
     if not p.exists():
         raise HTTPException(status_code=404, detail="File not found on disk")
@@ -56,7 +56,7 @@ async def get_node(node_id: str):
         raise HTTPException(status_code=404, detail="Node not found")
     path_str = node.get("path", "")
     if path_str:
-        root = Path(str(WORKSPACE_ROOT)).resolve()
+        root = get_workspace_root()
         resolved = resolve_node_path(node_id, path_str, root)
         if resolved.exists():
             return {**node, "path": str(resolved)}

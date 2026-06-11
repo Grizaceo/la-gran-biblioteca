@@ -4,8 +4,6 @@ from unittest.mock import patch
 
 import pytest
 
-pytestmark = pytest.mark.slow
-
 from backend.graph_engine import GraphEngine
 from backend.services.graph_pipeline import (
     finalize_raw_graph,
@@ -13,6 +11,8 @@ from backend.services.graph_pipeline import (
     rebuild_graph,
     scan_raw_graph,
 )
+
+pytestmark = pytest.mark.slow
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def test_import_ensure_paths_includes_github_root(tmp_path, engine):
     ws.mkdir()
     gh = ws / "imports" / "github" / "demo"
     gh.mkdir(parents=True)
-    with patch("backend.services.graph_pipeline.WORKSPACE_ROOT", ws):
+    with patch("backend.services.graph_pipeline.get_workspace_root", return_value=ws):
         paths = import_ensure_paths([], extra=[ws / "imports" / "arxiv" / "x.md"])
     assert any(p.name == "demo" for p in paths)
 

@@ -2,9 +2,16 @@
 
 ## Qué es
 
-Visualizador y gestor de un **grafo de conocimiento** sobre `WORKSPACE_ROOT` (configurado en `.env`; por defecto `~/knowledge`).
+Visualizador y gestor de un **grafo de conocimiento** sobre el **vault activo** (biblioteca). Por defecto `WORKSPACE_ROOT` en `.env` (`~/knowledge`); el registro multi-vault vive en `~/.hermes/lgb/vaults.json` (`LGB_REGISTRY_PATH`).
 Cada archivo/carpeta escaneado es un **nodo**; cada wikilink o dependencia es una **arista**.
-Backend: FastAPI + SQLite (`backend/library.db`) + watchdog (SSE event-driven). Frontend: WebGL 3D (`three` + `3d-force-graph`).
+Backend: FastAPI + SQLite por vault (`{vault}/.lgb/library.db`) + watchdog (SSE event-driven). Frontend: WebGL 3D (`three` + `3d-force-graph`).
+
+### Vault vs workspace
+
+| Concepto | Qué es |
+|----------|--------|
+| **Vault (biblioteca)** | Carpeta raíz escaneada in-place; grafo en `{vault}/.lgb/library.db` |
+| **Workspace** | Subcarpeta de primer nivel *dentro* del vault activo (`papers/`, `imports/`, …) |
 
 ## LGB MCP vs CodeGraph (repos de código en el vault)
 
@@ -14,6 +21,7 @@ La Gran Biblioteca escanea **todo el vault** (notas, papers, imports, carpetas d
 | Pregunta del agente | Herramienta |
 |---------------------|-------------|
 | Mapa del vault, huecos de estudio, lens en la UI | LGB `overview()` → `coverage()` → `publish_lens()` |
+| Cambiar biblioteca / ver registradas | LGB `list_vaults()` → `switch_vault(id\|path)` |
 | Contenido de una nota o archivo del vault | LGB `read_node()` / `explore()` |
 | Búsqueda rápida con contexto (nodos + aristas + preview) | LGB `explore(query)` |
 | Cómo funciona **código** en un repo clonado bajo el vault | **CodeGraph** en esa carpeta (`.codegraph/`) |
@@ -69,7 +77,9 @@ O en `~/.claude/claude_desktop_config.json`:
 | `coverage()` | Métricas por workspace/carpeta/topic (`study_ratio`, `avg_degree`, …) |
 | `apply_lens(lens?, preset?)` | Valida lens + `search_preview` + nodo foco sugerido (no publica) |
 | `publish_lens(lens?, preset?, focus_node_id?, highlight_ids?)` | Publica vista para la barra UI (`GET /api/lens/current`) |
-| `list_workspaces()` | Workspaces de primer nivel con nodo-counts |
+| `list_workspaces()` | Workspaces de primer nivel con nodo-counts **del vault activo** |
+| `list_vaults()` | Bibliotecas registradas + cuál está activa (`~/.hermes/lgb/vaults.json`) |
+| `switch_vault(id \| path)` | Cambia vault activo y recarga grafo MCP (mismo flujo que UI «Cambiar biblioteca») |
 | `search(query, mode?, node_type?, …)` | Búsqueda con `mode`: `text` (FTS), `related` (vecinos de semillas), `hub` (top por grado; `query` vacío OK). Ver `docs/search-bar.md` |
 | `get_node(id)` | Metadata + aristas + `attached_notes` (preview) cuando el nodo es documento fuente |
 | `read_node(id, max_chars?)` | Contenido del archivo (truncado con `truncated=true` si es grande) |

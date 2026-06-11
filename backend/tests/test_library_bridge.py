@@ -49,6 +49,8 @@ def test_get_graph():
 
 def test_overview_structure_and_search():
     with tempfile.TemporaryDirectory() as tmp:
+        vault = Path(tmp) / "vault"
+        vault.mkdir()
         db = Path(tmp) / "library.db"
         ge = _use_engine(db)
         graph = {
@@ -57,7 +59,7 @@ def test_overview_structure_and_search():
                     "id": "n1",
                     "type": "document",
                     "label": "Graph Notes",
-                    "path": str(Path(tmp) / "vault" / "notes" / "graph.md"),
+                    "path": str(vault / "notes" / "graph.md"),
                     "metadata": {
                         "workspace": "notes",
                         "topics": ["graph"],
@@ -70,7 +72,7 @@ def test_overview_structure_and_search():
                     "id": "n2",
                     "type": "folder",
                     "label": "notes",
-                    "path": str(Path(tmp) / "vault" / "notes"),
+                    "path": str(vault / "notes"),
                     "metadata": {"workspace": "notes", "structural_role": "docs"},
                     "position": {"x": 1, "y": 1},
                 },
@@ -78,16 +80,19 @@ def test_overview_structure_and_search():
             "edges": [{"source": "n2", "target": "n1", "type": "contains"}],
         }
         ge.build_graph(graph)
-        bridge.set_current_graph(graph)
-        client = TestClient(bridge.app)
+        from unittest.mock import patch
 
-        structure = client.get("/api/graph/overview-structure")
-        assert structure.status_code == 200
-        assert "modes" in structure.json()
+        with patch("backend.constants.get_workspace_root", return_value=vault):
+            bridge.set_current_graph(graph)
+            client = TestClient(bridge.app)
 
-        search = client.get("/api/search?q=graph")
-        assert search.status_code == 200
-        assert search.json()["results"][0]["id"] == "n1"
+            structure = client.get("/api/graph/overview-structure")
+            assert structure.status_code == 200
+            assert "modes" in structure.json()
+
+            search = client.get("/api/search?q=graph")
+            assert search.status_code == 200
+            assert search.json()["results"][0]["id"] == "n1"
 
 
 def test_study_node_persists():

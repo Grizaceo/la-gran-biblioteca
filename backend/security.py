@@ -22,6 +22,7 @@ MUTATING_PREFIXES = (
     "/api/create/",
     "/api/notes",
     "/api/open",
+    "/api/vaults",
 )
 
 RATE_LIMITED_PREFIXES = MUTATING_PREFIXES

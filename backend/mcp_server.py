@@ -30,8 +30,9 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for test/runtime with
                 return fn
             return decorator
 
-from .constants import WORKSPACE_ROOT
-from .graph_engine import GraphEngine, DB_PATH
+from .constants import WORKSPACE_ROOT, get_db_path, get_workspace_root
+from .graph_engine import GraphEngine
+from .path_utils import resolve_node_path
 from .graph_queries import build_subgraph, search_graph
 from .overview import build_overview
 from .graph_enrichment import build_graph_structure_summary
@@ -45,13 +46,15 @@ from .imports import (
 )
 from . import graph_state
 from .services.graph_pipeline import rebuild_graph, get_last_scan_stats
+from .vault_manager import vault_manager
+from .vault_switch import apply_vault_switch_sync
 from .impact import impact_files_bfs, paths_to_node_ids
 
 # ---------------------------------------------------------------------------
 # State (loaded once at startup, refreshed on demand)
 # ---------------------------------------------------------------------------
 
-_engine = GraphEngine(db_path=DB_PATH)
+_engine = GraphEngine(db_path=get_db_path())
 _graph: dict[str, Any] = {"nodes": [], "edges": []}
 _node_index: dict[str, dict] = {}
 _adj_out: dict[str, list[dict]] = defaultdict(list)
@@ -85,12 +88,14 @@ _load()
 mcp = FastMCP(
     "la-gran-biblioteca",
     instructions=(
-        "La Gran Biblioteca is a knowledge graph of files scanned from "
-        f"{WORKSPACE_ROOT}. A 'node' is a file or folder; an 'edge' represents "
-        "a link (wikilink, import, annotates, etc.). Notes may live inline in "
-        "source markdown (<!-- lgb-note --> blocks) or under _notes/ (vault). "
-        "Use get_node(source) → attached_notes or list_notes / search_notes for "
-        "annotations. Always start with overview, then search or get_node."
+        "La Gran Biblioteca is a knowledge graph of files scanned from the "
+        "active vault (biblioteca). Use list_vaults() to see registered libraries "
+        "and switch_vault(id|path) to change the active one. A 'node' is a file "
+        "or folder; an 'edge' represents a link (wikilink, import, annotates, etc.). "
+        "Notes may live inline in source markdown (<!-- lgb-note --> blocks) or under "
+        "_notes/ (vault). Use get_node(source) → attached_notes or list_notes / "
+        "search_notes for annotations. Always start with overview(), then search or "
+        "get_node."
     ),
 )
 
@@ -117,12 +122,13 @@ def _node_summary(n: dict) -> dict:
 
 
 def _validate_workspace_path(path_str: str) -> Path:
-    """Ensure path is inside WORKSPACE_ROOT; resolves relative paths to root."""
+    """Ensure path is inside active vault root; resolves relative paths to root."""
+    root = get_workspace_root()
     p = Path(path_str)
     if not p.is_absolute():
-        p = WORKSPACE_ROOT / p
+        p = root / p
     p = p.resolve()
-    root = WORKSPACE_ROOT.resolve()
+    root = root.resolve()
     if not p.is_relative_to(root):
         raise ValueError(f"Path {path_str!r} is outside the workspace ({root})")
     return p
@@ -153,8 +159,9 @@ def overview() -> dict:
         nodes = _graph["nodes"]
         edges = _graph["edges"]
         recent = list(_recent_imports)
-    overview_data = build_overview(nodes, edges, recent, WORKSPACE_ROOT)
-    coverage = build_graph_structure_summary(nodes, edges, WORKSPACE_ROOT)
+    root = get_workspace_root()
+    overview_data = build_overview(nodes, edges, recent, root)
+    coverage = build_graph_structure_summary(nodes, edges, root)
     scan_meta = get_last_scan_stats()
     coverage["wiki_pattern"] = scan_meta.get("wiki_pattern") or coverage.get("wiki_pattern")
     coverage["unresolved_wikilinks"] = scan_meta.get("unresolved_wikilinks") or coverage.get(
@@ -184,18 +191,19 @@ def list_workspaces() -> list[dict]:
     counts: dict[str, int] = defaultdict(int)
     with _lock:
         nodes = _graph["nodes"]
+    root = get_workspace_root()
     for n in nodes:
         path_str = n.get("path", "")
         if not path_str:
             continue
         try:
-            rel = Path(path_str).relative_to(WORKSPACE_ROOT)
+            rel = Path(path_str).relative_to(root)
             ws = rel.parts[0] if rel.parts else "root"
         except ValueError:
             continue
         counts[ws] += 1
     return [
-        {"workspace": ws, "path": str(WORKSPACE_ROOT / ws), "nodes": c}
+        {"workspace": ws, "path": str(root / ws), "nodes": c}
         for ws, c in sorted(counts.items(), key=lambda x: -x[1])
     ]
 
@@ -317,8 +325,8 @@ def read_node(node_id: str, max_chars: int = 8000) -> dict:
         return {"error": "Node has no path"}
 
     try:
-        p = Path(path_str).resolve()
-        root = Path(WORKSPACE_ROOT).resolve()
+        root = get_workspace_root()
+        p = resolve_node_path(node_id, path_str, root)
         if not p.is_relative_to(root):
             return {"error": "Path outside workspace"}
     except (OSError, ValueError) as e:
@@ -504,7 +512,7 @@ def impact_files(paths: list[str], limit: int = 80) -> dict:
     limit = min(max(limit, 1), 200)
     with _lock:
         graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
-    seed_ids = paths_to_node_ids(paths, WORKSPACE_ROOT, graph.get("nodes"))
+    seed_ids = paths_to_node_ids(paths, get_workspace_root(), graph.get("nodes"))
     if not seed_ids:
         return {"error": "No paths resolved to graph nodes", "paths": paths}
     return impact_files_bfs(graph, seed_ids, limit=limit)
@@ -581,6 +589,50 @@ def rescan() -> dict:
 
 
 @mcp.tool()
+def list_vaults() -> dict:
+    """
+    List registered bibliotecas (vaults) and which one is active.
+    Workspaces inside overview are subfolders of the active vault, not separate vaults.
+    """
+    vault_manager._load_registry()
+    active_id = vault_manager._data.get("active_id")
+    if not vault_manager._bootstrapped:
+        vault_manager.bootstrap()
+        active_id = vault_manager._data.get("active_id")
+    vaults = [
+        vault_manager.vault_to_public(v, active=v.id == active_id)
+        for v in vault_manager.list_vaults()
+    ]
+    return {"active_id": active_id, "vaults": vaults}
+
+
+@mcp.tool()
+def switch_vault(id: str = "", path: str = "") -> dict:
+    """
+    Switch the active biblioteca (vault) and reload the in-memory graph.
+
+    Provide either id (from list_vaults) or path (absolute folder path).
+    """
+    global _engine
+    if not id and not path:
+        return {"error": "Provide id or path"}
+    try:
+        from .app_deps import get_engine
+
+        result = apply_vault_switch_sync(
+            vault_id=id or None,
+            vault_path=path or None,
+        )
+        _engine = get_engine()
+        _load()
+        return result
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
 def create_file(relative_path: str, content: str = "") -> dict:
     """
     Create a new file inside the workspace.
@@ -603,7 +655,7 @@ def create_file(relative_path: str, content: str = "") -> dict:
     _recent_imports.append(str(dest))
     if len(_recent_imports) > 50:
         _recent_imports.pop(0)
-    return {"status": "ok", "path": str(dest.relative_to(WORKSPACE_ROOT))}
+    return {"status": "ok", "path": str(dest.relative_to(get_workspace_root()))}
 
 
 @mcp.tool()
@@ -621,7 +673,7 @@ def create_folder(relative_path: str) -> dict:
     if dest.exists():
         return {"error": f"Already exists: {relative_path}"}
     dest.mkdir(parents=True, exist_ok=True)
-    return {"status": "ok", "path": str(dest.relative_to(WORKSPACE_ROOT))}
+    return {"status": "ok", "path": str(dest.relative_to(get_workspace_root()))}
 
 
 @mcp.tool()
@@ -640,7 +692,7 @@ def import_github(repo_url: str) -> dict:
         _recent_imports.append(str(dest))
         if len(_recent_imports) > 50:
             _recent_imports.pop(0)
-        return {"status": "ok", "path": str(dest.relative_to(WORKSPACE_ROOT))}
+        return {"status": "ok", "path": str(dest.relative_to(get_workspace_root()))}
     except Exception as e:
         return {"error": str(e)}
 

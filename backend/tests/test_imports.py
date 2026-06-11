@@ -352,9 +352,9 @@ def test_api_create_endpoints(mock_urlopen):
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
 
-        with patch("backend.constants.WORKSPACE_ROOT", workspace_root), patch(
-            "backend.api.create.WORKSPACE_ROOT", workspace_root
-        ), patch("backend.api.imports_api.WORKSPACE_ROOT", workspace_root):
+        with patch("backend.constants.get_workspace_root", return_value=workspace_root), patch(
+            "backend.api.create.get_workspace_root", return_value=workspace_root
+        ), patch("backend.api.imports_api.get_workspace_root", return_value=workspace_root):
             client = TestClient(bridge.app)
 
             resp = client.post("/api/create/folder", json={"path": "documents"})
@@ -472,8 +472,8 @@ def test_api_create_doi_pmc_preprint(mock_fetch_json):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
-        with patch("backend.constants.WORKSPACE_ROOT", workspace_root), patch(
-            "backend.api.imports_api.WORKSPACE_ROOT", workspace_root
+        with patch("backend.constants.get_workspace_root", return_value=workspace_root), patch(
+            "backend.api.imports_api.get_workspace_root", return_value=workspace_root
         ):
             client = TestClient(bridge.app)
 

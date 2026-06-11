@@ -19,10 +19,9 @@ export interface ModalShellElements {
 export function createModalShell(els: ModalShellElements) {
   function closeModal(): void {
     els.container.classList.remove('active')
+    els.container.style.removeProperty('display')
+    els.container.setAttribute('aria-hidden', 'true')
     els.confirmBtn.style.display = ''
-    setTimeout(() => {
-      els.container.style.display = 'none'
-    }, 300)
   }
 
   function showModal(
@@ -60,7 +59,8 @@ export function createModalShell(els: ModalShellElements) {
       els.body.appendChild(fieldContainer)
     }
 
-    els.container.style.display = 'flex'
+    els.container.style.removeProperty('display')
+    els.container.setAttribute('aria-hidden', 'false')
     void els.container.offsetWidth
     els.container.classList.add('active')
 

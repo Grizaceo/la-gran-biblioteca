@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from .. import graph_state
 from .. import app_deps
-from ..app_deps import engine, notify_graph_clients
+from ..app_deps import get_engine, notify_graph_clients
 from ..graph_queries import build_subgraph
 from ..security import safe_error_detail
 from ..services.graph_pipeline import get_last_pipeline_stats, rebuild_graph
@@ -89,7 +89,7 @@ async def trigger_rescan():
     try:
         new_graph = await asyncio.to_thread(
             rebuild_graph,
-            engine,
+            get_engine(),
             recently_imported_paths=graph_state.recently_imported_paths,
             use_rebuild=True,
         )
@@ -106,10 +106,11 @@ async def trigger_rescan():
 
 @router.post("/rollback")
 async def trigger_rollback():
-    restored = engine.restore_backup()
+    eng = get_engine()
+    restored = eng.restore_backup()
     if not restored:
         raise HTTPException(status_code=404, detail="No backup found")
-    graph = engine.load_from_db()
+    graph = eng.load_from_db()
     graph_state.set_current_graph(graph)
     await notify_graph_clients()
     return {

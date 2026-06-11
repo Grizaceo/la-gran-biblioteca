@@ -73,6 +73,28 @@ export async function importPubmed(id: string): Promise<ImportNoteResponse> {
   return res.json()
 }
 
+export async function importFileFromPath(path: string): Promise<{ status: string; path: string }> {
+  const res = await apiFetch('/create/import-file-path', {
+    method: 'POST',
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ path }),
+  })
+  if (!res.ok) await handleResponseError(res, 'No se pudo importar el archivo')
+  return res.json()
+}
+
+export async function importFolderFromPath(
+  path: string,
+): Promise<{ status: string; path: string; node_id?: string; workspace_root?: string }> {
+  const res = await apiFetch('/create/import-folder-path', {
+    method: 'POST',
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ path }),
+  })
+  if (!res.ok) await handleResponseError(res, 'No se pudo importar la carpeta')
+  return res.json()
+}
+
 export async function createSystemFile(): Promise<{ status: string; path: string }> {
   const res = await apiFetch('/create/system-file', {
     method: 'POST',

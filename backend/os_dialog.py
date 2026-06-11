@@ -11,24 +11,39 @@ def select_file_in_os() -> str:
     """Opens a native system file selector dialog and returns the absolute path of the selected file."""
     try:
         if is_wsl():
-            # PowerShell File Open Dialog via .NET Forms
             cmd = [
-                "powershell.exe", "-NoProfile", "-Command",
+                "powershell.exe", "-Sta", "-NoProfile", "-Command",
                 "Add-Type -AssemblyName System.Windows.Forms; "
+                "$owner = New-Object System.Windows.Forms.Form; "
+                "$owner.TopMost = $true; "
+                "$owner.ShowInTaskbar = $false; "
+                "$owner.StartPosition = 'CenterScreen'; "
+                "$owner.Size = New-Object System.Drawing.Size(0,0); "
+                "$owner.Show(); "
+                "$owner.Activate(); "
                 "$f = New-Object System.Windows.Forms.OpenFileDialog; "
                 "$f.Filter = 'All Files (*.*)|*.*'; "
                 "$f.Title = 'Seleccionar Archivo para La Gran Biblioteca'; "
-                "$res = $f.ShowDialog(); "
-                "if ($res -eq 'OK') { Write-Output $f.FileName }"
+                "$res = $f.ShowDialog($owner); "
+                "$owner.Dispose(); "
+                "if ($res -eq 'OK') { Write-Output $f.FileName }",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             win_path = result.stdout.strip()
             if not win_path:
                 return ""
             
-            # Convert Windows path to WSL Linux path
-            res_wsl = subprocess.run(["wslpath", win_path], capture_output=True, text=True, timeout=5)
-            return res_wsl.stdout.strip()
+            res_wsl = subprocess.run(["wslpath", "-u", win_path], capture_output=True, text=True, timeout=5)
+            wsl_path = res_wsl.stdout.strip()
+            if res_wsl.returncode == 0 and wsl_path:
+                return wsl_path
+            logger.warning(
+                "wslpath failed for %r (rc=%s): %s",
+                win_path,
+                res_wsl.returncode,
+                (res_wsl.stderr or "").strip(),
+            )
+            return ""
             
         elif platform.system() == "Darwin":
             # macOS AppleScript dialog
@@ -59,23 +74,42 @@ def select_folder_in_os() -> str:
     """Opens a native system folder selector dialog and returns the absolute path of the selected folder."""
     try:
         if is_wsl():
-            # PowerShell Folder Browser Dialog
+            # TopMost owner form so the dialog appears above the browser on Windows/WSL.
             cmd = [
-                "powershell.exe", "-NoProfile", "-Command",
+                "powershell.exe", "-Sta", "-NoProfile", "-Command",
                 "Add-Type -AssemblyName System.Windows.Forms; "
+                "$owner = New-Object System.Windows.Forms.Form; "
+                "$owner.TopMost = $true; "
+                "$owner.ShowInTaskbar = $false; "
+                "$owner.StartPosition = 'CenterScreen'; "
+                "$owner.Size = New-Object System.Drawing.Size(0,0); "
+                "$owner.Show(); "
+                "$owner.Activate(); "
                 "$f = New-Object System.Windows.Forms.FolderBrowserDialog; "
                 "$f.Description = 'Seleccionar Carpeta para La Gran Biblioteca'; "
-                "$res = $f.ShowDialog(); "
-                "if ($res -eq 'OK') { Write-Output $f.SelectedPath }"
+                "$res = $f.ShowDialog($owner); "
+                "$owner.Dispose(); "
+                "if ($res -eq 'OK') { Write-Output $f.SelectedPath }",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             win_path = result.stdout.strip()
             if not win_path:
+                if result.stderr:
+                    logger.warning("Folder picker stderr: %s", result.stderr.strip())
                 return ""
-                
+
             # Convert Windows path to WSL Linux path
-            res_wsl = subprocess.run(["wslpath", win_path], capture_output=True, text=True, timeout=5)
-            return res_wsl.stdout.strip()
+            res_wsl = subprocess.run(["wslpath", "-u", win_path], capture_output=True, text=True, timeout=5)
+            wsl_path = res_wsl.stdout.strip()
+            if res_wsl.returncode == 0 and wsl_path:
+                return wsl_path
+            logger.warning(
+                "wslpath failed for %r (rc=%s): %s",
+                win_path,
+                res_wsl.returncode,
+                (res_wsl.stderr or "").strip(),
+            )
+            return ""
             
         elif platform.system() == "Darwin":
             # macOS AppleScript folder dialog

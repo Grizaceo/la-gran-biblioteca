@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from collections import Counter, defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-from .constants import WORKSPACE_ROOT
+from .constants import get_workspace_root
 
 
 def _workspace_from_node(node: dict[str, Any]) -> str:
@@ -19,7 +18,7 @@ def _workspace_from_node(node: dict[str, Any]) -> str:
     if not path:
         return ""
     try:
-        root = Path(os.environ.get("WORKSPACE_ROOT", str(WORKSPACE_ROOT))).resolve()
+        root = get_workspace_root()
         rel = Path(path).resolve().relative_to(root)
         return rel.parts[0] if rel.parts else ""
     except (OSError, ValueError):

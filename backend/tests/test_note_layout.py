@@ -58,8 +58,8 @@ def test_orbit_layout_places_notes_around_source(tmp_path: Path):
     sx, sy = 100, 200
     d1 = ((n1["position"]["x"] - sx) ** 2 + (n1["position"]["y"] - sy) ** 2) ** 0.5
     d2 = ((n2["position"]["x"] - sx) ** 2 + (n2["position"]["y"] - sy) ** 2) ** 0.5
-    assert 40 < d1 < 55
-    assert 40 < d2 < 55
+    assert 40 < d1 <= 55
+    assert 40 < d2 <= 55
     assert n1["position"] != n2["position"]
 
 

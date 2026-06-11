@@ -15,6 +15,7 @@ import {
   TOAST_TREE_LAYOUT,
 } from './constellationCopy'
 import { createModalShell } from './modals/modalShell'
+import { mountFolderPicker } from './folderPicker'
 import { getPanelDock } from './panelDock'
 import { HELP_GUIDE_HTML, mountHelpGuideStyles } from './helpGuide'
 import { syncMinimapHudLayout } from './legendDock'
@@ -24,6 +25,7 @@ export interface MenuBarOptions {
   constellationSettings?: ConstellationSettingsAPI
   onRescanComplete?: () => void
   resetExplorer?: () => void
+  onVaultSwitch?: (result: bridge.VaultSwitchResponse) => void | Promise<void>
 }
 
 export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): void {
@@ -126,6 +128,12 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
         break
       case 'rescan-library':
         runRescan()
+        break
+      case 'open-vault':
+        openAnotherVault()
+        break
+      case 'switch-vault':
+        openSwitchVaultModal()
         break
 
       // View actions
@@ -337,6 +345,109 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
   }
 
   let rescanRunning = false
+  let vaultSwitchInProgress = false
+
+  const modalContent = document.getElementById('modal-content') as HTMLElement
+
+  function showModalOverlay(): void {
+    modalContainer.style.removeProperty('display')
+    modalContainer.setAttribute('aria-hidden', 'false')
+    modalContent.classList.add('modal-wide')
+    void modalContainer.offsetWidth
+    modalContainer.classList.add('active')
+  }
+
+  function hideModalOverlay(): void {
+    modalContainer.classList.remove('active')
+    modalContainer.style.removeProperty('display')
+    modalContainer.setAttribute('aria-hidden', 'true')
+    modalContent.classList.remove('modal-wide')
+  }
+
+  const folderPicker = mountFolderPicker({
+    container: modalContainer,
+    titleEl: modalTitle,
+    bodyEl: modalBody,
+    errorEl: modalError,
+    confirmBtn: modalConfirmBtn,
+    cancelBtn: modalCancelBtn,
+    closeBtn: modalCloseBtn,
+    show: showModalOverlay,
+    hide: hideModalOverlay,
+  })
+
+  async function openAnotherVault(): Promise<void> {
+    folderPicker.open({
+      mode: 'vault',
+      title: 'Abrir biblioteca',
+      confirmLabel: 'Abrir biblioteca',
+      onConfirm: async (path) => {
+        if (vaultSwitchInProgress) return
+        vaultSwitchInProgress = true
+        try {
+          showNotification('Cargando biblioteca…', 'info')
+          const result = await bridge.switchVaultByPath(path)
+          showNotification(`Biblioteca abierta: ${result.vault.name}`, 'success')
+          await opts.onVaultSwitch?.(result)
+        } finally {
+          vaultSwitchInProgress = false
+        }
+      },
+    })
+  }
+
+  async function openSwitchVaultModal(): Promise<void> {
+    if (vaultSwitchInProgress) return
+    try {
+      const list = await bridge.fetchVaults()
+      modalTitle.textContent = 'Cambiar biblioteca'
+      modalError.textContent = ''
+      modalBody.innerHTML = ''
+      modalConfirmBtn.style.display = 'none'
+      modalCancelBtn.style.display = 'inline-block'
+      modalContent.classList.remove('modal-wide')
+
+      if (list.vaults.length === 0) {
+        modalBody.innerHTML = '<p style="margin:0;color:rgba(255,255,255,0.75)">No hay bibliotecas registradas. Usa «Abrir otra biblioteca…» primero.</p>'
+      } else {
+        const wrap = document.createElement('div')
+        wrap.style.display = 'flex'
+        wrap.style.flexDirection = 'column'
+        wrap.style.gap = '8px'
+        for (const v of list.vaults) {
+          const btn = document.createElement('button')
+          btn.type = 'button'
+          btn.className = 'menu-option'
+          btn.style.textAlign = 'left'
+          btn.disabled = !!v.active || vaultSwitchInProgress
+          const label = v.active ? `${v.name} (activa)` : v.name
+          const meta = v.node_count != null ? `${v.node_count} nodos` : v.path
+          btn.innerHTML = `<strong>${label}</strong><br><span style="opacity:0.7;font-size:11px">${meta}</span>`
+          btn.addEventListener('click', async () => {
+            if (vaultSwitchInProgress) return
+            vaultSwitchInProgress = true
+            closeModal()
+            showNotification(`Cargando ${v.name}…`, 'info')
+            try {
+              const result = await bridge.switchVault(v.id)
+              showNotification(`Biblioteca activa: ${result.vault.name}`, 'success')
+              await opts.onVaultSwitch?.(result)
+            } catch (switchErr) {
+              showNotification(`Error: ${(switchErr as Error).message}`, 'error')
+            } finally {
+              vaultSwitchInProgress = false
+            }
+          })
+          wrap.appendChild(btn)
+        }
+        modalBody.appendChild(wrap)
+      }
+      showModalOverlay()
+    } catch (err) {
+      showNotification(`Error: ${(err as Error).message}`, 'error')
+    }
+  }
+
   async function runRescan(): Promise<void> {
     if (rescanRunning) return
     rescanRunning = true
@@ -368,57 +479,32 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
   // --- Specific Modal Handlers ---
 
   async function openCreateFileModal(): Promise<void> {
-    try {
-      showNotification('Abriendo selector de archivos del SO...', 'info')
-      if ((window as any).addActivityLog) {
-        (window as any).addActivityLog('Abriendo selector de archivos nativo del SO...', 'info')
-      }
-      const res = await bridge.createSystemFile()
-      showNotification(`Archivo importado con éxito: ${res.path}`, 'success')
-      if ((window as any).addActivityLog) {
-        (window as any).addActivityLog(`Archivo seleccionado con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
-      }
-      engine.enqueuePendingFocus(res.path)
-    } catch (err: any) {
-      if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
-        showNotification('Operación cancelada o sin selección', 'info')
-        if ((window as any).addActivityLog) {
-          (window as any).addActivityLog('Operación de selección de archivo cancelada', 'warn')
-        }
-      } else {
-        showNotification(err.message || 'Error al seleccionar archivo', 'error')
-        if ((window as any).addActivityLog) {
-          (window as any).addActivityLog(`Error al seleccionar archivo: ${err.message}`, 'error')
-        }
-      }
-    }
+    folderPicker.open({
+      mode: 'file',
+      title: 'Importar archivo al vault',
+      confirmLabel: 'Importar archivo',
+      onConfirm: async (path) => {
+        showNotification('Importando archivo…', 'info')
+        const res = await bridge.importFileFromPath(path)
+        showNotification(`Archivo importado: ${res.path}`, 'success')
+        engine.enqueuePendingFocus(res.path)
+      },
+    })
   }
 
   async function openCreateFolderModal(): Promise<void> {
-    try {
-      showNotification('Abriendo selector de carpetas del SO...', 'info')
-      if ((window as any).addActivityLog) {
-        (window as any).addActivityLog('Abriendo selector de carpetas nativo del SO...', 'info')
-      }
-      const res = await bridge.createSystemFolder()
-      showNotification(`Carpeta importada con éxito: ${res.path}`, 'success')
-      if ((window as any).addActivityLog) {
-        (window as any).addActivityLog(`Carpeta seleccionada con éxito: ${res.path}. Esperando actualización del grafo...`, 'success')
-      }
-      engine.enqueuePendingFocus(res.path)
-    } catch (err: any) {
-      if (err.message && (err.message.includes('cancelada') || err.message.includes('cerrado'))) {
-        showNotification('Operación cancelada o sin selección', 'info')
-        if ((window as any).addActivityLog) {
-          (window as any).addActivityLog('Operación de selección de carpeta cancelada', 'warn')
-        }
-      } else {
-        showNotification(err.message || 'Error al seleccionar carpeta', 'error')
-        if ((window as any).addActivityLog) {
-          (window as any).addActivityLog(`Error al seleccionar carpeta: ${err.message}`, 'error')
-        }
-      }
-    }
+    folderPicker.open({
+      mode: 'folder',
+      title: 'Importar carpeta al vault',
+      confirmLabel: 'Importar carpeta',
+      onConfirm: async (path) => {
+        showNotification('Importando carpeta…', 'info')
+        const res = await bridge.importFolderFromPath(path)
+        showNotification(`Carpeta importada: ${res.path}`, 'success')
+        engine.enqueuePendingFocus(res.path)
+        if (res.node_id) engine.enqueuePendingFocus(res.node_id)
+      },
+    })
   }
 
 

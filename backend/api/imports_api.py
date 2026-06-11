@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from .. import graph_state
 from ..bridge_tasks import force_graph_update
-from ..constants import WORKSPACE_ROOT
+from ..constants import get_workspace_root
 from ..imports import (
     download_and_extract_github,
     import_arxiv,
@@ -55,17 +55,17 @@ class ImportPreprintRequest(BaseModel):
 async def create_github(req: ImportGithubRequest):
     try:
         dest_dir = await asyncio.to_thread(
-            download_and_extract_github, req.url, WORKSPACE_ROOT
+            download_and_extract_github, req.url, get_workspace_root()
         )
         graph_state.register_recently_imported(dest_dir)
-        rel_path = str(dest_dir.relative_to(WORKSPACE_ROOT))
-        node_id = node_id_for_import_dir(dest_dir, WORKSPACE_ROOT)
+        rel_path = str(dest_dir.relative_to(get_workspace_root()))
+        node_id = node_id_for_import_dir(dest_dir, get_workspace_root())
         asyncio.create_task(force_graph_update(ensure_paths=[dest_dir]))
         return {
             "status": "ok",
             "path": rel_path,
             "node_id": node_id,
-            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+            "workspace_root": str(get_workspace_root().resolve()),
         }
     except Exception as e:
         logger.error("Error importando repositorio de GitHub: %s", e)
@@ -109,16 +109,16 @@ async def arxiv_search(
 @router.post("/create/arxiv")
 async def create_arxiv(req: ImportArxivRequest):
     try:
-        file_path = await asyncio.to_thread(import_arxiv, req.id, WORKSPACE_ROOT)
+        file_path = await asyncio.to_thread(import_arxiv, req.id, get_workspace_root())
         graph_state.register_recently_imported(file_path)
-        rel_path = str(file_path.relative_to(WORKSPACE_ROOT))
-        node_id = node_id_for_import_path(file_path, WORKSPACE_ROOT)
+        rel_path = str(file_path.relative_to(get_workspace_root()))
+        node_id = node_id_for_import_path(file_path, get_workspace_root())
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
         return {
             "status": "ok",
             "path": rel_path,
             "node_id": node_id,
-            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+            "workspace_root": str(get_workspace_root().resolve()),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -130,16 +130,16 @@ async def create_arxiv(req: ImportArxivRequest):
 @router.post("/create/pubmed")
 async def create_pubmed(req: ImportPubmedRequest):
     try:
-        file_path = await asyncio.to_thread(import_pubmed, req.id, WORKSPACE_ROOT)
+        file_path = await asyncio.to_thread(import_pubmed, req.id, get_workspace_root())
         graph_state.register_recently_imported(file_path)
-        rel_path = str(file_path.relative_to(WORKSPACE_ROOT))
-        node_id = node_id_for_import_path(file_path, WORKSPACE_ROOT)
+        rel_path = str(file_path.relative_to(get_workspace_root()))
+        node_id = node_id_for_import_path(file_path, get_workspace_root())
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
         return {
             "status": "ok",
             "path": rel_path,
             "node_id": node_id,
-            "workspace_root": str(WORKSPACE_ROOT.resolve()),
+            "workspace_root": str(get_workspace_root().resolve()),
         }
     except Exception as e:
         logger.error("Error importando de PubMed: %s", e)
@@ -160,10 +160,10 @@ def _import_file_response(file_path, workspace_root) -> dict:
 @router.post("/create/doi")
 async def create_doi(req: ImportDoiRequest):
     try:
-        file_path = await asyncio.to_thread(import_doi, req.doi, WORKSPACE_ROOT)
+        file_path = await asyncio.to_thread(import_doi, req.doi, get_workspace_root())
         graph_state.register_recently_imported(file_path)
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
-        return _import_file_response(file_path, WORKSPACE_ROOT)
+        return _import_file_response(file_path, get_workspace_root())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -174,10 +174,10 @@ async def create_doi(req: ImportDoiRequest):
 @router.post("/create/pmc")
 async def create_pmc(req: ImportPmcRequest):
     try:
-        file_path = await asyncio.to_thread(import_pmc, req.pmcid, WORKSPACE_ROOT)
+        file_path = await asyncio.to_thread(import_pmc, req.pmcid, get_workspace_root())
         graph_state.register_recently_imported(file_path)
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
-        return _import_file_response(file_path, WORKSPACE_ROOT)
+        return _import_file_response(file_path, get_workspace_root())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -188,10 +188,10 @@ async def create_pmc(req: ImportPmcRequest):
 @router.post("/create/medrxiv")
 async def create_medrxiv(req: ImportPreprintRequest):
     try:
-        file_path = await asyncio.to_thread(import_preprint, "medrxiv", req.id, WORKSPACE_ROOT)
+        file_path = await asyncio.to_thread(import_preprint, "medrxiv", req.id, get_workspace_root())
         graph_state.register_recently_imported(file_path)
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
-        return _import_file_response(file_path, WORKSPACE_ROOT)
+        return _import_file_response(file_path, get_workspace_root())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -202,10 +202,10 @@ async def create_medrxiv(req: ImportPreprintRequest):
 @router.post("/create/biorxiv")
 async def create_biorxiv(req: ImportPreprintRequest):
     try:
-        file_path = await asyncio.to_thread(import_preprint, "biorxiv", req.id, WORKSPACE_ROOT)
+        file_path = await asyncio.to_thread(import_preprint, "biorxiv", req.id, get_workspace_root())
         graph_state.register_recently_imported(file_path)
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
-        return _import_file_response(file_path, WORKSPACE_ROOT)
+        return _import_file_response(file_path, get_workspace_root())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

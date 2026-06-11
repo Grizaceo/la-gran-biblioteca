@@ -9,23 +9,30 @@ Para el contexto RepoCiv / Hermes (plano de conocimiento vs workshop), ver [`eco
 ## Vista general
 
 ```mermaid
-flowchart LR
-  Vault[WORKSPACE_ROOT] --> Scanner[scan_workspaces BFS]
+flowchart TB
+  Registry["~/.hermes/lgb/vaults.json"] --> VM[VaultManager]
+  VM --> Active[vault activo]
+  Active --> Root[WORKSPACE_ROOT]
+  Active --> VDB["vault/.lgb/library.db"]
+  Root --> Scanner[scan_workspaces BFS]
   Scanner --> Pipeline[graph_pipeline]
   Pipeline --> Engine[GraphEngine SQLite]
   Engine --> API[FastAPI REST + SSE]
   Engine --> MCP[MCP stdio]
   API --> UI[WebGL 3D frontend]
   Watcher[watchdog] --> Pipeline
+  Switch[switch_vault] --> Engine
+  Switch --> Watcher
 ```
 
 | Capa | Tecnología | Rol |
 |------|------------|-----|
 | Escaneo | Python BFS | Nodos/aristas desde el filesystem |
-| Persistencia | SQLite (`DB_PATH`) | Grafo + prefs de constelaciones |
-| API | FastAPI :3001 | REST, SSE, imports |
+| Persistencia | SQLite (`{vault}/.lgb/library.db`) | Grafo + prefs de constelaciones por biblioteca |
+| Registro | JSON (`LGB_REGISTRY_PATH`) | Vaults registrados + `active_id` |
+| API | FastAPI :3001 | REST, SSE, imports, `/api/vaults*` |
 | Agentes | MCP (`backend/mcp_server.py`) | Mismas operaciones sin HTTP |
-| UI | Vite + Three.js + 3d-force-graph :5173 | Grafo 3D, panel de detalle |
+| UI | Vite + Three.js + 3d-force-graph :5173 | Grafo 3D, panel de detalle, menú biblioteca |
 
 **No** usa React ni Neo4j.
 
@@ -50,15 +57,21 @@ flowchart LR
 
 ### API (`backend/api/`)
 
-Routers modulares montados en `library_bridge.py`: `graph`, `nodes`, `constellation`, `create`, `imports_api`, `overview`.
+Routers modulares montados en `library_bridge.py`: `graph`, `nodes`, `constellation`, `create`, `imports_api`, `overview`, `vaults_api`.
 
-Estado en memoria: `graph_state` (grafo actual, cap de respuesta, imports recientes). Singleton `app_deps.engine`.
+Estado en memoria: `graph_state` (grafo actual, cap de respuesta, imports recientes). Engine intercambiable vía `app_deps.set_engine()` / `vault_switch.apply_vault_switch()`.
+
+### Multi-vault
+
+- `backend/vault_manager.py` — registro JSON, bootstrap, migración desde `backend/library.db`
+- `backend/vault_switch.py` — hot-swap engine + grafo + reinicio watchdog + SSE
+- `.lgb/` excluido del walker; DB co-localizada en cada vault
 
 ### Vault hygiene
 
 En `backend/scan/walker.py`:
 
-- Exclusiones técnicas: `.git`, `node_modules`, `.hermes`, etc. + `LGB_EXTRA_EXCLUDE_DIRS`
+- Exclusiones técnicas: `.git`, `node_modules`, `.hermes`, `.lgb`, etc. + `LGB_EXTRA_EXCLUDE_DIRS`
 - Carpetas `archive`, `backups`, `snapshots` según `LGB_ARCHIVE_POLICY` (`exclude` | `shadow` | `include`)
 - Overview: `skipped_archive_dirs` en el último escaneo
 

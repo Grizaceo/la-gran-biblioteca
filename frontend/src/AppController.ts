@@ -1,4 +1,5 @@
 import { fetchGraph, fetchOverview, fetchOverviewStructure, subscribeToUpdates } from './lib/bridge'
+import type { VaultSwitchResponse } from './lib/bridge'
 import { processGraphUpdate } from './services/syncGraphFromSSE'
 import type { Graph, Overview, OverviewStructure } from './lib/bridge'
 import { Graph3DEngine } from './render3d/Graph3DEngine'
@@ -45,6 +46,10 @@ function formatStats(graph: Graph, overview: Overview | null): string {
   const top = overview?.top_workspaces?.[0]
   if (top?.workspace) {
     text += ` · ${top.workspace}`
+  }
+  const vaultName = overview?.vault?.name
+  if (vaultName) {
+    text = `${vaultName} · ${text}`
   }
   return text
 }
@@ -144,7 +149,7 @@ export class AppController {
 
     this.statsEl.textContent = formatStats(graph, this.overview)
     this.coverageMap?.refreshCapBanner()
-    this.statusEl.textContent = 'Conectado'
+    this.statusEl.textContent = this.overview?.vault?.name ?? 'Conectado'
 
     addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success')
     addActivityLog(
@@ -177,7 +182,66 @@ export class AppController {
     this.engine?.destroy()
   }
 
+  private async reloadAfterVaultSwitch(result: VaultSwitchResponse): Promise<void> {
+    this.loadingEl.style.display = 'flex'
+    this.loadingEl.style.opacity = '1'
+    this.loadingText.textContent = `Cargando biblioteca ${result.vault.name}…`
+    this.statusEl.textContent = result.vault.name
+    try {
+      const [g, ov, structure] = await Promise.all([
+        fetchGraph(),
+        fetchOverview(),
+        fetchOverviewStructure(),
+      ])
+      this.currentGraph = g
+      this.overview = ov
+      this.overviewStructure = structure
+      if (ov.workspace_root) {
+        this.engine.setWorkspaceRoot(ov.workspace_root)
+      }
+      this.engine.setGraph(g)
+      this.graphHydrated = true
+      this.explorerActions.reset()
+      this.search.setup(g.nodes)
+      this.minimap.setStructure(structure)
+      this.minimap.invalidateBounds()
+      this.minimap.update()
+      this.viewOptions.renderList()
+      this.statsEl.textContent = formatStats(g, ov)
+      this.statusEl.textContent = ov.vault?.name ?? result.vault.name
+      this.coverageMap?.refreshCapBanner()
+      addActivityLog(
+        `Biblioteca activa: ${result.vault.name} (${result.nodes} nodos).`,
+        'success',
+      )
+    } catch (err) {
+      this.showToast(`Error al cargar biblioteca: ${(err as Error).message}`, true)
+    } finally {
+      this.loadingEl.style.transition = 'opacity 0.4s'
+      this.loadingEl.style.opacity = '0'
+      setTimeout(() => { this.loadingEl.style.display = 'none' }, 400)
+    }
+  }
+
+  private async syncOverviewAfterGraphChange(graph: Graph): Promise<void> {
+    try {
+      const ov = await fetchOverview()
+      this.overview = ov
+      if (ov.workspace_root) {
+        this.engine.setWorkspaceRoot(ov.workspace_root)
+      }
+      if (ov.vault?.name) {
+        this.statusEl.textContent = ov.vault.name
+      }
+      this.statsEl.textContent = formatStats(graph, ov)
+      this.coverageMap?.refreshCapBanner()
+    } catch (err) {
+      console.warn('[LGB] overview sync after graph change failed', err)
+    }
+  }
+
   private onGraphUpdate(g: Graph, event: GraphUpdateEvent): void {
+    void this.syncOverviewAfterGraphChange(g)
     this.currentGraph = g
     processGraphUpdate(g, event, {
       engine: this.engine,
@@ -258,9 +322,10 @@ export class AppController {
       openViewOptions: () => this.viewOptions?.openPanel?.(),
       constellationSettings,
       onRescanComplete: () => {
-        this.statusEl.textContent = 'Sincronizando tras escaneo…'
+        this.statusEl.textContent = this.overview?.vault?.name ?? 'Sincronizando tras escaneo…'
       },
       resetExplorer: () => this.explorerActions.reset(),
+      onVaultSwitch: (result) => this.reloadAfterVaultSwitch(result),
     })
 
     const logPanel = document.getElementById('activity-log')

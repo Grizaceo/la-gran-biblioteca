@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .. import graph_state
-from ..constants import WORKSPACE_ROOT
+from ..constants import get_workspace_root
 from ..path_utils import (
     path_from_node_id,
     path_from_node_id_fuzzy,
@@ -76,7 +76,7 @@ def _stem_from_file_path(path: Path, root: Path) -> str:
 
 def _resolve_source_file(source_node_id: str, source_path: str = "") -> Path:
     nid = normalize_source_node_id(source_node_id)
-    root = WORKSPACE_ROOT.resolve()
+    root = get_workspace_root().resolve()
 
     node = graph_state.get_node_by_id(nid)
     path_str = (source_path or (node.get("path", "") if node else "")).strip()
@@ -120,7 +120,7 @@ def _wikilink_stem_from_vault_file(path: Path) -> str | None:
 
 def _wikilink_stem(source_node_id: str, source_path: str = "") -> str:
     path = _resolve_source_file(source_node_id, source_path)
-    return _stem_from_file_path(path, WORKSPACE_ROOT.resolve())
+    return _stem_from_file_path(path, get_workspace_root().resolve())
 
 
 def validate_labels(labels: list[str]) -> None:
@@ -135,7 +135,7 @@ def validate_labels(labels: list[str]) -> None:
 
 def _note_dir(source_node_id: str) -> Path:
     slug = source_slug_from_node_id(source_node_id)
-    return WORKSPACE_ROOT / NOTES_DIR / slug
+    return get_workspace_root() / NOTES_DIR / slug
 
 
 def _note_path(source_node_id: str, note_id: str) -> Path:
@@ -143,7 +143,7 @@ def _note_path(source_node_id: str, note_id: str) -> Path:
 
 
 def _find_vault_note_path(note_id: str) -> Path:
-    notes_root = WORKSPACE_ROOT / NOTES_DIR
+    notes_root = get_workspace_root() / NOTES_DIR
     if not notes_root.is_dir():
         raise NoteNotFoundError(note_id)
     matches = list(notes_root.rglob(f"{note_id}.md"))
@@ -152,7 +152,7 @@ def _find_vault_note_path(note_id: str) -> Path:
     if len(matches) > 1:
         matches.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     path = matches[0]
-    validate_path_under_workspace(str(path), WORKSPACE_ROOT)
+    validate_path_under_workspace(str(path), get_workspace_root())
     return path
 
 
@@ -231,7 +231,7 @@ def _parse_vault_note_file(path: Path) -> dict:
     elif not isinstance(labels, list):
         labels = []
 
-    rel = str(path.relative_to(WORKSPACE_ROOT))
+    rel = str(path.relative_to(get_workspace_root()))
     return {
         "id": note_id,
         "title": str(fm.get("title", "") or ""),
@@ -248,7 +248,7 @@ def _parse_vault_note_file(path: Path) -> dict:
 
 
 def _inline_notes_for_source(source_node_id: str, source_path: Path) -> list[dict]:
-    rel = str(source_path.relative_to(WORKSPACE_ROOT.resolve()))
+    rel = str(source_path.relative_to(get_workspace_root().resolve()))
     try:
         content = source_path.read_text(encoding="utf-8")
     except OSError:
@@ -262,7 +262,7 @@ def _inline_notes_for_source(source_node_id: str, source_path: Path) -> list[dic
 
 
 def _find_inline_note(note_id: str) -> tuple[dict, Path]:
-    root = WORKSPACE_ROOT.resolve()
+    root = get_workspace_root().resolve()
     candidates: list[Path] = []
 
     graph = graph_state.get_current_graph()
@@ -277,7 +277,7 @@ def _find_inline_note(note_id: str) -> tuple[dict, Path]:
 
     if not candidates:
         for ext in ("*.md", "*.txt"):
-            candidates.extend(WORKSPACE_ROOT.rglob(ext))
+            candidates.extend(get_workspace_root().rglob(ext))
 
     seen: set[str] = set()
     for path in candidates:
@@ -316,7 +316,7 @@ def _create_vault_note(
         wikilink_stem=stem,
     )
     dest = _note_path(source_node_id, note_id)
-    validate_path_under_workspace(str(dest), WORKSPACE_ROOT)
+    validate_path_under_workspace(str(dest), get_workspace_root())
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(content, encoding="utf-8")
     return _parse_vault_note_file(dest), dest
@@ -352,7 +352,7 @@ def _create_inline_note(
         raise NoteValidationError(f"Cannot read source file: {e}") from e
     updated = insert_inline_block(content, block, selected_text)
     source_file.write_text(updated, encoding="utf-8")
-    rel = str(source_file.relative_to(WORKSPACE_ROOT.resolve()))
+    rel = str(source_file.relative_to(get_workspace_root().resolve()))
     notes = parse_inline_blocks(
         updated,
         source_path=rel,
@@ -446,7 +446,7 @@ def update_note(
         content = source_file.read_text(encoding="utf-8")
         updated = replace_inline_block(content, note_id, block)
         source_file.write_text(updated, encoding="utf-8")
-        rel = str(source_file.relative_to(WORKSPACE_ROOT.resolve()))
+        rel = str(source_file.relative_to(get_workspace_root().resolve()))
         for note in parse_inline_blocks(
             updated,
             source_path=rel,
@@ -520,7 +520,7 @@ def collect_all_notes() -> list[dict]:
     all_notes: list[dict] = []
     seen: set[str] = set()
 
-    notes_root = WORKSPACE_ROOT / NOTES_DIR
+    notes_root = get_workspace_root() / NOTES_DIR
     if notes_root.is_dir():
         for path in notes_root.rglob("*.md"):
             try:
@@ -531,7 +531,7 @@ def collect_all_notes() -> list[dict]:
             except OSError:
                 continue
 
-    root = WORKSPACE_ROOT.resolve()
+    root = get_workspace_root().resolve()
     scanned_files: set[str] = set()
     graph = graph_state.get_current_graph()
     file_paths: list[Path] = []
@@ -544,7 +544,7 @@ def collect_all_notes() -> list[dict]:
                     file_paths.append(p)
     if not file_paths:
         for ext in ("*.md", "*.txt"):
-            file_paths.extend(WORKSPACE_ROOT.rglob(ext))
+            file_paths.extend(get_workspace_root().rglob(ext))
 
     for path in file_paths:
         try:

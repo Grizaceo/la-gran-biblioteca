@@ -7,7 +7,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
-from ..constants import WORKSPACE_ROOT, get_exclude_dirs, is_archive_dir_name, get_archive_policy
+from ..constants import get_exclude_dirs, get_workspace_root, is_archive_dir_name, get_archive_policy
 from .layout import import_island_origin, posix_rel
 from .markdown import should_scan
 from .walker import _append_file_node, _append_folder_node
@@ -65,9 +65,9 @@ def _scan_subdirectory(
 
 def scan_import_paths(
     paths: Iterable[Path],
-    root: Path = WORKSPACE_ROOT,
+    root: Path | None = None,
 ) -> Dict[str, Any]:
-    root = root.resolve()
+    root = (root or get_workspace_root()).resolve()
     graph: Dict[str, Any] = {"nodes": [], "edges": []}
     node_map: Dict[str, str] = {}
 
@@ -103,15 +103,17 @@ def scan_import_paths(
     return graph
 
 
-def node_id_for_import_dir(path: Path, root: Path = WORKSPACE_ROOT) -> str:
+def node_id_for_import_dir(path: Path, root: Path | None = None) -> str:
     from .layout import folder_node_id
 
-    rel = posix_rel(Path(path), root)
+    base = root or get_workspace_root()
+    rel = posix_rel(Path(path), base)
     return folder_node_id(rel)
 
 
-def node_id_for_import_path(path: Path, root: Path = WORKSPACE_ROOT) -> str:
+def node_id_for_import_path(path: Path, root: Path | None = None) -> str:
     from .layout import file_node_id
 
-    rel = posix_rel(Path(path), root)
+    base = root or get_workspace_root()
+    rel = posix_rel(Path(path), base)
     return file_node_id(rel)

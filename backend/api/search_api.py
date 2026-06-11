@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query
 
 from .. import graph_state
-from ..app_deps import engine
+from ..app_deps import get_engine
 from ..graph_queries import search_graph
 
 router = APIRouter(prefix="/api", tags=["search"])
@@ -25,7 +25,8 @@ async def search_nodes(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    indexed = engine.search_index(q, limit=max(limit * 5, 50), offset=0) if mode in {"text", "related"} else []
+    eng = get_engine()
+    indexed = eng.search_index(q, limit=max(limit * 5, 50), offset=0) if mode in {"text", "related"} else []
     return search_graph(
         graph_state.get_current_graph(),
         engine_search_results=indexed,

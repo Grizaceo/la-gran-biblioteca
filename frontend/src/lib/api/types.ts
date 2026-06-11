@@ -42,6 +42,7 @@ export interface Overview {
   top_workspaces: Array<{ workspace: string; nodes: number }>
   recent_imports: string[]
   workspace_root: string
+  vault?: VaultInfo
   skipped_archive_dirs?: number
   pipeline?: {
     scan_ms: number
@@ -51,6 +52,42 @@ export interface Overview {
     edge_count: number
   }
   limited_count?: number
+}
+
+export interface VaultInfo {
+  id: string
+  name: string
+  path: string
+  db_path?: string
+  active?: boolean
+  node_count?: number
+  edge_count?: number
+  created_at?: string
+  last_opened_at?: string
+}
+
+export interface VaultListResponse {
+  active_id: string | null
+  vaults: VaultInfo[]
+}
+
+export interface VaultSwitchResponse {
+  vault: VaultInfo
+  nodes: number
+  edges: number
+}
+
+export interface BrowseEntry {
+  name: string
+  path: string
+  is_dir: boolean
+}
+
+export interface BrowseResponse {
+  path: string
+  parent: string | null
+  entries: BrowseEntry[]
+  roots: Array<{ label: string; path: string }>
 }
 
 export interface StructureCluster {

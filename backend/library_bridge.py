@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import graph_state
 from .api import (
+    browse_api,
     constellation,
     coverage,
     create,
@@ -31,19 +32,23 @@ from .api import (
     overview,
     search_api,
     tour_api,
+    vaults_api,
+    browse_api,
 )
-from .app_deps import engine
+from .app_deps import engine, set_engine
 from .bridge_tasks import force_graph_update
-from .constants import WORKSPACE_ROOT  # tests may patch via bridge.WORKSPACE_ROOT
-from .scan_workspaces import scan_workspaces
+from .constants import WORKSPACE_ROOT, get_db_path, get_workspace_root  # noqa: F401 — tests patch bridge.WORKSPACE_ROOT
+from .graph_engine import GraphEngine
 from .security import PRODUCTION, SecurityMiddleware
-from .services.graph_pipeline import finalize_raw_graph
+from .vault_manager import vault_manager
+from .vault_switch import load_vault_graph
 from .workspace_watcher import start_watcher
 
 logger = logging.getLogger(__name__)
 
 event_queue: asyncio.Queue | None = None
 observer = None
+_fs_events_task: asyncio.Task | None = None
 
 
 async def process_fs_events() -> None:
@@ -62,39 +67,73 @@ async def process_fs_events() -> None:
         await _fgu()
 
 
+def stop_workspace_watcher() -> None:
+    global observer, _fs_events_task
+    if observer is not None:
+        observer.stop()
+        observer.join()
+        observer = None
+    if _fs_events_task is not None and not _fs_events_task.done():
+        _fs_events_task.cancel()
+        _fs_events_task = None
+
+
+def start_workspace_watcher(root: Path) -> None:
+    global observer, _fs_events_task, event_queue
+    stop_workspace_watcher()
+    if not root.exists():
+        logger.warning(
+            "Vault root no existe (%s); watcher desactivado.",
+            root,
+        )
+        return
+    loop = asyncio.get_running_loop()
+    if event_queue is None:
+        event_queue = asyncio.Queue()
+    observer = start_watcher(str(root), loop, event_queue)
+    _fs_events_task = asyncio.create_task(process_fs_events())
+    logger.info("Watchdog activo en %s", root)
+
+
+async def restart_workspace_watcher(root: Path) -> None:
+    start_workspace_watcher(root)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global event_queue, observer
+    global event_queue
     event_queue = asyncio.Queue()
 
-    db_path = Path(__file__).parent / "library.db"
-    if db_path.exists():
-        graph_state.set_current_graph(engine.load_from_db())
+    cfg = vault_manager.bootstrap()
+    db_path = get_db_path()
+    eng = GraphEngine(db_path=db_path)
+    set_engine(eng)
+
+    if db_path.exists() and db_path.stat().st_size > 0:
+        try:
+            loaded = eng.load_from_db()
+            if loaded.get("nodes"):
+                graph_state.set_current_graph(loaded)
+            else:
+                graph_state.set_current_graph(load_vault_graph(cfg, eng))
+        except Exception:
+            graph_state.set_current_graph(load_vault_graph(cfg, eng))
     else:
-        from .services.graph_pipeline import SCAN_MAX_CHILDREN, SCAN_MAX_FILES
+        graph_state.set_current_graph(load_vault_graph(cfg, eng))
 
-        raw = scan_workspaces(max_files=SCAN_MAX_FILES, max_children=SCAN_MAX_CHILDREN)
-        raw = finalize_raw_graph(raw, engine)
-        graph_state.set_current_graph(engine.build_graph(raw))
-
-    observer = None
-    if WORKSPACE_ROOT.exists():
-        observer = start_watcher(
-            str(WORKSPACE_ROOT), asyncio.get_running_loop(), event_queue
-        )
-        asyncio.create_task(process_fs_events())
+    root = get_workspace_root()
+    if root.exists():
+        start_workspace_watcher(root)
     else:
         logger.warning(
-            "WORKSPACE_ROOT no existe (%s); watcher desactivado. "
-            "Crea el directorio o define WORKSPACE_ROOT en .env",
-            WORKSPACE_ROOT,
+            "Vault root no existe (%s); watcher desactivado. "
+            "Usa Archivo → Abrir otra biblioteca o crea el directorio.",
+            root,
         )
 
     yield
 
-    if observer:
-        observer.stop()
-        observer.join()
+    stop_workspace_watcher()
 
 
 _DEFAULT_CORS = (
@@ -132,6 +171,8 @@ app.include_router(search_api.router)
 app.include_router(coverage.router)
 app.include_router(lens_api.router)
 app.include_router(tour_api.router)
+app.include_router(vaults_api.router)
+app.include_router(browse_api.router)
 
 
 @app.get("/")
@@ -158,6 +199,9 @@ __all__ = [
     "get_current_graph",
     "get_limited_graph",
     "register_recently_imported",
+    "stop_workspace_watcher",
+    "start_workspace_watcher",
+    "restart_workspace_watcher",
 ]
 
 

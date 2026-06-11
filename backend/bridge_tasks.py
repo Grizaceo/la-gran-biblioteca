@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from . import graph_state
-from .app_deps import engine, notify_graph_clients
+from .app_deps import get_engine, notify_graph_clients
 from .services.graph_pipeline import rebuild_graph
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ async def force_graph_update(ensure_paths=None) -> None:
     try:
         new_graph = await asyncio.to_thread(
             rebuild_graph,
-            engine,
+            get_engine(),
             recently_imported_paths=graph_state.recently_imported_paths,
             ensure_paths=ensure_paths,
             use_rebuild=False,
