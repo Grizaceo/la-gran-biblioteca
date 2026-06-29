@@ -33,9 +33,8 @@ from .api import (
     search_api,
     tour_api,
     vaults_api,
-    browse_api,
 )
-from .app_deps import engine, set_engine
+from .app_deps import engine, notify_graph_clients, set_engine
 from .bridge_tasks import force_graph_update
 from .constants import WORKSPACE_ROOT, get_db_path, get_workspace_root  # noqa: F401 — tests patch bridge.WORKSPACE_ROOT
 from .graph_engine import GraphEngine
@@ -99,6 +98,43 @@ async def restart_workspace_watcher(root: Path) -> None:
     start_workspace_watcher(root)
 
 
+def _try_load_cached_graph(eng: GraphEngine, db_path: Path) -> dict | None:
+    if not db_path.exists() or db_path.stat().st_size == 0:
+        return None
+    try:
+        loaded = eng.load_from_db()
+        if loaded.get("nodes"):
+            return loaded
+    except Exception:
+        logger.exception("Could not load graph from %s", db_path)
+    return None
+
+
+async def _background_initial_load(cfg, eng: GraphEngine) -> None:
+    """Scan vault without blocking HTTP startup (empty DB or first open)."""
+    root = get_workspace_root()
+    try:
+        loaded = await asyncio.to_thread(load_vault_graph, cfg, eng)
+        graph_state.set_current_graph(loaded)
+        await notify_graph_clients()
+        logger.info(
+            "Initial vault scan: %d nodes, %d edges",
+            len(loaded.get("nodes", [])),
+            len(loaded.get("edges", [])),
+        )
+    except Exception:
+        logger.exception("Background initial graph load failed")
+    finally:
+        if root.exists():
+            start_workspace_watcher(root)
+        else:
+            logger.warning(
+                "Vault root no existe (%s); watcher desactivado. "
+                "Usa Archivo → Abrir otra biblioteca o crea el directorio.",
+                root,
+            )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global event_queue
@@ -109,27 +145,21 @@ async def lifespan(app: FastAPI):
     eng = GraphEngine(db_path=db_path)
     set_engine(eng)
 
-    if db_path.exists() and db_path.stat().st_size > 0:
-        try:
-            loaded = eng.load_from_db()
-            if loaded.get("nodes"):
-                graph_state.set_current_graph(loaded)
-            else:
-                graph_state.set_current_graph(load_vault_graph(cfg, eng))
-        except Exception:
-            graph_state.set_current_graph(load_vault_graph(cfg, eng))
+    cached = _try_load_cached_graph(eng, db_path)
+    if cached is not None:
+        graph_state.set_current_graph(cached)
+        root = get_workspace_root()
+        if root.exists():
+            start_workspace_watcher(root)
+        else:
+            logger.warning(
+                "Vault root no existe (%s); watcher desactivado. "
+                "Usa Archivo → Abrir otra biblioteca o crea el directorio.",
+                root,
+            )
     else:
-        graph_state.set_current_graph(load_vault_graph(cfg, eng))
-
-    root = get_workspace_root()
-    if root.exists():
-        start_workspace_watcher(root)
-    else:
-        logger.warning(
-            "Vault root no existe (%s); watcher desactivado. "
-            "Usa Archivo → Abrir otra biblioteca o crea el directorio.",
-            root,
-        )
+        graph_state.set_current_graph({"nodes": [], "edges": []})
+        asyncio.create_task(_background_initial_load(cfg, eng))
 
     yield
 

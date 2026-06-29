@@ -9,7 +9,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import graph_state
-from ..os_dialog import select_folder_in_os
 from ..security import safe_error_detail
 from .. import vault_manager as vault_manager_mod
 from ..vault_switch import apply_vault_switch
@@ -64,26 +63,6 @@ async def register_vault(req: RegisterVaultRequest):
         raise HTTPException(status_code=500, detail=safe_error_detail(exc)) from exc
 
 
-@router.post("/open")
-async def open_vault():
-    try:
-        picked = await asyncio.to_thread(select_folder_in_os)
-        if not picked:
-            raise HTTPException(
-                status_code=400,
-                detail="No folder selected (dialog cancelled or path conversion failed)",
-            )
-        result = await apply_vault_switch(vault_path=picked)
-        return result
-    except HTTPException:
-        raise
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        logger.exception("open_vault failed")
-        raise HTTPException(status_code=500, detail=safe_error_detail(exc)) from exc
-
-
 @router.post("/switch")
 async def switch_vault_endpoint(req: SwitchVaultRequest):
     if not req.id and not req.path:
@@ -105,6 +84,26 @@ async def remove_vault(vault_id: str):
     if not vault_manager_mod.vault_manager.remove_vault(vault_id):
         raise HTTPException(status_code=404, detail="Vault not found")
     return {"status": "ok", "removed_id": vault_id}
+
+
+class RegisterVaultFromPathRequest(BaseModel):
+    path: str
+    name: str | None = None
+
+
+@router.post("/register-from-path")
+async def register_vault_from_path(req: RegisterVaultFromPathRequest):
+    """Register (and switch to) a vault from a POSIX path selected via in-app browser."""
+    try:
+        cfg = vault_manager_mod.vault_manager.register_vault(req.path, name=req.name, activate=True)
+        # Trigger async vault switch to reload graph, watcher, SSE
+        result = await apply_vault_switch(vault_id=cfg.id)
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("register_vault_from_path failed")
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc)) from exc
 
 
 @router.patch("/{vault_id}")
