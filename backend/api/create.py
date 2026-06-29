@@ -18,7 +18,6 @@ from ..os_dialog import (
     import_selected_file,
     import_selected_folder,
     select_file_in_os,
-    select_folder_in_os,
 )
 from ..scan_workspaces import node_id_for_import_dir
 from ..security import safe_error_detail
@@ -146,33 +145,4 @@ async def create_system_file():
         raise
     except Exception as e:
         logger.error("Error importando archivo del sistema: %s", e)
-        raise HTTPException(status_code=500, detail=safe_error_detail(e))
-
-
-@router.post("/system-folder")
-async def create_system_folder():
-    try:
-        selected_path = await asyncio.to_thread(select_folder_in_os)
-        if not selected_path:
-            raise HTTPException(
-                status_code=400,
-                detail="Operación cancelada por el usuario o diálogo cerrado.",
-            )
-        root = get_workspace_root()
-        dest_path = await asyncio.to_thread(
-            import_selected_folder, selected_path, root
-        )
-        graph_state.register_recently_imported(dest_path)
-        asyncio.create_task(force_graph_update(ensure_paths=[dest_path]))
-        rel_path = str(dest_path.relative_to(root))
-        return {
-            "status": "ok",
-            "path": rel_path,
-            "node_id": node_id_for_import_dir(dest_path, root),
-            "workspace_root": str(root.resolve()),
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Error importando carpeta del sistema: %s", e)
         raise HTTPException(status_code=500, detail=safe_error_detail(e))

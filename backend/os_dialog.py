@@ -32,7 +32,7 @@ def select_file_in_os() -> str:
             win_path = result.stdout.strip()
             if not win_path:
                 return ""
-            
+
             res_wsl = subprocess.run(["wslpath", "-u", win_path], capture_output=True, text=True, timeout=5)
             wsl_path = res_wsl.stdout.strip()
             if res_wsl.returncode == 0 and wsl_path:
@@ -44,7 +44,7 @@ def select_file_in_os() -> str:
                 (res_wsl.stderr or "").strip(),
             )
             return ""
-            
+
         elif platform.system() == "Darwin":
             # macOS AppleScript dialog
             cmd = [
@@ -53,7 +53,7 @@ def select_file_in_os() -> str:
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             return result.stdout.strip()
-            
+
         else:
             # Linux Zenity dialog
             cmd = [
@@ -62,80 +62,13 @@ def select_file_in_os() -> str:
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             return result.stdout.strip()
-            
+
     except subprocess.TimeoutExpired:
         logger.warning("El selector de archivos del SO expiró tras 120 segundos.")
         return ""
     except Exception as e:
         logger.error(f"Error al abrir el selector de archivos del SO: {e}")
         return ""
-
-def select_folder_in_os() -> str:
-    """Opens a native system folder selector dialog and returns the absolute path of the selected folder."""
-    try:
-        if is_wsl():
-            # TopMost owner form so the dialog appears above the browser on Windows/WSL.
-            cmd = [
-                "powershell.exe", "-Sta", "-NoProfile", "-Command",
-                "Add-Type -AssemblyName System.Windows.Forms; "
-                "$owner = New-Object System.Windows.Forms.Form; "
-                "$owner.TopMost = $true; "
-                "$owner.ShowInTaskbar = $false; "
-                "$owner.StartPosition = 'CenterScreen'; "
-                "$owner.Size = New-Object System.Drawing.Size(0,0); "
-                "$owner.Show(); "
-                "$owner.Activate(); "
-                "$f = New-Object System.Windows.Forms.FolderBrowserDialog; "
-                "$f.Description = 'Seleccionar Carpeta para La Gran Biblioteca'; "
-                "$res = $f.ShowDialog($owner); "
-                "$owner.Dispose(); "
-                "if ($res -eq 'OK') { Write-Output $f.SelectedPath }",
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            win_path = result.stdout.strip()
-            if not win_path:
-                if result.stderr:
-                    logger.warning("Folder picker stderr: %s", result.stderr.strip())
-                return ""
-
-            # Convert Windows path to WSL Linux path
-            res_wsl = subprocess.run(["wslpath", "-u", win_path], capture_output=True, text=True, timeout=5)
-            wsl_path = res_wsl.stdout.strip()
-            if res_wsl.returncode == 0 and wsl_path:
-                return wsl_path
-            logger.warning(
-                "wslpath failed for %r (rc=%s): %s",
-                win_path,
-                res_wsl.returncode,
-                (res_wsl.stderr or "").strip(),
-            )
-            return ""
-            
-        elif platform.system() == "Darwin":
-            # macOS AppleScript folder dialog
-            cmd = [
-                "osascript", "-e",
-                'POSIX path of (choose folder with prompt "Seleccionar Carpeta para La Gran Biblioteca")'
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            return result.stdout.strip()
-            
-        else:
-            # Linux Zenity folder dialog
-            cmd = [
-                "zenity", "--file-selection", "--directory",
-                "--title=Seleccionar Carpeta para La Gran Biblioteca"
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            return result.stdout.strip()
-            
-    except subprocess.TimeoutExpired:
-        logger.warning("El selector de carpetas del SO expiró tras 120 segundos.")
-        return ""
-    except Exception as e:
-        logger.error(f"Error al abrir el selector de carpetas del SO: {e}")
-        return ""
-
 def import_selected_file(src_path_str: str, workspace_root: Path) -> Path:
     """Copies selected file into workspace_root, managing any name conflicts with numeric suffixes."""
     src_path = Path(src_path_str)
