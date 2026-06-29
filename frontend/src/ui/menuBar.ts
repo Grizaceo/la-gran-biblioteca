@@ -1,5 +1,7 @@
 import { Graph3DEngine } from '../render3d/Graph3DEngine'
 import * as bridge from '../lib/bridge'
+import { fetchVaults, switchVault, registerVaultFromPath } from '../lib/api/vaults'
+import { browseDirectory } from '../lib/api/browse'
 import {
   loadViewPrefs,
   saveViewPrefs,
@@ -347,8 +349,6 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
   let rescanRunning = false
   let vaultSwitchInProgress = false
 
-  const modalContent = document.getElementById('modal-content') as HTMLElement
-
   function showModalOverlay(): void {
     modalContainer.style.removeProperty('display')
     modalContainer.setAttribute('aria-hidden', 'false')
@@ -377,23 +377,39 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
   })
 
   async function openAnotherVault(): Promise<void> {
-    folderPicker.open({
-      mode: 'vault',
-      title: 'Abrir biblioteca',
-      confirmLabel: 'Abrir biblioteca',
-      onConfirm: async (path) => {
-        if (vaultSwitchInProgress) return
-        vaultSwitchInProgress = true
-        try {
-          showNotification('Cargando biblioteca…', 'info')
-          const result = await bridge.switchVaultByPath(path)
-          showNotification(`Biblioteca abierta: ${result.vault.name}`, 'success')
-          await opts.onVaultSwitch?.(result)
-        } finally {
+    if (vaultSwitchInProgress) return
+    try {
+      vaultSwitchInProgress = true
+      showNotification('Seleccionando carpeta…', 'info')
+      
+      // Use the in-app folder picker (same as import folder) for consistent UX
+      folderPicker.open({
+        mode: 'vault',
+        title: 'Seleccionar carpeta raíz de la nueva biblioteca',
+        confirmLabel: 'Abrir como biblioteca',
+        onConfirm: async (path: string) => {
+          try {
+            showNotification('Registrando biblioteca…', 'info')
+            const result = await registerVaultFromPath(path)
+            showNotification(`Biblioteca abierta: ${result.vault.name}`, 'success')
+            await opts.onVaultSwitch?.(result)
+          } catch (err) {
+            const msg = (err as Error).message || 'Error al registrar biblioteca'
+            showNotification(msg, 'error')
+          } finally {
+            vaultSwitchInProgress = false
+          }
+        },
+        onCancel: () => {
           vaultSwitchInProgress = false
-        }
-      },
-    })
+          showNotification('Operación cancelada', 'info')
+        },
+      })
+    } catch (err) {
+      const msg = (err as Error).message || 'Error al abrir selector'
+      showNotification(msg, 'error')
+      vaultSwitchInProgress = false
+    }
   }
 
   async function openSwitchVaultModal(): Promise<void> {

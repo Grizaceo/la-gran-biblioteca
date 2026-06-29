@@ -17,17 +17,6 @@ export async function registerVault(path: string, name?: string): Promise<VaultI
   return res.json() as Promise<VaultInfo>
 }
 
-export async function openVaultPicker(): Promise<VaultSwitchResponse> {
-  const res = await apiFetch('/vaults/open', {
-    method: 'POST',
-    headers: apiHeaders(),
-  })
-  if (!res.ok) {
-    await handleResponseError(res, `Failed to open vault: ${res.status}`)
-  }
-  return res.json() as Promise<VaultSwitchResponse>
-}
-
 export async function switchVault(id: string): Promise<VaultSwitchResponse> {
   const res = await apiFetch('/vaults/switch', {
     method: 'POST',
@@ -72,4 +61,16 @@ export async function removeVault(id: string): Promise<void> {
   if (!res.ok) {
     await handleResponseError(res, `Failed to remove vault: ${res.status}`)
   }
+}
+
+export async function registerVaultFromPath(path: string, name?: string): Promise<VaultSwitchResponse> {
+  const res = await apiFetch('/vaults/register-from-path', {
+    method: 'POST',
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ path, name: name ?? undefined }),
+  })
+  if (!res.ok) {
+    await handleResponseError(res, `Failed to register vault: ${res.status}`)
+  }
+  return res.json() as Promise<VaultSwitchResponse>
 }

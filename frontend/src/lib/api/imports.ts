@@ -103,12 +103,3 @@ export async function createSystemFile(): Promise<{ status: string; path: string
   if (!res.ok) await handleResponseError(res, 'No se pudo seleccionar o importar el archivo del sistema')
   return res.json()
 }
-
-export async function createSystemFolder(): Promise<{ status: string; path: string }> {
-  const res = await apiFetch('/create/system-folder', {
-    method: 'POST',
-    headers: apiHeaders({ 'Content-Type': 'application/json' }),
-  })
-  if (!res.ok) await handleResponseError(res, 'No se pudo seleccionar o importar la carpeta del sistema')
-  return res.json()
-}
