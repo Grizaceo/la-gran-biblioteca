@@ -118,3 +118,37 @@ def test_study_node_persists():
         conn.close()
         import json
         assert json.loads(row[0]).get("study_count") == 1
+
+
+def test_startup_returns_before_empty_db_scan():
+    """HTTP must respond when vault DB exists but has no nodes (no blocking scan)."""
+    import time
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as tmp:
+        vault = Path(tmp) / "vault"
+        vault.mkdir()
+        db = vault / ".lgb" / "library.db"
+        db.parent.mkdir(parents=True)
+        db.write_bytes(b"x")  # non-empty file, schema created on GraphEngine init
+
+        ge = GraphEngine(db_path=db)
+        _use_engine(db)
+        cfg = type("Cfg", (), {"root": vault, "db_path": db})()
+
+        with patch("backend.library_bridge.load_vault_graph") as load_mock:
+            def slow_scan(*_a, **_k):
+                time.sleep(2)
+                return {"nodes": [{"id": "n1", "type": "document", "label": "x", "path": "/x", "metadata": {}, "position": None}], "edges": []}
+
+            load_mock.side_effect = slow_scan
+            with patch("backend.library_bridge.vault_manager.bootstrap", return_value=cfg):
+                with patch("backend.library_bridge.get_db_path", return_value=db):
+                    with patch("backend.library_bridge.get_workspace_root", return_value=vault):
+                        t0 = time.perf_counter()
+                        with TestClient(bridge.app) as client:
+                            elapsed = time.perf_counter() - t0
+                            response = client.get("/api/health")
+                        assert response.status_code == 200
+                        assert elapsed < 1.0
+                        load_mock.assert_called_once()
