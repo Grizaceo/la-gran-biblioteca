@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from collections import Counter, defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-from .constants import get_workspace_root
+from .constants import WORKSPACE_ROOT, get_workspace_root
 
 
 def _workspace_from_node(node: dict[str, Any]) -> str:

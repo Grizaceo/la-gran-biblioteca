@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from backend.fs_browse import is_path_allowed, list_directory, resolve_browse_path, resolve_import_path

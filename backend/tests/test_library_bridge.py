@@ -132,7 +132,7 @@ def test_startup_returns_before_empty_db_scan():
         db.parent.mkdir(parents=True)
         db.write_bytes(b"x")  # non-empty file, schema created on GraphEngine init
 
-        ge = GraphEngine(db_path=db)
+        GraphEngine(db_path=db)
         _use_engine(db)
         cfg = type("Cfg", (), {"root": vault, "db_path": db})()
 
