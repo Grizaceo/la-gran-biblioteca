@@ -33,12 +33,21 @@ def test_get_graph():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "library.db"
         ge = _use_engine(db)
-        ge.build_graph({
-            "nodes": [
-                {"id": "n1", "type": "folder", "label": "Root", "path": "/", "metadata": {}, "position": None}
-            ],
-            "edges": []
-        })
+        ge.build_graph(
+            {
+                "nodes": [
+                    {
+                        "id": "n1",
+                        "type": "folder",
+                        "label": "Root",
+                        "path": "/",
+                        "metadata": {},
+                        "position": None,
+                    }
+                ],
+                "edges": [],
+            }
+        )
         bridge.set_current_graph(bridge.engine.load_from_db())
         client = TestClient(bridge.app)
         response = client.get("/api/graph")
@@ -99,12 +108,21 @@ def test_study_node_persists():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "library.db"
         ge = _use_engine(db)
-        ge.build_graph({
-            "nodes": [
-                {"id": "n1", "type": "document", "label": "Doc", "path": "/doc", "metadata": {}, "position": None}
-            ],
-            "edges": []
-        })
+        ge.build_graph(
+            {
+                "nodes": [
+                    {
+                        "id": "n1",
+                        "type": "document",
+                        "label": "Doc",
+                        "path": "/doc",
+                        "metadata": {},
+                        "position": None,
+                    }
+                ],
+                "edges": [],
+            }
+        )
         bridge.set_current_graph(bridge.engine.load_from_db())
         client = TestClient(bridge.app)
         response = client.post("/api/study", json={"node_id": "n1"})
@@ -113,10 +131,12 @@ def test_study_node_persists():
 
         # Verify persistence in DB
         import sqlite3
+
         conn = sqlite3.connect(db)
         row = conn.execute("SELECT metadata FROM nodes WHERE id = ?", ("n1",)).fetchone()
         conn.close()
         import json
+
         assert json.loads(row[0]).get("study_count") == 1
 
 
@@ -137,9 +157,22 @@ def test_startup_returns_before_empty_db_scan():
         cfg = type("Cfg", (), {"root": vault, "db_path": db})()
 
         with patch("backend.library_bridge.load_vault_graph") as load_mock:
+
             def slow_scan(*_a, **_k):
                 time.sleep(2)
-                return {"nodes": [{"id": "n1", "type": "document", "label": "x", "path": "/x", "metadata": {}, "position": None}], "edges": []}
+                return {
+                    "nodes": [
+                        {
+                            "id": "n1",
+                            "type": "document",
+                            "label": "x",
+                            "path": "/x",
+                            "metadata": {},
+                            "position": None,
+                        }
+                    ],
+                    "edges": [],
+                }
 
             load_mock.side_effect = slow_scan
             with patch("backend.library_bridge.vault_manager.bootstrap", return_value=cfg):

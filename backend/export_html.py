@@ -20,10 +20,8 @@ def _load_style() -> dict:
 
 def generate_html(graph: dict) -> str:
     tpl = TEMPLATE_PATH.read_text()
-    return (
-        tpl
-        .replace("__GRAPH_JSON__", json.dumps(graph, indent=2))
-        .replace("__STYLE_JSON__", json.dumps(_load_style()))
+    return tpl.replace("__GRAPH_JSON__", json.dumps(graph, indent=2)).replace(
+        "__STYLE_JSON__", json.dumps(_load_style())
     )
 
 
@@ -33,7 +31,7 @@ def export_static():
     if not graph["nodes"]:
         print("No hay datos. Ejecuta: python -m backend.library_bridge (rescan) primero")
         return
-    
+
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE.write_text(generate_html(graph))
     print(f"Exportado: {OUTPUT_FILE}")

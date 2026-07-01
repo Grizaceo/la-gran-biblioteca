@@ -42,7 +42,11 @@ def get_session_lens() -> dict[str, Any]:
         raw = _read_raw()
     lens = raw.get("lens")
     if lens is None:
-        return {"lens": None, "updated_at": raw.get("updated_at"), "updated_by": raw.get("updated_by")}
+        return {
+            "lens": None,
+            "updated_at": raw.get("updated_at"),
+            "updated_by": raw.get("updated_by"),
+        }
     try:
         validated = validate_lens(lens)
     except ValueError:

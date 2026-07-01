@@ -1,6 +1,5 @@
 """Tests for constellation prefs persistence in GraphEngine."""
 
-
 import pytest
 
 from backend.graph_engine import GraphEngine
@@ -16,9 +15,7 @@ def engine(tmp_path):
 def test_upsert_and_list_prefs(engine, tmp_path):
     folder = tmp_path / "proj"
     folder.mkdir()
-    pref = engine.upsert_constellation_pref(
-        str(folder), "orion", "confirmed", "manual"
-    )
+    pref = engine.upsert_constellation_pref(str(folder), "orion", "confirmed", "manual")
     assert pref["constellation_id"] == "orion"
     assert pref["status"] == "confirmed"
     listed = engine.list_constellation_prefs()

@@ -126,7 +126,10 @@ def test_create_note_with_source_path_without_graph_node(tmp_path, monkeypatch):
         },
     )
     assert res.status_code == 200, res.text
-    assert "[[orphan]]" in (ws / "_notes" / source_id.replace("/", "__") / f"{res.json()['id']}.md").read_text()
+    assert (
+        "[[orphan]]"
+        in (ws / "_notes" / source_id.replace("/", "__") / f"{res.json()['id']}.md").read_text()
+    )
 
 
 def test_list_notes_by_source(tmp_path, monkeypatch):
@@ -176,8 +179,7 @@ def test_label_validation(tmp_path, monkeypatch):
     assert client.post("/api/notes", json={**base, "labels": ok_labels}).status_code == 200
 
     assert (
-        client.post("/api/notes", json={**base, "labels": ok_labels + ["extra"]}).status_code
-        == 422
+        client.post("/api/notes", json={**base, "labels": ok_labels + ["extra"]}).status_code == 422
     )
     assert (
         client.post(
@@ -188,9 +190,7 @@ def test_label_validation(tmp_path, monkeypatch):
     )
     assert client.post("/api/notes", json={**base, "labels": ["Hello"]}).status_code == 422
     assert client.post("/api/notes", json={**base, "labels": ["my label"]}).status_code == 422
-    assert (
-        client.post("/api/notes", json={**base, "labels": ["my-label_2"]}).status_code == 200
-    )
+    assert client.post("/api/notes", json={**base, "labels": ["my-label_2"]}).status_code == 200
 
 
 def test_validate_path_under_workspace(tmp_path):
@@ -247,7 +247,7 @@ def test_create_inline_note_in_source_file(tmp_path, monkeypatch):
     assert data["storage"] == "inline"
     note_id = data["id"]
     text = source_file.read_text(encoding="utf-8")
-    assert f'id={note_id}' in text
+    assert f"id={note_id}" in text
     assert "Inline body" in text
 
     listed = client.get(f"/api/notes?source={source_id}")
@@ -264,7 +264,7 @@ def test_create_inline_note_in_source_file(tmp_path, monkeypatch):
 
     deleted = client.delete(f"/api/notes/{note_id}")
     assert deleted.status_code == 200
-    assert f'id={note_id}' not in source_file.read_text(encoding="utf-8")
+    assert f"id={note_id}" not in source_file.read_text(encoding="utf-8")
 
 
 def test_list_merges_vault_and_inline(tmp_path, monkeypatch):

@@ -69,13 +69,15 @@ def test_validate_lens_round_trip():
 
 
 def test_lens_to_search_params():
-    lens = validate_lens({
-        "workspaces": ["ws"],
-        "topics": ["ml"],
-        "folders": ["ws/sub"],
-        "studyFilter": "studied",
-        "minDegree": 3,
-    })
+    lens = validate_lens(
+        {
+            "workspaces": ["ws"],
+            "topics": ["ml"],
+            "folders": ["ws/sub"],
+            "studyFilter": "studied",
+            "minDegree": 3,
+        }
+    )
     params = lens_to_search_params(lens)
     assert params["workspace"] == "ws"
     assert params["topic"] == "ml"

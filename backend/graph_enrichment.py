@@ -84,12 +84,7 @@ def _folder_depth_bucket(depth: int) -> str:
 
 def _normalize_topic_token(raw: str) -> str | None:
     token = (
-        raw.strip()
-        .lower()
-        .replace("\\", "/")
-        .replace("-", "_")
-        .replace(".", "_")
-        .replace(" ", "_")
+        raw.strip().lower().replace("\\", "/").replace("-", "_").replace(".", "_").replace(" ", "_")
     )
     token = "".join(ch for ch in token if ch.isalnum() or ch in {"_", "/"})
     if not token or token in _GENERIC_TOPIC_PARTS or len(token) < 3:
@@ -262,22 +257,32 @@ def build_graph_structure_summary(
             topic_groups[str(topic)].append(node)
             topic_counts[str(topic)] += 1
 
-    def summarize_group(key: str, members: list[dict[str, Any]], *, label: str | None = None) -> dict[str, Any]:
+    def summarize_group(
+        key: str, members: list[dict[str, Any]], *, label: str | None = None
+    ) -> dict[str, Any]:
         count = len(members)
         if count == 0:
             return {"key": key, "label": label or key, "count": 0}
         degree_sum = sum(int(n.get("degree") or 0) for n in members)
-        studied_count = sum(1 for n in members if int((n.get("metadata") or {}).get("study_count") or 0) > 0)
+        studied_count = sum(
+            1 for n in members if int((n.get("metadata") or {}).get("study_count") or 0) > 0
+        )
         study_score_sum = sum(
             int((n.get("metadata") or {}).get("study_score") or 0) for n in members
         )
         avg_degree = round(degree_sum / count, 2) if count else 0.0
         study_ratio = round(studied_count / count, 4) if count else 0.0
-        sample_node_ids = [str(n.get("id")) for n in sorted(
-            members,
-            key=lambda n: (int(n.get("degree") or 0), int((n.get("metadata") or {}).get("study_score") or 0)),
-            reverse=True,
-        )[:5]]
+        sample_node_ids = [
+            str(n.get("id"))
+            for n in sorted(
+                members,
+                key=lambda n: (
+                    int(n.get("degree") or 0),
+                    int((n.get("metadata") or {}).get("study_score") or 0),
+                ),
+                reverse=True,
+            )[:5]
+        ]
         centers = [n.get("position") or {} for n in members]
         valid = [p for p in centers if "x" in p and "y" in p]
         centroid = {
@@ -299,14 +304,20 @@ def build_graph_structure_summary(
 
     workspaces = [
         summarize_group(ws, members, label=ws)
-        for ws, members in sorted(workspace_groups.items(), key=lambda item: (-len(item[1]), item[0]))
+        for ws, members in sorted(
+            workspace_groups.items(), key=lambda item: (-len(item[1]), item[0])
+        )
     ]
 
     folders = [
         summarize_group(folder, members, label=Path(folder).name or folder)
         for folder, members in sorted(
             folder_groups.items(),
-            key=lambda item: (-len(item[1]), -sum(int(n.get("degree") or 0) for n in item[1]), item[0]),
+            key=lambda item: (
+                -len(item[1]),
+                -sum(int(n.get("degree") or 0) for n in item[1]),
+                item[0],
+            ),
         )[:40]
     ]
 
@@ -318,7 +329,9 @@ def build_graph_structure_summary(
     topics.sort(key=lambda item: (-item["count"], item["label"]))
     topics = topics[:30]
 
-    role_counts = Counter(str((node.get("metadata") or {}).get("structural_role") or "unknown") for node in nodes)
+    role_counts = Counter(
+        str((node.get("metadata") or {}).get("structural_role") or "unknown") for node in nodes
+    )
 
     from .services.graph_pipeline import get_last_scan_stats
 
@@ -337,7 +350,9 @@ def build_graph_structure_summary(
             "topic": topics,
         },
         "legend": {
-            "workspaces": [{"key": item["key"], "count": item["count"]} for item in workspaces[:12]],
+            "workspaces": [
+                {"key": item["key"], "count": item["count"]} for item in workspaces[:12]
+            ],
             "topics": [{"key": item["key"], "count": item["count"]} for item in topics[:12]],
             "roles": dict(role_counts),
         },

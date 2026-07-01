@@ -79,9 +79,7 @@ def extract_tags(frontmatter: dict, content: str) -> list:
         else:
             tags.add(str(fm_tags).lstrip("#"))
 
-    inline_matches = re.finditer(
-        r"(?<!\S)#([a-zA-Z0-9_/\-áéíóúñüÁÉÍÓÚÑÜ]+)", content
-    )
+    inline_matches = re.finditer(r"(?<!\S)#([a-zA-Z0-9_/\-áéíóúñüÁÉÍÓÚÑÜ]+)", content)
     for match in inline_matches:
         tags.add(match.group(1))
     return list(tags)

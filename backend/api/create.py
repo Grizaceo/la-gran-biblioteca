@@ -135,9 +135,7 @@ async def create_system_file():
                 detail="Operación cancelada por el usuario o diálogo cerrado.",
             )
         root = get_workspace_root()
-        dest_path = await asyncio.to_thread(
-            import_selected_file, selected_path, root
-        )
+        dest_path = await asyncio.to_thread(import_selected_file, selected_path, root)
         graph_state.register_recently_imported(dest_path)
         asyncio.create_task(force_graph_update())
         return {"status": "ok", "path": str(dest_path.relative_to(root))}

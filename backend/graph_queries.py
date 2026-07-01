@@ -88,7 +88,11 @@ def _node_matches(
     return True
 
 
-def _build_indexes(graph: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], dict[str, list[dict[str, Any]]]]:
+def _build_indexes(
+    graph: dict[str, Any],
+) -> tuple[
+    dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], dict[str, list[dict[str, Any]]]
+]:
     node_index = {str(node["id"]): node for node in graph.get("nodes", [])}
     adj_out: dict[str, list[dict[str, Any]]] = defaultdict(list)
     adj_in: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -118,7 +122,8 @@ def search_graph(
 ) -> dict[str, Any]:
     node_index, adj_out, adj_in = _build_indexes(graph)
     base_nodes = [
-        node for node in graph.get("nodes", [])
+        node
+        for node in graph.get("nodes", [])
         if _node_matches(
             node,
             node_type=node_type,
@@ -158,8 +163,10 @@ def search_graph(
         seed_ids = [str(item["node_id"]) for item in seeds if str(item["node_id"]) in node_index]
         if not seed_ids and query_lc:
             seed_ids = [
-                str(node["id"]) for node in base_nodes
-                if query_lc in str(node.get("label") or "").lower() or query_lc in str(node.get("path") or "").lower()
+                str(node["id"])
+                for node in base_nodes
+                if query_lc in str(node.get("label") or "").lower()
+                or query_lc in str(node.get("path") or "").lower()
             ][:10]
         relation_score: Counter[str] = Counter()
         reason: dict[str, set[str]] = defaultdict(set)
@@ -304,8 +311,7 @@ def build_subgraph(
     sub_nodes = [node_index[nid] for nid in visited if nid in node_index]
     sub_ids = {node["id"] for node in sub_nodes}
     sub_edges = [
-        edge for edge in edges
-        if edge.get("source") in sub_ids and edge.get("target") in sub_ids
+        edge for edge in edges if edge.get("source") in sub_ids and edge.get("target") in sub_ids
     ]
     return {
         "nodes": sub_nodes,

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from backend.fs_browse import is_path_allowed, list_directory, resolve_browse_path, resolve_import_path
+from backend.fs_browse import (
+    is_path_allowed,
+    list_directory,
+    resolve_browse_path,
+    resolve_import_path,
+)
 
 
 def test_resolve_browse_path_home(tmp_path, monkeypatch):

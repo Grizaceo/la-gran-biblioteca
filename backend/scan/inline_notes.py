@@ -172,7 +172,11 @@ def insert_inline_block(content: str, block: str, selected_text: str = "") -> st
     idx = _insertion_index(content, selected_text)
     prefix = content[:idx]
     suffix = content[idx:]
-    sep = "" if not prefix or prefix.endswith("\n\n") else ("\n\n" if prefix.endswith("\n") else "\n\n")
+    sep = (
+        ""
+        if not prefix or prefix.endswith("\n\n")
+        else ("\n\n" if prefix.endswith("\n") else "\n\n")
+    )
     if not prefix:
         return block + ("\n" if suffix else "\n\n") + suffix
     if suffix and not suffix.startswith("\n"):

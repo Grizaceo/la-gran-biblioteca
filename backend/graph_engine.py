@@ -37,48 +37,58 @@ class Node:
     path: str
     metadata: Dict[str, Any]
     position: Dict[str, float] = None
+
     def to_dict(self):
         return asdict(self)
 
 
-@dataclass  
+@dataclass
 class Edge:
     source: str
     target: str
     type: str
+
     def to_dict(self):
         return asdict(self)
 
 
 class GraphEngine:
     def __init__(self, db_path: Path | None = None):
-        self.db_path = Path(db_path) if db_path is not None else Path(os.environ.get("DB_PATH", str(_DB_DEFAULT)))
+        self.db_path = (
+            Path(db_path)
+            if db_path is not None
+            else Path(os.environ.get("DB_PATH", str(_DB_DEFAULT)))
+        )
         self.nodes: Dict[str, Node] = {}
         self.edges: List[Edge] = []
         self._fts_enabled = False
         self._init_db()
-    
+
     def _init_db(self):
         conn = sqlite3.connect(self.db_path)
         self._enable_wal(conn)
-        conn.execute('CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, type TEXT, label TEXT, path TEXT, metadata TEXT, position TEXT)')
-        conn.execute('CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, type TEXT, PRIMARY KEY (source, target, type))')
         conn.execute(
-            'CREATE TABLE IF NOT EXISTS node_search ('
-            'node_id TEXT PRIMARY KEY, label TEXT, path TEXT, title TEXT, tags TEXT, topics TEXT, search_blob TEXT)'
+            "CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, type TEXT, label TEXT, path TEXT, metadata TEXT, position TEXT)"
         )
-        conn.execute('''CREATE TABLE IF NOT EXISTS constellation_prefs (
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS edges (source TEXT, target TEXT, type TEXT, PRIMARY KEY (source, target, type))"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS node_search ("
+            "node_id TEXT PRIMARY KEY, label TEXT, path TEXT, title TEXT, tags TEXT, topics TEXT, search_blob TEXT)"
+        )
+        conn.execute("""CREATE TABLE IF NOT EXISTS constellation_prefs (
             folder_path TEXT PRIMARY KEY,
             constellation_id TEXT NOT NULL,
             status TEXT NOT NULL,
             suggested_from TEXT,
             updated_at TEXT NOT NULL
-        )''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS exploration_tours (
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS exploration_tours (
             workspace TEXT PRIMARY KEY,
             steps TEXT NOT NULL,
             updated_at TEXT NOT NULL
-        )''')
+        )""")
         self._ensure_node_fingerprint_columns(conn)
         self._ensure_fts(conn)
         conn.commit()
@@ -119,7 +129,9 @@ class GraphEngine:
         title = str(frontmatter.get("title") or node.label or "")
         tags = " ".join(str(tag) for tag in meta.get("tags") or [])
         topics = " ".join(str(topic) for topic in meta.get("topics") or [])
-        search_blob = " ".join(part for part in [node.label, node.path, title, tags, topics] if part)
+        search_blob = " ".join(
+            part for part in [node.label, node.path, title, tags, topics] if part
+        )
         return (node.id, node.label, node.path, title, tags, topics, search_blob)
 
     def _rebuild_search_index(self, conn: sqlite3.Connection) -> None:
@@ -139,7 +151,7 @@ class GraphEngine:
                     "VALUES (?, ?, ?, ?, ?, ?)",
                     row[:6],
                 )
-    
+
     @staticmethod
     def file_fingerprint(path: Path) -> tuple[str, float]:
         """Return (content_hash, mtime) for incremental scan."""
@@ -217,6 +229,7 @@ class GraphEngine:
                     except ValueError:
                         continue
                     from .scan.layout import file_node_id
+
                     nid = file_node_id(rel)
                     current_paths[nid] = self.file_fingerprint(entry)
 
@@ -257,7 +270,10 @@ class GraphEngine:
         nodes = []
         for row in conn.execute("SELECT * FROM nodes"):
             node = Node(
-                id=row[0], type=row[1], label=row[2], path=row[3],
+                id=row[0],
+                type=row[1],
+                label=row[2],
+                path=row[3],
                 metadata=json.loads(row[4]),
                 position=json.loads(row[5]) if row[5] else None,
             )
@@ -267,13 +283,20 @@ class GraphEngine:
             self.edges.append(Edge(row[0], row[1], row[2]))
         conn.close()
         return {"nodes": nodes, "edges": [e.to_dict() for e in self.edges]}
-    
+
     def build_graph(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         self.nodes.clear()
         self.edges.clear()
 
         for nd in raw["nodes"]:
-            self.nodes[nd["id"]] = Node(id=nd["id"], type=nd["type"], label=nd["label"], path=nd["path"], metadata=dict(nd.get("metadata", {})), position=nd.get("position"))
+            self.nodes[nd["id"]] = Node(
+                id=nd["id"],
+                type=nd["type"],
+                label=nd["label"],
+                path=nd["path"],
+                metadata=dict(nd.get("metadata", {})),
+                position=nd.get("position"),
+            )
 
         for ed in raw["edges"]:
             self.edges.append(Edge(ed["source"], ed["target"], ed["type"]))
@@ -293,8 +316,16 @@ class GraphEngine:
                 conn.execute(
                     "INSERT INTO nodes (id, type, label, path, metadata, position, content_hash, mtime) "
                     "VALUES (?,?,?,?,?,?,?,?)",
-                    (n.id, n.type, n.label, n.path, json.dumps(n.metadata),
-                     json.dumps(n.position) if n.position else None, ch, mt),
+                    (
+                        n.id,
+                        n.type,
+                        n.label,
+                        n.path,
+                        json.dumps(n.metadata),
+                        json.dumps(n.position) if n.position else None,
+                        ch,
+                        mt,
+                    ),
                 )
             for e in self.edges:
                 conn.execute(
@@ -309,7 +340,10 @@ class GraphEngine:
         finally:
             conn.close()
 
-        return {"nodes": [n.to_dict() for n in self.nodes.values()], "edges": [e.to_dict() for e in self.edges]}
+        return {
+            "nodes": [n.to_dict() for n in self.nodes.values()],
+            "edges": [e.to_dict() for e in self.edges],
+        }
 
     def rebuild_graph(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """Rebuild the graph atomically with backup + transaction."""
@@ -328,9 +362,12 @@ class GraphEngine:
 
             for nd in raw["nodes"]:
                 node = Node(
-                    id=nd["id"], type=nd["type"], label=nd["label"],
-                    path=nd["path"], metadata=dict(nd.get("metadata", {})),
-                    position=nd.get("position")
+                    id=nd["id"],
+                    type=nd["type"],
+                    label=nd["label"],
+                    path=nd["path"],
+                    metadata=dict(nd.get("metadata", {})),
+                    position=nd.get("position"),
                 )
                 self.nodes[node.id] = node
                 ch, mt = ("", 0.0)
@@ -342,17 +379,23 @@ class GraphEngine:
                 conn.execute(
                     "INSERT INTO nodes (id, type, label, path, metadata, position, content_hash, mtime) "
                     "VALUES (?,?,?,?,?,?,?,?)",
-                    (node.id, node.type, node.label, node.path,
-                     json.dumps(node.metadata), json.dumps(node.position) if node.position else None,
-                     ch, mt),
+                    (
+                        node.id,
+                        node.type,
+                        node.label,
+                        node.path,
+                        json.dumps(node.metadata),
+                        json.dumps(node.position) if node.position else None,
+                        ch,
+                        mt,
+                    ),
                 )
 
             for ed in raw["edges"]:
                 edge = Edge(ed["source"], ed["target"], ed["type"])
                 self.edges.append(edge)
                 conn.execute(
-                    "INSERT INTO edges VALUES (?,?,?)",
-                    (edge.source, edge.target, edge.type)
+                    "INSERT INTO edges VALUES (?,?,?)", (edge.source, edge.target, edge.type)
                 )
 
             self._rebuild_search_index(conn)
@@ -367,7 +410,10 @@ class GraphEngine:
             if conn:
                 conn.close()
 
-        return {"nodes": [n.to_dict() for n in self.nodes.values()], "edges": [e.to_dict() for e in self.edges]}
+        return {
+            "nodes": [n.to_dict() for n in self.nodes.values()],
+            "edges": [e.to_dict() for e in self.edges],
+        }
 
     def restore_backup(self) -> bool:
         """Restore database from .db.bak if it exists."""
@@ -590,13 +636,11 @@ class GraphEngine:
             "SELECT workspace, steps, updated_at FROM exploration_tours ORDER BY workspace"
         ).fetchall()
         conn.close()
-        return [
-            {"workspace": r[0], "steps": json.loads(r[1]), "updated_at": r[2]}
-            for r in rows
-        ]
+        return [{"workspace": r[0], "steps": json.loads(r[1]), "updated_at": r[2]} for r in rows]
 
 
 if __name__ == "__main__":
     from scan_workspaces import scan_workspaces
+
     g = GraphEngine().build_graph(scan_workspaces())
     print(json.dumps(g, indent=2))

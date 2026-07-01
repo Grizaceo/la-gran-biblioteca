@@ -7,7 +7,12 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
-from ..constants import get_exclude_dirs, get_workspace_root, is_archive_dir_name, get_archive_policy
+from ..constants import (
+    get_exclude_dirs,
+    get_workspace_root,
+    is_archive_dir_name,
+    get_archive_policy,
+)
 from .layout import import_island_origin, posix_rel
 from .markdown import should_scan
 from .walker import _append_file_node, _append_folder_node
@@ -45,22 +50,16 @@ def _scan_subdirectory(
                     continue
             if current_path.name in get_exclude_dirs():
                 continue
-            _append_folder_node(
-                graph, node_map, current_path, workspace_root, depth, position=pos
-            )
+            _append_folder_node(graph, node_map, current_path, workspace_root, depth, position=pos)
             try:
                 children = [p for p in current_path.iterdir() if should_scan(p)]
-                for idx, child in enumerate(
-                    sorted(children, key=lambda p: p.name)[:max_children]
-                ):
+                for idx, child in enumerate(sorted(children, key=lambda p: p.name)[:max_children]):
                     queue.append((child, depth + 1, idx))
             except (PermissionError, OSError) as e:
                 logger.warning("No se pudo escanear import %s: %s", current_path, e)
         else:
             file_count += 1
-            _append_file_node(
-                graph, node_map, current_path, workspace_root, depth, position=pos
-            )
+            _append_file_node(graph, node_map, current_path, workspace_root, depth, position=pos)
 
 
 def scan_import_paths(

@@ -10,13 +10,16 @@ import tempfile
 from pathlib import Path
 from urllib.parse import quote, urlencode
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as DET
 import logging
 
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_TIMEOUT = int(os.environ.get("LGB_DOWNLOAD_TIMEOUT", "120"))
 MAX_ZIP_BYTES = int(os.environ.get("LGB_MAX_ZIP_BYTES", str(100 * 1024 * 1024)))
-ARXIV_API_BASE = os.environ.get("LGB_ARXIV_API_BASE", "https://export.arxiv.org/api/query").rstrip("/")
+ARXIV_API_BASE = os.environ.get("LGB_ARXIV_API_BASE", "https://export.arxiv.org/api/query").rstrip(
+    "/"
+)
 ARXIV_USER_AGENT = os.environ.get(
     "LGB_ARXIV_USER_AGENT",
     "LaGranBiblioteca/1.0 (+https://github.com/la-gran-biblioteca; mailto:support@local)",
@@ -37,12 +40,7 @@ def _urlopen(req: urllib.request.Request) -> bytes:
 
 def _yaml_double_quoted(value: str) -> str:
     """Escape a string for YAML double-quoted scalars."""
-    escaped = (
-        value.replace("\\", "\\\\")
-        .replace('"', '\\"')
-        .replace("\n", " ")
-        .replace("\r", " ")
-    )
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").replace("\r", " ")
     return f'"{escaped}"'
 
 
@@ -116,15 +114,14 @@ def _parse_arxiv_entry(entry: ET.Element, *, truncate_abstract: int | None = Non
 
     title_elem = entry.find("atom:title", _ARXIV_NS_MAP)
     title_raw = (title_elem.text or "").strip() if title_elem is not None else ""
-    title = " ".join(title_raw.replace("\n", " ").split()) or (f"arXiv:{arxiv_id}" if arxiv_id else "arXiv paper")
+    title = " ".join(title_raw.replace("\n", " ").split()) or (
+        f"arXiv:{arxiv_id}" if arxiv_id else "arXiv paper"
+    )
 
     summary_elem = entry.find("atom:summary", _ARXIV_NS_MAP)
     summary = (summary_elem.text or "").strip() if summary_elem is not None else ""
     summary = " ".join(summary.split())
-    withdrawn = bool(
-        summary
-        and re.search(r"\b(withdrawn|retracted)\b", summary, re.IGNORECASE)
-    )
+    withdrawn = bool(summary and re.search(r"\b(withdrawn|retracted)\b", summary, re.IGNORECASE))
 
     authors = []
     for author in entry.findall("atom:author", _ARXIV_NS_MAP):
@@ -218,8 +215,8 @@ def search_arxiv(
     xml_data = _fetch_arxiv_api(api_url)
 
     try:
-        root = ET.fromstring(xml_data)
-    except ET.ParseError as e:
+        root = DET.fromstring(xml_data)
+    except DET.ParseError as e:
         logger.error(f"XML invalido de arXiv (busqueda): {e}")
         raise RuntimeError(f"Respuesta invalida de arXiv: {e}") from e
 
@@ -251,6 +248,7 @@ def _safe_extract_zip(zip_ref: zipfile.ZipFile, dest_dir: Path) -> None:
             raise RuntimeError("Zip path traversal detected")
     zip_ref.extractall(dest)
 
+
 def download_and_extract_github(repo_input: str, workspace_root: Path) -> Path:
     """
     Downloads a public GitHub repository as a ZIP archive via HTTP and extracts it
@@ -259,32 +257,31 @@ def download_and_extract_github(repo_input: str, workspace_root: Path) -> Path:
     repo_input = repo_input.strip()
     if repo_input.endswith(".git"):
         repo_input = repo_input[:-4]
-    
+
     # Parse owner and repo name
     if "github.com/" in repo_input:
         parts = repo_input.split("github.com/")[-1].split("/")
     else:
         parts = repo_input.split("/")
-        
+
     if len(parts) < 2:
         raise ValueError("Format invalido para GitHub. Usar 'usuario/repo' o la URL completa.")
-        
+
     owner, repo = parts[0].strip(), parts[1].strip()
     if not owner or not repo:
         raise ValueError("Nombre de usuario o repositorio vacio.")
-        
+
     dest_dir = workspace_root / "imports" / "github" / f"{owner}-{repo}"
-    
+
     # Create the imports directory and cleanup previous version if it exists
     if dest_dir.exists():
         shutil.rmtree(dest_dir)
-        
+
     zipball_url = f"https://api.github.com/repos/{owner}/{repo}/zipball"
     req = urllib.request.Request(
-        zipball_url,
-        headers={"User-Agent": "LaGranBiblioteca/1.0 (Python urllib)"}
+        zipball_url, headers={"User-Agent": "LaGranBiblioteca/1.0 (Python urllib)"}
     )
-    
+
     try:
         zip_data = _urlopen(req)
     except urllib.error.HTTPError as e:
@@ -293,25 +290,25 @@ def download_and_extract_github(repo_input: str, workspace_root: Path) -> Path:
     except Exception as e:
         logger.error(f"Error de red al descargar de GitHub: {e}")
         raise RuntimeError(f"Error de conexion al descargar de GitHub: {e}")
-        
+
     # Extract ZIP file
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
             _safe_extract_zip(zip_ref, temp_path)
-            
+
         # GitHub zipballs pack everything in a single root folder: owner-repo-hash
         extracted_dirs = [p for p in temp_path.iterdir() if p.is_dir()]
         if not extracted_dirs:
             raise RuntimeError("El archivo ZIP descargado esta vacio.")
-            
+
         root_extracted = extracted_dirs[0]
-        
+
         # Ensure destination parent directory exists
         dest_dir.parent.mkdir(parents=True, exist_ok=True)
         # Move the inner folder contents to target destination folder
         shutil.move(str(root_extracted), str(dest_dir))
-        
+
     return dest_dir
 
 
@@ -324,8 +321,8 @@ def import_arxiv(arxiv_id: str, workspace_root: Path) -> Path:
     xml_data = _fetch_arxiv_xml(arxiv_id)
 
     try:
-        root = ET.fromstring(xml_data)
-    except ET.ParseError as e:
+        root = DET.fromstring(xml_data)
+    except DET.ParseError as e:
         logger.error(f"XML invalido de arXiv: {e}")
         raise RuntimeError(f"Respuesta invalida de arXiv: {e}") from e
 
@@ -336,9 +333,7 @@ def import_arxiv(arxiv_id: str, workspace_root: Path) -> Path:
     if _is_arxiv_error_entry(entry):
         summary_elem = entry.find("atom:summary", _ARXIV_NS_MAP)
         detail = (summary_elem.text or "").strip() if summary_elem is not None else ""
-        raise ValueError(
-            detail or f"No se encontro el articulo en arXiv para el ID {arxiv_id}"
-        )
+        raise ValueError(detail or f"No se encontro el articulo en arXiv para el ID {arxiv_id}")
 
     parsed = _parse_arxiv_entry(entry)
     title = parsed["title"]
@@ -353,14 +348,14 @@ def import_arxiv(arxiv_id: str, workspace_root: Path) -> Path:
     dest_dir = workspace_root / "imports" / "arxiv"
     dest_dir.mkdir(parents=True, exist_ok=True)
     file_path = dest_dir / f"{_arxiv_filename_id(arxiv_id)}.md"
-    
+
     # Format tags for semantic search indexation in La Gran Biblioteca
     # We substitute '.' and '-' in category names for compatible tag tokens
     tags = ["arxiv", "paper"]
     for cat in categories:
         tag_friendly = cat.replace(".", "_").replace("-", "_")
         tags.append(f"arxiv_{tag_friendly}")
-        
+
     authors_yaml = ", ".join(_yaml_double_quoted(auth) for auth in authors)
     tags_yaml = ", ".join(_yaml_double_quoted(t) for t in tags)
     categories_yaml = ", ".join(_yaml_double_quoted(c) for c in categories)
@@ -394,10 +389,10 @@ type: "paper"
 ---
 #arxiv {" ".join(["#" + t for t in tags if t != "paper"])}
 """
-    
+
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(md_content)
-        
+
     return file_path
 
 
@@ -411,100 +406,105 @@ def import_pubmed(pmid: str, workspace_root: Path) -> Path:
     if "pubmed.ncbi.nlm.nih.gov/" in pmid:
         pmid = pmid.split("pubmed.ncbi.nlm.nih.gov/")[-1].split("/")[0]
 
-    api_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
-    req = urllib.request.Request(
-        api_url,
-        headers={"User-Agent": "LaGranBiblioteca/1.0 (Python urllib)"}
+    api_url = (
+        f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
     )
-    
+    req = urllib.request.Request(
+        api_url, headers={"User-Agent": "LaGranBiblioteca/1.0 (Python urllib)"}
+    )
+
     try:
         xml_data = _urlopen(req)
     except Exception as e:
         logger.error(f"Error al conectar con la API de PubMed: {e}")
         raise RuntimeError(f"Error al consultar la API de PubMed: {e}")
-        
+
     try:
-        root = ET.fromstring(xml_data)
-        
-        article = root.find('.//PubmedArticle')
+        root = DET.fromstring(xml_data)
+
+        article = root.find(".//PubmedArticle")
         if article is None:
             raise ValueError(f"No se encontro el articulo en PubMed para el PMID {pmid}")
-            
-        title_elem = article.find('.//ArticleTitle')
-        title = "".join(title_elem.itertext()).strip() if title_elem is not None else f"PubMed PMID:{pmid}"
+
+        title_elem = article.find(".//ArticleTitle")
+        title = (
+            "".join(title_elem.itertext()).strip()
+            if title_elem is not None
+            else f"PubMed PMID:{pmid}"
+        )
         title = " ".join(title.split())
-            
+
         abstract_texts = []
-        for abs_text in article.findall('.//AbstractText'):
-            label = abs_text.attrib.get('Label')
+        for abs_text in article.findall(".//AbstractText"):
+            label = abs_text.attrib.get("Label")
             text = "".join(abs_text.itertext()).strip()
             if label and text:
                 abstract_texts.append(f"**{label}**: {text}")
             elif text:
                 abstract_texts.append(text)
-                
+
         summary = "\n\n".join(abstract_texts)
         summary = "\n\n".join(" ".join(p.split()) for p in summary.split("\n\n"))
-        
+
         authors = []
-        for author in article.findall('.//AuthorList/Author'):
-            last = author.find('LastName')
-            fore = author.find('ForeName')
-            coll = author.find('CollectiveName')
+        for author in article.findall(".//AuthorList/Author"):
+            last = author.find("LastName")
+            fore = author.find("ForeName")
+            coll = author.find("CollectiveName")
             if last is not None and fore is not None:
                 authors.append(f"{fore.text.strip()} {last.text.strip()}")
             elif last is not None:
                 authors.append(last.text.strip())
             elif coll is not None:
                 authors.append(coll.text.strip())
-                
-        pub_date = article.find('.//JournalIssue/PubDate')
+
+        pub_date = article.find(".//JournalIssue/PubDate")
         year_str = ""
         month_str = "01"
         day_str = "01"
         if pub_date is not None:
-            year_elem = pub_date.find('Year')
-            month_elem = pub_date.find('Month')
-            day_elem = pub_date.find('Day')
-            medline_elem = pub_date.find('MedlineDate')
-            
+            year_elem = pub_date.find("Year")
+            month_elem = pub_date.find("Month")
+            day_elem = pub_date.find("Day")
+            medline_elem = pub_date.find("MedlineDate")
+
             if year_elem is not None:
                 year_str = year_elem.text.strip()
             if month_elem is not None:
                 month_str = month_elem.text.strip()
             if day_elem is not None:
                 day_str = day_elem.text.strip()
-                
+
             if not year_str and medline_elem is not None:
                 parts = medline_elem.text.strip().split()
                 if parts:
                     year_str = parts[0]
-                    
+
         published = f"{year_str}-{month_str}-{day_str}" if year_str else ""
-        
-        journal_elem = article.find('.//Journal/Title')
+
+        journal_elem = article.find(".//Journal/Title")
         journal = journal_elem.text.strip() if journal_elem is not None else ""
-        
+
         keywords = []
-        for kw in article.findall('.//KeywordList/Keyword'):
+        for kw in article.findall(".//KeywordList/Keyword"):
             keywords.append("".join(kw.itertext()).strip())
     except Exception as e:
         logger.error(f"Error parseando el XML de PubMed: {e}")
         raise RuntimeError(f"Error procesando la respuesta de PubMed: {e}")
-        
+
     # Create the markdown file
     dest_dir = workspace_root / "imports" / "pubmed"
     dest_dir.mkdir(parents=True, exist_ok=True)
     file_path = dest_dir / f"{pmid}.md"
-    
+
     tags = ["pubmed", "paper", "medical"]
-    for kw in keywords[:5]: # Take top 5 keywords
+    for kw in keywords[:5]:  # Take top 5 keywords
         kw_friendly = kw.lower().replace(" ", "_").replace("-", "_").replace(".", "")
         tags.append(f"pm_{kw_friendly}")
-        
+
     authors_yaml = ", ".join([f'"{auth}"' for auth in authors])
     tags_yaml = ", ".join([f'"{t}"' for t in tags])
-    
+
     md_content = f"""---
 title: "{title}"
 authors: [{authors_yaml}]
@@ -530,10 +530,10 @@ type: "paper"
 ---
 #pubmed {" ".join(["#" + t for t in tags if t != "paper" and t != "pubmed"])}
 """
-    
+
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(md_content)
-        
+
     return file_path
 
 
@@ -588,7 +588,10 @@ def _normalize_preprint_doi(raw: str) -> str:
 def _fetch_json(url: str) -> dict:
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "LaGranBiblioteca/1.0 (Python urllib)", "Accept": "application/json"},
+        headers={
+            "User-Agent": "LaGranBiblioteca/1.0 (Python urllib)",
+            "Accept": "application/json",
+        },
     )
     try:
         data = _urlopen(req)

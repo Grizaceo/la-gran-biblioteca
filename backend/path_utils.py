@@ -195,7 +195,11 @@ def resolve_node_path(node_id: str, path_str: str, workspace_root: Path) -> Path
     """
     root = workspace_root.resolve()
     canonical = path_from_node_id(node_id, root)
-    fuzzy = path_from_node_id_fuzzy(node_id, root) if canonical is None or not canonical.exists() else None
+    fuzzy = (
+        path_from_node_id_fuzzy(node_id, root)
+        if canonical is None or not canonical.exists()
+        else None
+    )
     for candidate in (canonical, fuzzy):
         if candidate is None:
             continue
@@ -211,9 +215,7 @@ def resolve_node_path(node_id: str, path_str: str, workspace_root: Path) -> Path
     stored = normalize_stored_path(path_str, root)
     if stored.exists():
         # Stale OneDrive C:\\ in DB must not beat an existing workspace file
-        if canonical is not None and (
-            is_windows_path(path_str) or str(stored).startswith("/mnt/")
-        ):
+        if canonical is not None and (is_windows_path(path_str) or str(stored).startswith("/mnt/")):
             try:
                 c = canonical.resolve()
                 if c.exists() and c.is_relative_to(root):
@@ -239,9 +241,7 @@ def to_windows_path(posix_path: Path) -> str:
         win_path = result.stdout.strip().replace("\r", "")
         if result.returncode != 0 or not win_path:
             err = (result.stderr or "").strip() or f"exit code {result.returncode}"
-            raise RuntimeError(
-                f"wslpath no pudo convertir la ruta: {posix_path} ({err})"
-            )
+            raise RuntimeError(f"wslpath no pudo convertir la ruta: {posix_path} ({err})")
         return win_path.replace("/", "\\")
 
     return str(posix_path)

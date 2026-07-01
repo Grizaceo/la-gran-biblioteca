@@ -18,7 +18,9 @@ def paths_to_node_ids(
 ) -> list[str]:
     ids: list[str] = []
     root = workspace_root.resolve()
-    path_index = {str(Path(n.get("path", "")).resolve()): n["id"] for n in (nodes or []) if n.get("path")}
+    path_index = {
+        str(Path(n.get("path", "")).resolve()): n["id"] for n in (nodes or []) if n.get("path")
+    }
     for raw in paths:
         p = Path(raw)
         if not p.is_absolute():
@@ -77,9 +79,7 @@ def impact_files_bfs(
                 }
             )
         for parent_id, edge_type in adj_in.get(nid, []):
-            edges_found.append(
-                {"from": parent_id, "to": nid, "type": edge_type}
-            )
+            edges_found.append({"from": parent_id, "to": nid, "type": edge_type})
             if parent_id not in visited:
                 visited.add(parent_id)
                 frontier.append(parent_id)

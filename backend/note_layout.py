@@ -174,7 +174,9 @@ def apply_note_orbit_layout(graph: dict[str, Any]) -> dict[str, Any]:
         if source is None:
             continue
         cx, cy, cz = _get_position(source)
-        group.sort(key=lambda n: (n.get("metadata") or {}).get("note_id") or n.get("label") or n["id"])
+        group.sort(
+            key=lambda n: (n.get("metadata") or {}).get("note_id") or n.get("label") or n["id"]
+        )
         total = len(group)
         for idx, note_node in enumerate(group):
             x, y, z = _orbit_point((cx, cy, cz), idx, total)

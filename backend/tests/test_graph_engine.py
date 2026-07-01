@@ -12,18 +12,32 @@ def test_build_graph_clears_previous_state():
 
         raw1 = {
             "nodes": [
-                {"id": "a", "type": "folder", "label": "A", "path": "/a", "metadata": {}, "position": {"x": 0, "y": 0}}
+                {
+                    "id": "a",
+                    "type": "folder",
+                    "label": "A",
+                    "path": "/a",
+                    "metadata": {},
+                    "position": {"x": 0, "y": 0},
+                }
             ],
-            "edges": []
+            "edges": [],
         }
         engine.build_graph(raw1)
         assert len(engine.nodes) == 1
 
         raw2 = {
             "nodes": [
-                {"id": "b", "type": "file", "label": "B", "path": "/b", "metadata": {}, "position": {"x": 1, "y": 1}}
+                {
+                    "id": "b",
+                    "type": "file",
+                    "label": "B",
+                    "path": "/b",
+                    "metadata": {},
+                    "position": {"x": 1, "y": 1},
+                }
             ],
-            "edges": []
+            "edges": [],
         }
         engine.build_graph(raw2)
         assert len(engine.nodes) == 1
@@ -38,9 +52,16 @@ def test_update_node_metadata_persists():
 
         raw = {
             "nodes": [
-                {"id": "n1", "type": "document", "label": "Doc", "path": "/doc", "metadata": {"views": 0}, "position": None}
+                {
+                    "id": "n1",
+                    "type": "document",
+                    "label": "Doc",
+                    "path": "/doc",
+                    "metadata": {"views": 0},
+                    "position": None,
+                }
             ],
-            "edges": []
+            "edges": [],
         }
         engine.build_graph(raw)
         engine.update_node_metadata("n1", {"views": 5})
@@ -60,17 +81,31 @@ def test_rebuild_graph_is_atomic():
 
         raw1 = {
             "nodes": [
-                {"id": "a", "type": "folder", "label": "A", "path": "/a", "metadata": {}, "position": None}
+                {
+                    "id": "a",
+                    "type": "folder",
+                    "label": "A",
+                    "path": "/a",
+                    "metadata": {},
+                    "position": None,
+                }
             ],
-            "edges": []
+            "edges": [],
         }
         engine.build_graph(raw1)
 
         raw2 = {
             "nodes": [
-                {"id": "b", "type": "file", "label": "B", "path": "/b", "metadata": {}, "position": None}
+                {
+                    "id": "b",
+                    "type": "file",
+                    "label": "B",
+                    "path": "/b",
+                    "metadata": {},
+                    "position": None,
+                }
             ],
-            "edges": []
+            "edges": [],
         }
         result = engine.rebuild_graph(raw2)
         assert len(result["nodes"]) == 1
@@ -88,8 +123,17 @@ def test_restore_backup():
         engine = GraphEngine(db_path=db)
 
         raw1 = {
-            "nodes": [{"id": "a", "type": "folder", "label": "A", "path": "/a", "metadata": {}, "position": None}],
-            "edges": []
+            "nodes": [
+                {
+                    "id": "a",
+                    "type": "folder",
+                    "label": "A",
+                    "path": "/a",
+                    "metadata": {},
+                    "position": None,
+                }
+            ],
+            "edges": [],
         }
         engine.build_graph(raw1)
         engine.rebuild_graph({"nodes": [], "edges": []})

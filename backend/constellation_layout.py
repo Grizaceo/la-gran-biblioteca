@@ -24,13 +24,44 @@ _PERIPHERAL_CLOUD_RADIUS = 550.0
 _PERIPHERAL_NEAR_CENTER_RADIUS = 120.0
 
 # Folder names too generic for automatic constellation suggestions.
-GENERIC_FOLDER_NAMES = frozenset({
-    "src", "docs", "doc", "lib", "bin", "dist", "build", "tmp", "temp",
-    "node_modules", "vendor", "assets", "static", "public", "private",
-    "test", "tests", "spec", "coverage", "data", "cache", "config",
-    "scripts", "tools", "utils", "common", "shared", "include",
-    "out", "target", "obj", "venv", ".venv", "env",
-})
+GENERIC_FOLDER_NAMES = frozenset(
+    {
+        "src",
+        "docs",
+        "doc",
+        "lib",
+        "bin",
+        "dist",
+        "build",
+        "tmp",
+        "temp",
+        "node_modules",
+        "vendor",
+        "assets",
+        "static",
+        "public",
+        "private",
+        "test",
+        "tests",
+        "spec",
+        "coverage",
+        "data",
+        "cache",
+        "config",
+        "scripts",
+        "tools",
+        "utils",
+        "common",
+        "shared",
+        "include",
+        "out",
+        "target",
+        "obj",
+        "venv",
+        ".venv",
+        "env",
+    }
+)
 _catalog_cache: Optional[List[Dict[str, Any]]] = None
 
 
@@ -98,7 +129,9 @@ def suggest_constellation(folder_name: str, threshold: float = 0.72) -> Optional
     return None
 
 
-def _ra_dec_to_xy(ra_deg: float, dec_deg: float, center_ra: float, center_dec: float) -> Tuple[float, float]:
+def _ra_dec_to_xy(
+    ra_deg: float, dec_deg: float, center_ra: float, center_dec: float
+) -> Tuple[float, float]:
     """Stereographic projection around constellation center (degrees)."""
     ra_rad = math.radians(ra_deg - center_ra)
     dec_rad = math.radians(dec_deg)
@@ -139,12 +172,14 @@ def _project_constellation_stars(constellation: Dict[str, Any]) -> List[Dict[str
         mag = p["mag"]
         # Keep figure flat (z=0) so the constellation shape reads correctly from any
         # camera angle.  Magnitude is preserved for guide-star sizing in the frontend.
-        out.append({
-            "x": p["x"] * scale,
-            "y": p["y"] * scale,
-            "z": 0.0,
-            "mag": mag,
-        })
+        out.append(
+            {
+                "x": p["x"] * scale,
+                "y": p["y"] * scale,
+                "z": 0.0,
+                "mag": mag,
+            }
+        )
     return out
 
 
@@ -180,17 +215,11 @@ def _recenter_positions(
     cx = sum(xs) / n
     cy = sum(ys) / n
     cz = sum(zs) / n
-    shifted = {
-        nid: (x - cx, y - cy, z - cz)
-        for nid, (x, y, z) in positions.items()
-    }
+    shifted = {nid: (x - cx, y - cy, z - cz) for nid, (x, y, z) in positions.items()}
     max_r = max(math.sqrt(x * x + y * y + z * z) for x, y, z in shifted.values())
     if _MAX_SCENE_RADIUS > 0 and max_r > _MAX_SCENE_RADIUS:
         scale = _MAX_SCENE_RADIUS / max_r
-        return {
-            nid: (x * scale, y * scale, z * scale)
-            for nid, (x, y, z) in shifted.items()
-        }
+        return {nid: (x * scale, y * scale, z * scale) for nid, (x, y, z) in shifted.items()}
     return shifted
 
 
@@ -289,18 +318,22 @@ def _layout_anchor_subtree(
     # Compute star world positions (same transform applied to nodes later)
     star_world: List[Dict[str, float]] = []
     for s in stars:
-        star_world.append({
-            "x": ox + s["x"] * scale,
-            "y": oy + s["y"] * scale,
-            "z": oz + s["z"] * scale,
-            "mag": s["mag"],
-        })
+        star_world.append(
+            {
+                "x": ox + s["x"] * scale,
+                "y": oy + s["y"] * scale,
+                "z": oz + s["z"] * scale,
+                "mag": s["mag"],
+            }
+        )
 
     folders, files = _collect_subtree_nodes(graph, anchor_path)
-    folders.sort(key=lambda n: (
-        int((n.get("metadata") or {}).get("depth", 0)),
-        (n.get("label") or "").lower(),
-    ))
+    folders.sort(
+        key=lambda n: (
+            int((n.get("metadata") or {}).get("depth", 0)),
+            (n.get("label") or "").lower(),
+        )
+    )
 
     positions: Dict[str, Tuple[float, float, float]] = {}
 
@@ -316,10 +349,7 @@ def _layout_anchor_subtree(
         positions[folder["id"]] = (x, y, z)
 
     # Files cluster near their parent folder's assigned star
-    folder_path_to_id = {
-        _normalize_folder_path(n.get("path", "")): n["id"]
-        for n in folders
-    }
+    folder_path_to_id = {_normalize_folder_path(n.get("path", "")): n["id"] for n in folders}
     files_by_parent: Dict[str, List[Dict[str, Any]]] = {}
     for f in files:
         parent = _normalize_folder_path(_parent_folder_path(f.get("path", "")))
@@ -399,7 +429,7 @@ def apply_constellation_layout(
     # Stored with sentinel keys so _recenter_positions transforms them identically.
     # Key format: "__star__<anchor_idx>__<star_idx>"
     star_sentinel_keys: List[Tuple[str, str, int]] = []  # (sentinel_key, anchor_path, star_idx)
-    anchor_figures_raw: Dict[str, Dict[str, Any]] = {}   # anchor_path -> raw figure info
+    anchor_figures_raw: Dict[str, Dict[str, Any]] = {}  # anchor_path -> raw figure info
 
     top_level_paths = sorted(
         [p for p in anchor_paths if _is_top_level_anchor(p, anchor_paths)],
@@ -470,14 +500,9 @@ def apply_constellation_layout(
         }
 
     has_confirmed = any(p.get("status") == "confirmed" for p in prefs_by_path.values())
-    cloud_radius = (
-        _PERIPHERAL_NEAR_CENTER_RADIUS if has_confirmed else _PERIPHERAL_CLOUD_RADIUS
-    )
+    cloud_radius = _PERIPHERAL_NEAR_CENTER_RADIUS if has_confirmed else _PERIPHERAL_CLOUD_RADIUS
 
-    unanchored = [
-        n for n in graph.get("nodes", [])
-        if n["id"] not in all_positions
-    ]
+    unanchored = [n for n in graph.get("nodes", []) if n["id"] not in all_positions]
     unanchored.sort(key=lambda n: (n.get("path") or "", n.get("label") or ""))
     for i, node in enumerate(unanchored):
         all_positions[node["id"]] = _fibonacci_sphere_point(
@@ -516,14 +541,16 @@ def apply_constellation_layout(
             if pos:
                 x, y, z = pos
                 stars_out.append({"x": x, "y": y, "z": z, "mag": fig_raw["star_mags"][si]})
-        figures.append({
-            "constellation_id": cid,
-            "anchor": anchor_path,
-            "name": fig_raw["name"],
-            "name_es": fig_raw["name_es"],
-            "stars": stars_out,
-            "lines": fig_raw["lines"],
-        })
+        figures.append(
+            {
+                "constellation_id": cid,
+                "anchor": anchor_path,
+                "name": fig_raw["name"],
+                "name_es": fig_raw["name_es"],
+                "stars": stars_out,
+                "lines": fig_raw["lines"],
+            }
+        )
 
     graph["constellations"] = figures
     return graph

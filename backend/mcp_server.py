@@ -16,19 +16,27 @@ import os
 import threading
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+# FastMCP stub for when MCP package is not available
+class _FastMCPStub:  # type: ignore[no-redef]
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+    def tool(self):
+        def decorator(fn: Callable) -> Callable:
+            return fn
+
+        return decorator
+
+    def run(self):
+        pass
 
 try:
     from mcp.server.fastmcp import FastMCP
 except ModuleNotFoundError:  # pragma: no cover - fallback for test/runtime without MCP package
-    class FastMCP:  # type: ignore[override]
-        def __init__(self, *_args, **_kwargs):
-            pass
+    FastMCP = _FastMCPStub  # type: ignore[assignment,misc]
 
-        def tool(self):
-            def decorator(fn):
-                return fn
-            return decorator
 
 from .constants import WORKSPACE_ROOT, get_db_path, get_workspace_root
 from .graph_engine import GraphEngine
@@ -102,6 +110,7 @@ mcp = FastMCP(
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _node_summary(n: dict) -> dict:
     """Compact node representation for list results."""
     path = n.get("path", "")
@@ -146,6 +155,7 @@ def _rescan_and_reload() -> dict:
 
 # ── Read tools ─────────────────────────────────────────────────────────────
 
+
 @mcp.tool()
 def overview() -> dict:
     """
@@ -164,9 +174,9 @@ def overview() -> dict:
     coverage = build_graph_structure_summary(nodes, edges, root)
     scan_meta = get_last_scan_stats()
     coverage["wiki_pattern"] = scan_meta.get("wiki_pattern") or coverage.get("wiki_pattern")
-    coverage["unresolved_wikilinks"] = scan_meta.get("unresolved_wikilinks") or coverage.get(
-        "unresolved_wikilinks"
-    ) or []
+    coverage["unresolved_wikilinks"] = (
+        scan_meta.get("unresolved_wikilinks") or coverage.get("unresolved_wikilinks") or []
+    )
     coverage["categories"] = scan_meta.get("categories") or coverage.get("categories") or []
     overview_data["coverage"] = coverage
     overview_data["wiki_pattern"] = scan_meta.get("wiki_pattern")
@@ -246,7 +256,11 @@ def search(
     limit = min(limit, 100)
     with _lock:
         graph = {"nodes": list(_graph["nodes"]), "edges": list(_graph["edges"])}
-    indexed = _engine.search_index(query, limit=max(limit * 5, 50), offset=0) if mode in {"text", "related"} else []
+    indexed = (
+        _engine.search_index(query, limit=max(limit * 5, 50), offset=0)
+        if mode in {"text", "related"}
+        else []
+    )
     result = search_graph(
         graph,
         engine_search_results=indexed,
@@ -264,7 +278,8 @@ def search(
     )
     if tag:
         result["results"] = [
-            item for item in result["results"]
+            item
+            for item in result["results"]
             if tag in ((_node_index.get(item["id"], {}).get("metadata") or {}).get("tags", []))
         ]
         result["total"] = len(result["results"])
@@ -470,7 +485,11 @@ def explore(
     previews: list[dict] = []
     for hit in hits[:2]:
         nid = hit["id"]
-        preview: dict[str, Any] = {"node_id": nid, "label": hit.get("label"), "type": hit.get("type")}
+        preview: dict[str, Any] = {
+            "node_id": nid,
+            "label": hit.get("label"),
+            "type": hit.get("type"),
+        }
         with _lock:
             n = _node_index.get(nid)
         if n and n.get("path"):
@@ -553,6 +572,7 @@ def subgraph(
 
 
 # ── Mutation tools ──────────────────────────────────────────────────────────
+
 
 @mcp.tool()
 def mark_studied(node_id: str) -> dict:

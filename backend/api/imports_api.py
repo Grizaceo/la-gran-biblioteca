@@ -188,7 +188,9 @@ async def create_pmc(req: ImportPmcRequest):
 @router.post("/create/medrxiv")
 async def create_medrxiv(req: ImportPreprintRequest):
     try:
-        file_path = await asyncio.to_thread(import_preprint, "medrxiv", req.id, get_workspace_root())
+        file_path = await asyncio.to_thread(
+            import_preprint, "medrxiv", req.id, get_workspace_root()
+        )
         graph_state.register_recently_imported(file_path)
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
         return _import_file_response(file_path, get_workspace_root())
@@ -202,7 +204,9 @@ async def create_medrxiv(req: ImportPreprintRequest):
 @router.post("/create/biorxiv")
 async def create_biorxiv(req: ImportPreprintRequest):
     try:
-        file_path = await asyncio.to_thread(import_preprint, "biorxiv", req.id, get_workspace_root())
+        file_path = await asyncio.to_thread(
+            import_preprint, "biorxiv", req.id, get_workspace_root()
+        )
         graph_state.register_recently_imported(file_path)
         asyncio.create_task(force_graph_update(ensure_paths=[file_path]))
         return _import_file_response(file_path, get_workspace_root())

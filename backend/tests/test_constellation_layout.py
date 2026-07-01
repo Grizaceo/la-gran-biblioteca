@@ -1,6 +1,5 @@
 """Tests for constellation catalog and layout."""
 
-
 import math
 
 from backend.constellation_layout import (
@@ -139,20 +138,24 @@ def test_top_level_islands_clustered(tmp_path):
         path = str(folder.resolve())
         roots.append(path)
         cid = catalog_ids[i % len(catalog_ids)]
-        nodes.append({
-            "id": f"folder_{i}",
-            "type": "folder",
-            "label": f"root_{i}",
-            "path": path,
-            "metadata": {"depth": 0},
-            "position": {"x": i * 500, "y": 0, "z": 0},
-        })
-        prefs.append({
-            "folder_path": path,
-            "constellation_id": cid,
-            "status": "confirmed",
-            "suggested_from": "manual",
-        })
+        nodes.append(
+            {
+                "id": f"folder_{i}",
+                "type": "folder",
+                "label": f"root_{i}",
+                "path": path,
+                "metadata": {"depth": 0},
+                "position": {"x": i * 500, "y": 0, "z": 0},
+            }
+        )
+        prefs.append(
+            {
+                "folder_path": path,
+                "constellation_id": cid,
+                "status": "confirmed",
+                "suggested_from": "manual",
+            }
+        )
 
     out = apply_constellation_layout({"nodes": nodes, "edges": []}, prefs)
     positions = []
@@ -169,7 +172,7 @@ def test_top_level_islands_clustered(tmp_path):
 
     max_pair = 0.0
     for i, a in enumerate(positions):
-        for b in positions[i + 1:]:
+        for b in positions[i + 1 :]:
             d = math.dist(a, b)
             max_pair = max(max_pair, d)
     # Island origins sit on a sphere of _ISLAND_SPHERE_RADIUS; star layout adds inner spread.

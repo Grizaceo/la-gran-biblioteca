@@ -7,7 +7,12 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ..constants import get_archive_policy, get_exclude_dirs, get_workspace_root, is_archive_dir_name
+from ..constants import (
+    get_archive_policy,
+    get_exclude_dirs,
+    get_workspace_root,
+    is_archive_dir_name,
+)
 from .layout import (
     attach_tags_to_node,
     file_node_id,
@@ -64,9 +69,7 @@ def _append_shadow_folder(
     node_map[folder_key] = node_id
     parent_id = node_map.get(str(folder.parent.resolve()))
     if parent_id:
-        graph["edges"].append(
-            {"source": parent_id, "target": node_id, "type": "contains"}
-        )
+        graph["edges"].append({"source": parent_id, "target": node_id, "type": "contains"})
     return node_id
 
 
@@ -99,9 +102,7 @@ def _append_folder_node(
     if folder.parent != folder:
         parent_id = node_map.get(str(folder.parent.resolve()))
         if parent_id:
-            graph["edges"].append(
-                {"source": parent_id, "target": node_id, "type": "contains"}
-            )
+            graph["edges"].append({"source": parent_id, "target": node_id, "type": "contains"})
     return node_id
 
 
@@ -149,9 +150,7 @@ def _append_file_node(
 
     parent_id = node_map.get(str(filepath.parent.resolve()))
     if parent_id:
-        graph["edges"].append(
-            {"source": parent_id, "target": node_id, "type": "contains"}
-        )
+        graph["edges"].append({"source": parent_id, "target": node_id, "type": "contains"})
 
     tag_created = created_tags if created_tags is not None else {}
     attach_tags_to_node(graph, node_id, tags, position=pos, created_tags=tag_created)
@@ -200,9 +199,7 @@ def scan_workspaces(
                     continue
                 if policy == "shadow":
                     _scan_stats["skipped_archive_dirs"] += 1
-                    _append_shadow_folder(
-                        graph, node_map, current_path, root, depth, x, y
-                    )
+                    _append_shadow_folder(graph, node_map, current_path, root, depth, x, y)
                     continue
 
             if _should_skip_dir(current_path.name):
@@ -241,9 +238,7 @@ def scan_workspaces(
                         len(children),
                         max_children,
                     )
-                for idx, child in enumerate(
-                    sorted(children, key=lambda p: p.name)[:max_children]
-                ):
+                for idx, child in enumerate(sorted(children, key=lambda p: p.name)[:max_children]):
                     queue.append((child, depth + 1, x, y, idx))
             except (PermissionError, OSError) as e:
                 logger.warning("No se pudo escanear %s: %s", current_path, e)
@@ -303,9 +298,7 @@ def scan_workspaces(
 
             parent_id = node_map.get(str(current_path.parent))
             if parent_id:
-                graph["edges"].append(
-                    {"source": parent_id, "target": node_id, "type": "contains"}
-                )
+                graph["edges"].append({"source": parent_id, "target": node_id, "type": "contains"})
 
     resolve_wikilinks(graph, pending_wikilinks, name_to_id)
     add_colocated_edges(graph, folder_files)

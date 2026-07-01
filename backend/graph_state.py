@@ -94,11 +94,7 @@ def _path_matches_recent(node_path_str: str, recent: str) -> bool:
 
 def _is_vault_import_node(n: dict) -> bool:
     blob = f"{n.get('id', '')} {n.get('path', '')}".replace("\\", "/").lower()
-    return (
-        "/imports/github/" in blob
-        or "/imports/arxiv/" in blob
-        or "/imports/pubmed/" in blob
-    )
+    return "/imports/github/" in blob or "/imports/arxiv/" in blob or "/imports/pubmed/" in blob
 
 
 def _node_priority_key(n: dict, degree: int, root: Path) -> tuple:
@@ -123,7 +119,15 @@ def _node_priority_key(n: dict, degree: int, root: Path) -> tuple:
     child_count = int(meta.get("child_count") or 0)
     study_score = int(meta.get("study_score") or 0)
     is_folder = 1 if n.get("type") == "folder" else 0
-    return (is_recent, role_bonus, is_folder, 1 if study > 0 else 0, study_score, child_count, degree)
+    return (
+        is_recent,
+        role_bonus,
+        is_folder,
+        1 if study > 0 else 0,
+        study_score,
+        child_count,
+        degree,
+    )
 
 
 def get_limited_graph() -> dict:
@@ -171,10 +175,6 @@ def get_limited_graph() -> dict:
                     break
 
         node_ids = selected_ids
-        edges = [
-            e
-            for e in graph["edges"]
-            if e["source"] in node_ids and e["target"] in node_ids
-        ]
+        edges = [e for e in graph["edges"] if e["source"] in node_ids and e["target"] in node_ids]
         return {"nodes": selected_nodes, "edges": edges, "total": total}
     return {**graph, "total": total}

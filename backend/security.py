@@ -56,7 +56,12 @@ def requires_api_key(request: Request) -> bool:
     if not API_KEY:
         return False
     path = request.url.path
-    if request.method == "GET" and path in ("/api/health", "/api/graph", "/api/overview", "/api/stream"):
+    if request.method == "GET" and path in (
+        "/api/health",
+        "/api/graph",
+        "/api/overview",
+        "/api/stream",
+    ):
         return False
     if request.method == "GET" and path.startswith("/api/node/"):
         return False

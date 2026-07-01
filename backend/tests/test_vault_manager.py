@@ -64,7 +64,9 @@ def test_remove_vault(registry: VaultManager, tmp_path: Path):
     assert registry.get_active().id == c1.id
 
 
-def test_bootstrap_registers_env_root(registry: VaultManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_bootstrap_registers_env_root(
+    registry: VaultManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     ws = tmp_path / "vault"
     ws.mkdir()
     monkeypatch.setenv("WORKSPACE_ROOT", str(ws))
@@ -79,7 +81,9 @@ def test_bootstrap_registers_env_root(registry: VaultManager, tmp_path: Path, mo
     assert len(registry.list_vaults()) == 1
 
 
-def test_legacy_db_migration(registry: VaultManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_legacy_db_migration(
+    registry: VaultManager, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     ws = tmp_path / "vault"
     ws.mkdir()
     legacy_db = tmp_path / "legacy-library.db"

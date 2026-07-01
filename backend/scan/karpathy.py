@@ -147,7 +147,11 @@ def resolve_wikilink_target(
                     if "/" not in node_path or not node_path.endswith(".md"):
                         continue
                     try:
-                        nrel = Path(node_path).relative_to(root.resolve()) if Path(node_path).is_absolute() else Path(node_path)
+                        nrel = (
+                            Path(node_path).relative_to(root.resolve())
+                            if Path(node_path).is_absolute()
+                            else Path(node_path)
+                        )
                         if nrel.parent.as_posix() == src_dir:
                             return nid
                     except (OSError, ValueError):
@@ -205,10 +209,7 @@ def _parse_index_sections(index_path: Path) -> list[dict[str, Any]]:
 
 
 def _compute_backlinks(graph: dict[str, Any]) -> None:
-    refs = [
-        e for e in graph.get("edges", [])
-        if e.get("type") in ("references", "wikilink")
-    ]
+    refs = [e for e in graph.get("edges", []) if e.get("type") in ("references", "wikilink")]
     incoming: dict[str, list[dict[str, str]]] = {}
     id_to_label: dict[str, str] = {
         n["id"]: n.get("label") or n["id"] for n in graph.get("nodes", [])
@@ -218,9 +219,7 @@ def _compute_backlinks(graph: dict[str, Any]) -> None:
         src = e.get("source")
         if not tgt or not src:
             continue
-        incoming.setdefault(tgt, []).append(
-            {"id": src, "label": id_to_label.get(src, src)}
-        )
+        incoming.setdefault(tgt, []).append({"id": src, "label": id_to_label.get(src, src)})
 
     for node in graph.get("nodes", []):
         bl = incoming.get(node["id"])

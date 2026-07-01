@@ -101,8 +101,7 @@ def _resolve_source_file(source_node_id: str, source_path: str = "") -> Path:
             return candidate
 
     raise SourceNodeNotFoundError(
-        f"Nodo origen no encontrado: {nid!r}. "
-        "Abre el nodo de nuevo o re-escanea la biblioteca."
+        f"Nodo origen no encontrado: {nid!r}. Abre el nodo de nuevo o re-escanea la biblioteca."
     )
 
 
@@ -128,9 +127,7 @@ def validate_labels(labels: list[str]) -> None:
         raise NoteValidationError(f"At most {MAX_LABELS} labels allowed")
     for label in labels:
         if len(label) > 30 or not LABEL_RE.match(label):
-            raise NoteValidationError(
-                "Each label must match ^[a-z][a-z0-9_-]{0,29}$"
-            )
+            raise NoteValidationError("Each label must match ^[a-z][a-z0-9_-]{0,29}$")
 
 
 def _note_dir(source_node_id: str) -> Path:
@@ -258,7 +255,11 @@ def _inline_notes_for_source(source_node_id: str, source_path: Path) -> list[dic
         source_path=rel,
         source_node_id=source_node_id,
     )
-    return [n for n in notes if n.get("source_node_id") in ("", source_node_id) or not n.get("source_node_id")]
+    return [
+        n
+        for n in notes
+        if n.get("source_node_id") in ("", source_node_id) or not n.get("source_node_id")
+    ]
 
 
 def _find_inline_note(note_id: str) -> tuple[dict, Path]:
@@ -466,9 +467,8 @@ def update_note(
         labels=new_labels,
         source_node_id=current["source_node_id"],
         selected_text=current["selected_text"],
-        created_at=current["created_at"] or datetime.now(timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%S"
-        ),
+        created_at=current["created_at"]
+        or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
         wikilink_stem=stem,
     )
     path.write_text(content, encoding="utf-8")

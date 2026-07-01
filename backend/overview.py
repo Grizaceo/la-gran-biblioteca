@@ -31,8 +31,7 @@ def build_overview(
             workspace_counts[ws] += 1
 
     top_workspaces = [
-        {"workspace": ws, "nodes": count}
-        for ws, count in workspace_counts.most_common(10)
+        {"workspace": ws, "nodes": count} for ws, count in workspace_counts.most_common(10)
     ]
 
     recent: list[str] = []

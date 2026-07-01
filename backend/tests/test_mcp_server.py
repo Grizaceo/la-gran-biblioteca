@@ -1,11 +1,11 @@
 """Tests for the MCP server tools using a fixture graph."""
 
-
 import pytest
 
 # ---------------------------------------------------------------------------
 # Fixture setup — patch DB_PATH before importing mcp_server
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def isolated_mcp(tmp_path, monkeypatch):
@@ -24,15 +24,34 @@ def isolated_mcp(tmp_path, monkeypatch):
 
     # Build DB
     from backend.graph_engine import GraphEngine
+
     engine = GraphEngine(db_path=db)
     raw = {
         "nodes": [
-            {"id": "n1", "type": "markdown", "label": "note.md",
-             "path": str(ws / "alpha" / "note.md"), "metadata": {"tags": ["foo"]}, "position": None},
-            {"id": "n2", "type": "markdown", "label": "index.md",
-             "path": str(ws / "beta" / "index.md"), "metadata": {}, "position": None},
-            {"id": "n3", "type": "code", "label": "script.py",
-             "path": str(ws / "alpha" / "script.py"), "metadata": {}, "position": None},
+            {
+                "id": "n1",
+                "type": "markdown",
+                "label": "note.md",
+                "path": str(ws / "alpha" / "note.md"),
+                "metadata": {"tags": ["foo"]},
+                "position": None,
+            },
+            {
+                "id": "n2",
+                "type": "markdown",
+                "label": "index.md",
+                "path": str(ws / "beta" / "index.md"),
+                "metadata": {},
+                "position": None,
+            },
+            {
+                "id": "n3",
+                "type": "code",
+                "label": "script.py",
+                "path": str(ws / "alpha" / "script.py"),
+                "metadata": {},
+                "position": None,
+            },
         ],
         "edges": [
             {"source": "n1", "target": "n2", "type": "wikilink"},
@@ -57,6 +76,7 @@ def isolated_mcp(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_overview_counts(isolated_mcp):
     srv, ws = isolated_mcp
@@ -296,7 +316,9 @@ def test_mcp_get_update_search_notes(isolated_mcp, monkeypatch):
     import backend.graph_state as gs
 
     monkeypatch.setattr(gs, "get_node_by_id", lambda nid: srv._node_index.get(nid))
-    monkeypatch.setattr(gs, "get_current_graph", lambda: {"nodes": list(srv._node_index.values()), "edges": []})
+    monkeypatch.setattr(
+        gs, "get_current_graph", lambda: {"nodes": list(srv._node_index.values()), "edges": []}
+    )
     monkeypatch.setattr(srv, "_rescan_and_reload", lambda: srv._graph)
 
     created = srv.create_note(

@@ -118,6 +118,7 @@ MOCK_PUBMED_XML = """<?xml version="1.0" encoding="UTF-8"?>
 </PubmedArticleSet>
 """
 
+
 def create_mock_zip():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zip_ref:
@@ -211,8 +212,18 @@ def test_scan_import_paths_adds_file_node():
 
 
 def test_merge_scan_graphs_dedupes_nodes():
-    base = {"nodes": [{"id": "a", "type": "file", "label": "A", "path": "/a", "metadata": {}, "position": {}}], "edges": []}
-    extra = {"nodes": [{"id": "a", "label": "A2", "type": "file", "path": "/a", "metadata": {}, "position": {}}], "edges": []}
+    base = {
+        "nodes": [
+            {"id": "a", "type": "file", "label": "A", "path": "/a", "metadata": {}, "position": {}}
+        ],
+        "edges": [],
+    }
+    extra = {
+        "nodes": [
+            {"id": "a", "label": "A2", "type": "file", "path": "/a", "metadata": {}, "position": {}}
+        ],
+        "edges": [],
+    }
     merged = merge_scan_graphs(base, extra)
     assert len(merged["nodes"]) == 1
     assert merged["nodes"][0]["label"] == "A2"
@@ -227,13 +238,13 @@ def test_import_arxiv(mock_urlopen):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
-        
+
         file_path = import_arxiv("2303.08774", workspace_root)
-        
+
         # Verify file creation
         assert file_path.exists()
         assert file_path.name == "2303.08774.md"
-        
+
         # Read contents and verify parsing
         content = file_path.read_text(encoding="utf-8")
         assert 'title: "Attention Is All You Need"' in content
@@ -292,13 +303,13 @@ def test_import_pubmed(mock_urlopen):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
-        
+
         file_path = import_pubmed("36915867", workspace_root)
-        
+
         # Verify file creation
         assert file_path.exists()
         assert file_path.name == "36915867.md"
-        
+
         # Read contents and verify parsing
         content = file_path.read_text(encoding="utf-8")
         assert 'title: "A beautiful medical discovery"' in content
@@ -332,9 +343,11 @@ def test_import_github(mock_urlopen):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
-        
-        dest_dir = download_and_extract_github("https://github.com/octocat/Spoon-Knife", workspace_root)
-        
+
+        dest_dir = download_and_extract_github(
+            "https://github.com/octocat/Spoon-Knife", workspace_root
+        )
+
         # Verify directory structure
         assert dest_dir.exists()
         assert dest_dir.name == "octocat-Spoon-Knife"
@@ -352,9 +365,11 @@ def test_api_create_endpoints(mock_urlopen):
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
 
-        with patch("backend.constants.get_workspace_root", return_value=workspace_root), patch(
-            "backend.api.create.get_workspace_root", return_value=workspace_root
-        ), patch("backend.api.imports_api.get_workspace_root", return_value=workspace_root):
+        with (
+            patch("backend.constants.get_workspace_root", return_value=workspace_root),
+            patch("backend.api.create.get_workspace_root", return_value=workspace_root),
+            patch("backend.api.imports_api.get_workspace_root", return_value=workspace_root),
+        ):
             client = TestClient(bridge.app)
 
             resp = client.post("/api/create/folder", json={"path": "documents"})
@@ -392,13 +407,9 @@ MOCK_CROSSREF_JSON = {
     }
 }
 
-MOCK_EUROPE_PMC_JSON = {
-    "resultList": {"result": [{"title": "PMC Example Article"}]}
-}
+MOCK_EUROPE_PMC_JSON = {"resultList": {"result": [{"title": "PMC Example Article"}]}}
 
-MOCK_PREPRINT_JSON = {
-    "collection": [{"title": "A medRxiv Preprint Title"}]
-}
+MOCK_PREPRINT_JSON = {"collection": [{"title": "A medRxiv Preprint Title"}]}
 
 
 @patch("backend.imports._fetch_json")
@@ -472,8 +483,9 @@ def test_api_create_doi_pmc_preprint(mock_fetch_json):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         workspace_root = Path(tmp_dir)
-        with patch("backend.constants.get_workspace_root", return_value=workspace_root), patch(
-            "backend.api.imports_api.get_workspace_root", return_value=workspace_root
+        with (
+            patch("backend.constants.get_workspace_root", return_value=workspace_root),
+            patch("backend.api.imports_api.get_workspace_root", return_value=workspace_root),
         ):
             client = TestClient(bridge.app)
 

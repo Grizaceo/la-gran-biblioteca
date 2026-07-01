@@ -81,10 +81,7 @@ async def apply_lens_preview(body: LensBody):
     )
     preview = result.get("results", [])[:20]
     highlight_ids = [str(item["id"]) for item in preview if item.get("id")]
-    suggested_focus = (
-        validated.get("focusNodeId")
-        or (highlight_ids[0] if highlight_ids else None)
-    )
+    suggested_focus = validated.get("focusNodeId") or (highlight_ids[0] if highlight_ids else None)
     return {
         "lens": validated,
         "search_preview": preview,

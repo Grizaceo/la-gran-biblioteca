@@ -167,13 +167,10 @@ async def lifespan(app: FastAPI):
 
 
 _DEFAULT_CORS = (
-    "http://localhost:5173,http://127.0.0.1:5173,"
-    "http://localhost:3000,http://127.0.0.1:3000"
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
 )
 CORS_ORIGINS = [
-    o.strip()
-    for o in os.environ.get("CORS_ORIGINS", _DEFAULT_CORS).split(",")
-    if o.strip()
+    o.strip() for o in os.environ.get("CORS_ORIGINS", _DEFAULT_CORS).split(",") if o.strip()
 ]
 
 app = FastAPI(title="La Gran Biblioteca API", lifespan=lifespan)
@@ -185,9 +182,7 @@ _cors_kwargs: dict = {
     "allow_headers": ["*"],
 }
 if not PRODUCTION:
-    _cors_kwargs["allow_origin_regex"] = (
-        r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
-    )
+    _cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
 app.include_router(graph.router)
@@ -256,8 +251,5 @@ if __name__ == "__main__":
     finally:
         probe.close()
 
-    print(
-        f"API: http://{host}:{port}/  |  UI: http://localhost:5173 "
-        "(npm run dev en frontend/)"
-    )
+    print(f"API: http://{host}:{port}/  |  UI: http://localhost:5173 (npm run dev en frontend/)")
     uvicorn.run(app, host=host, port=port)

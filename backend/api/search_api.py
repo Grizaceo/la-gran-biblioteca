@@ -26,7 +26,11 @@ async def search_nodes(
     offset: int = Query(0, ge=0),
 ):
     eng = get_engine()
-    indexed = eng.search_index(q, limit=max(limit * 5, 50), offset=0) if mode in {"text", "related"} else []
+    indexed = (
+        eng.search_index(q, limit=max(limit * 5, 50), offset=0)
+        if mode in {"text", "related"}
+        else []
+    )
     return search_graph(
         graph_state.get_current_graph(),
         engine_search_results=indexed,

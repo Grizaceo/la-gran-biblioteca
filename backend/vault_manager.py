@@ -73,8 +73,7 @@ def _normalize_vault_path(path: str | Path) -> Path:
 class VaultManager:
     def __init__(self, registry_path: Path | None = None) -> None:
         self.registry_path = Path(
-            registry_path
-            or os.environ.get("LGB_REGISTRY_PATH", str(_DEFAULT_REGISTRY))
+            registry_path or os.environ.get("LGB_REGISTRY_PATH", str(_DEFAULT_REGISTRY))
         )
         self._data: dict[str, Any] = {"active_id": None, "vaults": []}
         self._bootstrapped = False

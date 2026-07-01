@@ -26,7 +26,9 @@ def test_karpathy_categories_and_backlinks(tmp_path):
     (ws / "transformer.md").write_text("# Transformer", encoding="utf-8")
 
     engine = GraphEngine(db_path=tmp_path / "k.db")
-    raw = scan_raw_graph(root=vault, max_files=50, max_children=20, engine=engine, incremental=False)
+    raw = scan_raw_graph(
+        root=vault, max_files=50, max_children=20, engine=engine, incremental=False
+    )
 
     stats = get_last_scan_stats()
     assert stats.get("wiki_pattern") == "karpathy"

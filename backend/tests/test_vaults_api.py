@@ -14,7 +14,9 @@ from backend.graph_engine import GraphEngine
 from backend.vault_manager import VaultManager
 
 
-def _setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, VaultManager, Path]:
+def _setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[TestClient, VaultManager, Path]:
     reg = tmp_path / "vaults.json"
     monkeypatch.setenv("LGB_REGISTRY_PATH", str(reg))
     vm = VaultManager(registry_path=reg)
