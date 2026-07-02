@@ -161,7 +161,7 @@ export function initMenuBar(engine: Graph3DEngine, opts: MenuBarOptions = {}): v
         opts.openViewOptions?.()
         break
       case 'toggle-coverage':
-        getPanelDock().toggle('coverage')
+        getPanelDock().toggle('filters')
         break
       case 'toggle-constellation-layout':
         toggleConstellationLayout()

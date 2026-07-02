@@ -2,9 +2,9 @@
  * Coordinates left config panels: stack without overlap, smooth open/close, Escape / click-outside.
  */
 
-export type ConfigPanelId = 'coverage' | 'visibility' | 'view-options'
+export type ConfigPanelId = 'filters' | 'visibility' | 'view-options'
 
-const PANEL_IDS: ConfigPanelId[] = ['coverage', 'visibility', 'view-options']
+const PANEL_IDS: ConfigPanelId[] = ['filters', 'visibility', 'view-options']
 
 export interface PanelDockOptions {
   dockRoot?: HTMLElement

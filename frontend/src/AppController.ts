@@ -18,7 +18,7 @@ import { initConstellationSettings } from './ui/constellationSettings'
 import { initPanelDock } from './ui/panelDock'
 import { initAgentLensBar } from './ui/agentLensBar'
 import { initIndexTour } from './ui/indexTour'
-import { initCoverageMap } from './ui/coverageMap'
+import { initLeftPanel } from './ui/leftPanel'
 import { resetExplorerState } from './ui/navigationReset'
 import { addActivityLog } from './lib/activityLog'
 
@@ -35,6 +35,7 @@ type MinimapController = {
   invalidateBounds: () => void
   setStructure: (data: OverviewStructure | null) => void
 }
+type LeftPanelController = ReturnType<typeof initLeftPanel>
 
 function formatStats(graph: Graph, overview: Overview | null): string {
   const shown = graph.nodes.length
@@ -68,7 +69,7 @@ export class AppController {
   private overview: Overview | null = null
   private overviewStructure: OverviewStructure | null = null
   private graphHydrated = false
-  private coverageMap: ReturnType<typeof initCoverageMap> | null = null
+  private leftPanel!: LeftPanelController
 
   private viewOptions!: ViewOptions
   private focus!: FocusController
@@ -148,7 +149,7 @@ export class AppController {
     }
 
     this.statsEl.textContent = formatStats(graph, this.overview)
-    this.coverageMap?.refreshCapBanner()
+    this.leftPanel?.refreshCapBanner()
     this.statusEl.textContent = this.overview?.vault?.name ?? 'Conectado'
 
     addActivityLog('¡Conexión establecida con el backend de La Gran Biblioteca!', 'success')
@@ -209,7 +210,7 @@ export class AppController {
       this.viewOptions.renderList()
       this.statsEl.textContent = formatStats(g, ov)
       this.statusEl.textContent = ov.vault?.name ?? result.vault.name
-      this.coverageMap?.refreshCapBanner()
+      this.leftPanel?.refreshCapBanner()
       addActivityLog(
         `Biblioteca activa: ${result.vault.name} (${result.nodes} nodos).`,
         'success',
@@ -234,7 +235,7 @@ export class AppController {
         this.statusEl.textContent = ov.vault.name
       }
       this.statsEl.textContent = formatStats(graph, ov)
-      this.coverageMap?.refreshCapBanner()
+      this.leftPanel?.refreshCapBanner()
     } catch (err) {
       console.warn('[LGB] overview sync after graph change failed', err)
     }
@@ -248,7 +249,7 @@ export class AppController {
       getOverview: () => this.overview,
       onStats: (updated) => {
         this.statsEl.textContent = formatStats(updated, this.overview)
-        this.coverageMap?.refreshCapBanner()
+        this.leftPanel?.refreshCapBanner()
       },
       onSearchSetup: (nodes) => this.search.setup(nodes),
       onMinimapInvalidate: () => this.minimap.invalidateBounds(),
@@ -280,7 +281,7 @@ export class AppController {
 
     this.focus = initFocus(this.engine.fg, this.engine, () => this.panel.getCurrentNodeId())
 
-    this.coverageMap = initCoverageMap({
+    this.leftPanel = initLeftPanel({
       engine: this.engine,
       forceGraph: this.engine.fg,
       showToast: (msg, isError) => this.showToast(msg, isError),
@@ -390,7 +391,7 @@ export class AppController {
     this.minimap.setStructure(this.overviewStructure)
     this.minimap.update()
     this.viewOptions.renderList()
-    this.coverageMap?.refreshCapBanner()
+    this.leftPanel?.refreshCapBanner()
 
     this.agentLensBar = initAgentLensBar({
       engine: this.engine,

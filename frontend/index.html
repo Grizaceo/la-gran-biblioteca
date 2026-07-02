@@ -122,44 +122,44 @@
 
   <p id="dock-hint" class="dock-hint" title="Paneles opcionales del grafo">Paneles · <kbd>Esc</kbd> cierra</p>
   <nav id="config-dock" class="config-dock" aria-label="Paneles de configuración">
-    <aside id="coverage-panel" class="coverage-panel dock-panel" data-panel="coverage" aria-hidden="true">
-      <div class="dock-panel-header">
-        <span class="dock-panel-title">Cobertura</span>
-        <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar cobertura">&times;</button>
-      </div>
-      <div class="dock-panel-body">
-        <div id="coverage-body" class="dock-panel-body-inner coverage-body">
-          <div class="coverage-hint">Abre el panel para cargar métricas de cobertura.</div>
+      <aside id="filters-panel" class="dock-panel" data-panel="filters" aria-hidden="true">
+        <div class="dock-panel-header">
+          <span class="dock-panel-title">Filtros y Lente</span>
+          <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar filtros">&times;</button>
+        </div>
+        <div class="dock-panel-body">
+          <div id="left-panel-body" class="dock-panel-body-inner leftpanel-body">
+            <div class="leftpanel-hint">Abre el panel para cargar filtros y cobertura.</div>
+          </div>
+        </div>
+      </aside>
+
+      <div id="visibility-panel" class="dock-panel" data-panel="visibility" aria-hidden="true">
+        <div class="dock-panel-header">
+          <span class="dock-panel-title">Tipos de nodo</span>
+          <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar tipos">&times;</button>
+        </div>
+        <div class="dock-panel-body">
+          <div id="visibility-list" class="dock-panel-body-inner"></div>
         </div>
       </div>
-    </aside>
 
-    <div id="visibility-panel" class="dock-panel" data-panel="visibility" aria-hidden="true">
-      <div class="dock-panel-header">
-        <span class="dock-panel-title">Tipos de nodo</span>
-        <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar tipos">&times;</button>
+      <div id="view-options-panel" class="dock-panel" data-panel="view-options" aria-hidden="true">
+        <div class="dock-panel-header">
+          <span class="dock-panel-title">Visualización</span>
+          <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar opciones">&times;</button>
+        </div>
+        <div class="dock-panel-body">
+          <div id="view-options-list" class="dock-panel-body-inner"></div>
+        </div>
       </div>
-      <div class="dock-panel-body">
-        <div id="visibility-list" class="dock-panel-body-inner"></div>
-      </div>
-    </div>
-
-    <div id="view-options-panel" class="dock-panel" data-panel="view-options" aria-hidden="true">
-      <div class="dock-panel-header">
-        <span class="dock-panel-title">Visualización</span>
-        <button type="button" class="dock-panel-close" data-panel-close aria-label="Cerrar opciones">&times;</button>
-      </div>
-      <div class="dock-panel-body">
-        <div id="view-options-list" class="dock-panel-body-inner"></div>
-      </div>
-    </div>
-  </nav>
+    </nav>
 
   <div id="controls">
     <button id="btn-reset" title="Restablecer vista, búsqueda y filtros">Reset</button>
     <button id="btn-focus" title="Focus en nodo seleccionado (F)">Focus+</button>
     <button id="btn-visibility" class="dock-trigger" data-panel-trigger="visibility" title="Mostrar/ocultar tipos de nodo">Tipos</button>
-    <button type="button" id="btn-coverage-panel" class="dock-trigger" data-panel-trigger="coverage" title="Panel de cobertura">Cobertura</button>
+    <button type="button" id="btn-filters-panel" class="dock-trigger" data-panel-trigger="filters" title="Panel de filtros y lente">Filtros</button>
     <button type="button" id="btn-view-options" class="dock-trigger" data-panel-trigger="view-options" title="Opciones de visualización">Vista</button>
   </div>
 

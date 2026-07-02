@@ -1,4 +1,69 @@
 /* @component: panels */
+    /* Left Panel (Filters + Coverage) - UNIFIED */
+    #left-panel { }
+    .leftpanel-hint {
+      padding: 16px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+    }
+    .leftpanel-body { padding: 8px 4px 16px; max-height: calc(100vh - 160px); overflow-y: auto; }
+    .leftpanel-section { margin-bottom: 16px; }
+    .leftpanel-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px 4px;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+      color: rgba(255,255,255,0.35);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: 8px;
+    }
+    .leftpanel-section-header:first-child { border-top: none; margin-top: 0; }
+    .leftpanel-section-header > span { font-weight: 500; }
+    .leftpanel-btn-subtle {
+      background: none; border: none; color: rgba(79,195,247,0.7);
+      font-size: 10px; cursor: pointer; padding: 2px 8px; border-radius: 3px;
+    }
+    .leftpanel-btn-subtle:hover { background: rgba(79,195,247,0.1); color: #4fc3f7; }
+    .leftpanel-label { display: block; padding: 0 12px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.35); }
+    .leftpanel-search {
+      width: calc(100% - 24px); margin: 0 12px 8px; padding: 8px 10px;
+      background: rgba(0,0,17,0.9); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #cfd8dc; font-size: 12px;
+    }
+    .leftpanel-checklist { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 8px; }
+    .leftpanel-check-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+      cursor: pointer; color: rgba(255,255,255,0.65);
+      border-radius: 4px; transition: background 0.12s;
+    }
+    .leftpanel-check-item:hover { background: rgba(255,255,255,0.04); }
+    .leftpanel-check-item input { width: 13px; height: 13px; accent-color: #4fc3f7; flex-shrink: 0; }
+    .leftpanel-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .leftpanel-count { margin-left: auto; color: rgba(255,255,255,0.25); font-size: 10px; }
+    .leftpanel-radio-group { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 12px; }
+    .leftpanel-radio-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: rgba(255,255,255,0.65); }
+    .leftpanel-radio-group input { accent-color: #4fc3f7; }
+    .leftpanel-section-header + .leftpanel-radio-group { margin-top: 4px; }
+    .leftpanel-slider { width: calc(100% - 24px); margin: 4px 12px 8px; accent-color: #4fc3f7; }
+    .leftpanel-type-item { }
+    .leftpanel-cards { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; }
+    .leftpanel-card {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 10px 12px; text-align: left;
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .leftpanel-card:hover { background: rgba(79,195,247,0.08); border-color: rgba(79,195,247,0.3); }
+    .leftpanel-card-title { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.9); }
+    .leftpanel-card-stats { font-size: 10px; color: rgba(255,255,255,0.45); }
+    .leftpanel-bar-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; position: relative; }
+    .leftpanel-bar-study { position: absolute; top: 0; left: 0; bottom: 0; background: linear-gradient(90deg, #ef5350, #ffa726, #66bb6a); border-radius: 2px; }
+    .leftpanel-bar-volume { position: absolute; top: 0; left: 0; bottom: 0; background: rgba(79,195,247,0.4); border-radius: 2px; opacity: 0.6; }
+
+    /* Cap banner */
+    #cap-banner { display: none; padding: 8px 16px; background: rgba(255,193,7,0.12); border: 1px solid rgba(255,193,7,0.35); border-radius: 6px; color: rgba(255,224,130,0.95); font-size: 11px; margin: 8px 16px; cursor: pointer; }
+    #cap-banner.active { display: block; }
+    #cap-banner:hover { background: rgba(255,193,7,0.18); }
+
     /* Visibility panel (docked) */
     #visibility-list { display: flex; flex-direction: column; }
     .vis-all, .vis-item {
