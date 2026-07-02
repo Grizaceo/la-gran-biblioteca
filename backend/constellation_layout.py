@@ -15,13 +15,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 _CATALOG_PATH = Path(__file__).parent / "data" / "constellations.json"
-_LAYOUT_SCALE = 400.0
+_LAYOUT_SCALE = 800.0
 _NESTED_SCALE = 0.32
-_FILE_ORBIT_RADIUS = 28.0
-_ISLAND_SPHERE_RADIUS = 400.0
-_MAX_SCENE_RADIUS = 2400.0
-_PERIPHERAL_CLOUD_RADIUS = 550.0
-_PERIPHERAL_NEAR_CENTER_RADIUS = 120.0
+_FILE_ORBIT_RADIUS = 56.0
+_ISLAND_SPHERE_RADIUS = 800.0
+_MAX_SCENE_RADIUS = 4000.0
+_PERIPHERAL_CLOUD_RADIUS = 1100.0
+_PERIPHERAL_NEAR_CENTER_RADIUS = 240.0
 
 # Folder names too generic for automatic constellation suggestions.
 GENERIC_FOLDER_NAMES = frozenset(

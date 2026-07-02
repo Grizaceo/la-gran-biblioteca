@@ -29,6 +29,12 @@ def resolve_wikilinks(
     pending_wikilinks: list[tuple[str, str]],
     name_to_id: dict[str, str],
 ) -> None:
+    """Resolve wikilinks to edges, deduplicating by (source, target, type)."""
+    existing = {
+        (e["source"], e["target"])
+        for e in graph.get("edges", [])
+        if e.get("type") == "references"
+    }
     for source_id, target_name in pending_wikilinks:
         target_id = name_to_id.get(target_name)
         if not target_id:
@@ -42,42 +48,57 @@ def resolve_wikilinks(
                     target_id = val
                     break
         if target_id:
-            graph["edges"].append(
-                {
-                    "source": source_id,
-                    "target": target_id,
-                    "type": "references",
-                    "weight": 1.0,
-                }
-            )
+            key = (source_id, target_id)
+            if key not in existing:
+                existing.add(key)
+                graph["edges"].append(
+                    {
+                        "source": source_id,
+                        "target": target_id,
+                        "type": "references",
+                        "weight": 1.0,
+                    }
+                )
 
 
 def add_colocated_edges(graph: Dict[str, Any], folder_files: dict[str, list[str]]) -> None:
+    """Add co-location edges, deduplicating by (source, target, type)."""
     colocated_max = int(os.environ.get("LGB_COLOCATED_MAX", "0"))
+    existing = {
+        (e["source"], e["target"])
+        for e in graph.get("edges", [])
+        if e.get("type") == "co-located"
+    }
     for _folder_path, file_ids in folder_files.items():
         if 2 <= len(file_ids) <= 20:
             if colocated_max > 0 and len(file_ids) > colocated_max:
                 hub = file_ids[0]
                 for fid in file_ids[1:]:
-                    graph["edges"].append(
-                        {
-                            "source": hub,
-                            "target": fid,
-                            "type": "co-located",
-                            "weight": 0.2,
-                        }
-                    )
-            else:
-                for i in range(len(file_ids)):
-                    for j in range(i + 1, len(file_ids)):
+                    key = (hub, fid)
+                    if key not in existing:
+                        existing.add(key)
                         graph["edges"].append(
                             {
-                                "source": file_ids[i],
-                                "target": file_ids[j],
+                                "source": hub,
+                                "target": fid,
                                 "type": "co-located",
                                 "weight": 0.2,
                             }
                         )
+            else:
+                for i in range(len(file_ids)):
+                    for j in range(i + 1, len(file_ids)):
+                        key = (file_ids[i], file_ids[j])
+                        if key not in existing:
+                            existing.add(key)
+                            graph["edges"].append(
+                                {
+                                    "source": file_ids[i],
+                                    "target": file_ids[j],
+                                    "type": "co-located",
+                                    "weight": 0.2,
+                                }
+                            )
 
 
 def attach_tags_to_node(

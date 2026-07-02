@@ -258,7 +258,7 @@ export class Graph3DEngine implements Graph3DEngineHost {
       .linkDirectionalArrowRelPos(0.95)
       .linkResolution(4)
       .warmupTicks(120)
-      .cooldownTicks(0)
+      .cooldownTicks(40)
       .backgroundColor('#000011')
       .linkColor((link: Record<string, unknown>) => {
         const type = (link.type as string) || 'default'

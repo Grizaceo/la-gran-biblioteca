@@ -72,8 +72,10 @@ export function applyLayoutForces(
     }
     fg.warmupTicks(0).cooldownTicks(0)
   } else {
-    if (link?.strength) link.strength(saved.linkStrength)
-    if (charge?.strength) charge.strength(saved.chargeStrength)
+    const linkStrength = 0.5  // Weaker spring force for more spread
+    const chargeStrength = -120  // Stronger repulsion
+    if (link?.strength) link.strength(linkStrength)
+    if (charge?.strength) charge.strength(chargeStrength)
     fg.warmupTicks(profile.warmupTicks).cooldownTicks(profile.cooldownTicks)
   }
   return saved
