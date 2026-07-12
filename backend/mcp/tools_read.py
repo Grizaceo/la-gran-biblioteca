@@ -53,6 +53,7 @@ def overview() -> dict:
 
 def list_workspaces() -> list[dict]:
     from collections import defaultdict
+
     counts: dict[str, int] = defaultdict(int)
     s = _state()
     with s._lock:
@@ -135,6 +136,7 @@ def get_node(node_id: str) -> dict:
     meta = n.get("metadata") or {}
     if n.get("type") not in ("folder", "workspace", "project") and n.get("path"):
         from ..services.note_service import attached_notes_preview
+
         try:
             result["attached_notes"] = attached_notes_preview(node_id)
         except Exception:
@@ -167,6 +169,7 @@ def read_node(node_id: str, max_chars: int = 8000) -> dict:
     if not p.is_file():
         return {"error": "Path is a directory, not a file"}
     from ..preview import read_node_content
+
     try:
         return read_node_content(p, max_chars=max_chars)
     except ValueError as e:
@@ -246,7 +249,12 @@ def explore(
         return {"query": query, "search": search_result, "focus": None, "previews": []}
     focus_id = hits[0]["id"]
     sub = build_subgraph(
-        graph, node_id=focus_id, depth=depth, direction="both", workspace=workspace, limit=120,
+        graph,
+        node_id=focus_id,
+        depth=depth,
+        direction="both",
+        workspace=workspace,
+        limit=120,
     )
     with s._lock:
         for e in s._graph["edges"]:
@@ -260,11 +268,16 @@ def explore(
     previews: list[dict] = []
     for hit in hits[:2]:
         nid = hit["id"]
-        preview: dict[str, Any] = {"node_id": nid, "label": hit.get("label"), "type": hit.get("type")}
+        preview: dict[str, Any] = {
+            "node_id": nid,
+            "label": hit.get("label"),
+            "type": hit.get("type"),
+        }
         with s._lock:
             n = s._node_index.get(nid)
         if n and n.get("path"):
             from ..preview import read_node_content
+
             try:
                 body = read_node_content(Path(n["path"]), max_chars=preview_chars)
                 preview["content"] = body.get("content", "")[:preview_chars]
@@ -278,7 +291,12 @@ def explore(
         if meta.get("backlinks"):
             preview["backlinks"] = meta["backlinks"][:10]
         previews.append(preview)
-    return {"query": query, "search": search_result, "focus": {"node_id": focus_id, "subgraph": sub}, "previews": previews}
+    return {
+        "query": query,
+        "search": search_result,
+        "focus": {"node_id": focus_id, "subgraph": sub},
+        "previews": previews,
+    }
 
 
 def impact_files(paths: list[str], limit: int = 80) -> dict:
@@ -314,8 +332,13 @@ def subgraph(
     with s._lock:
         graph = {"nodes": list(s._graph["nodes"]), "edges": list(s._graph["edges"])}
     return build_subgraph(
-        graph, node_id=node_id, depth=depth, direction=direction,
-        workspace=workspace, node_type=node_type, limit=limit,
+        graph,
+        node_id=node_id,
+        depth=depth,
+        direction=direction,
+        workspace=workspace,
+        node_type=node_type,
+        limit=limit,
     )
 
 

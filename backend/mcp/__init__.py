@@ -5,22 +5,14 @@ from __future__ import annotations
 import threading
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 from ..constants import WORKSPACE_ROOT, get_db_path, get_workspace_root
 from ..graph_engine import GraphEngine
-from ..graph_queries import build_subgraph, search_graph
-from ..graph_enrichment import build_graph_structure_summary
-from ..overview import build_overview
-from ..lens import lens_to_search_params, preset_lens, validate_lens
-from ..lens_session import get_session_lens, publish_session_lens
-from ..services.graph_pipeline import rebuild_graph, get_last_scan_stats
-from ..import graph_state
 
 # ── Shared state ────────────────────────────────────────────────────────────
 
 _engine = GraphEngine(db_path=get_db_path())
-_graph: dict[str, Any] = {"nodes": [], "edges": []}
+_graph: dict = {"nodes": [], "edges": []}
 _node_index: dict[str, dict] = {}
 _adj_out: dict[str, list[dict]] = defaultdict(list)
 _adj_in: dict[str, list[dict]] = defaultdict(list)
@@ -81,7 +73,8 @@ def _rescan_and_reload() -> dict:
     """Rescan workspace and reload graph into memory."""
     import backend.mcp as mcp_mod
     from ..services.graph_pipeline import rebuild_graph as _rebuild_graph
-    from ..import graph_state
+    from .. import graph_state
+
     new_graph = _rebuild_graph(
         mcp_mod._engine,
         recently_imported_paths=graph_state.recently_imported_paths,

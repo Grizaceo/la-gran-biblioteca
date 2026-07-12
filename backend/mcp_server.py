@@ -14,7 +14,8 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
+
 
 # FastMCP stub for when MCP package is not available
 class _FastMCPStub:  # type: ignore[no-redef]
@@ -24,6 +25,7 @@ class _FastMCPStub:  # type: ignore[no-redef]
     def tool(self):
         def decorator(fn: Callable) -> Callable:
             return fn
+
         return decorator
 
     def run(self):
@@ -117,12 +119,36 @@ mcp = FastMCP(
 
 # Register all tools with @mcp.tool()
 for _fn in [
-    overview, list_workspaces, search, get_node, read_node, neighbors,
-    explore, impact_files, get_tour, subgraph, coverage,
-    mark_studied, rescan, list_vaults, switch_vault,
-    create_file, create_folder, open_in_os, apply_lens, publish_lens,
-    import_github, search_arxiv, import_arxiv, import_pubmed,
-    create_note, list_notes, get_note, update_note, search_notes, delete_note,
+    overview,
+    list_workspaces,
+    search,
+    get_node,
+    read_node,
+    neighbors,
+    explore,
+    impact_files,
+    get_tour,
+    subgraph,
+    coverage,
+    mark_studied,
+    rescan,
+    list_vaults,
+    switch_vault,
+    create_file,
+    create_folder,
+    open_in_os,
+    apply_lens,
+    publish_lens,
+    import_github,
+    search_arxiv,
+    import_arxiv,
+    import_pubmed,
+    create_note,
+    list_notes,
+    get_note,
+    update_note,
+    search_notes,
+    delete_note,
 ]:
     mcp.tool()(_fn)
 

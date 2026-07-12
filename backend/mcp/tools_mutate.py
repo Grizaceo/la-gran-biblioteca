@@ -10,8 +10,15 @@ from ..graph_queries import search_graph
 from ..vault_manager import vault_manager
 from ..vault_switch import apply_vault_switch_sync
 from . import (
-    _lock, _graph, _node_index, _engine, _load, _rescan_and_reload,
-    _validate_workspace_path, WORKSPACE_ROOT, get_workspace_root,
+    _lock,
+    _graph,
+    _node_index,
+    _engine,
+    _load,
+    _rescan_and_reload,
+    _validate_workspace_path,
+    WORKSPACE_ROOT,
+    get_workspace_root,
 )
 
 
@@ -49,10 +56,12 @@ def list_vaults() -> dict:
 
 def switch_vault(id: str = "", path: str = "") -> dict:
     import backend.mcp as mcp_mod
+
     if not id and not path:
         return {"error": "Provide id or path"}
     try:
         from ..app_deps import get_engine
+
         result = apply_vault_switch_sync(vault_id=id or None, vault_path=path or None)
         mcp_mod._engine = get_engine()
         _load()
@@ -65,6 +74,7 @@ def switch_vault(id: str = "", path: str = "") -> dict:
 
 def create_file(relative_path: str, content: str = "") -> dict:
     import backend.mcp as mcp_mod
+
     try:
         dest = _validate_workspace_path(relative_path)
     except ValueError as e:
@@ -92,6 +102,7 @@ def create_folder(relative_path: str) -> dict:
 
 def open_in_os(node_id: str, reveal: bool = False) -> dict:
     import backend.mcp as mcp_mod
+
     if not os.environ.get("LGB_MCP_ALLOW_OS_OPEN"):
         return {"error": "OS open is disabled. Set LGB_MCP_ALLOW_OS_OPEN=1 to enable."}
     with mcp_mod._lock:
@@ -104,6 +115,7 @@ def open_in_os(node_id: str, reveal: bool = False) -> dict:
     try:
         from ..path_utils import resolve_node_path
         from ..os_open import open_in_os as _open
+
         p = resolve_node_path(node_id, path_str, WORKSPACE_ROOT.resolve())
         if not p.exists():
             return {"error": f"File not found: {path_str}"}

@@ -6,6 +6,7 @@ from __future__ import annotations
 def _rescan():
     """Call _rescan_and_reload from the module (patchable in tests)."""
     import backend.mcp as mcp_mod
+
     return mcp_mod._rescan_and_reload()
 
 
@@ -20,14 +21,21 @@ def create_note(
 ) -> dict:
     import backend.mcp as mcp_mod
     from ..services.note_service import (
-        NoteValidationError, SourceNodeNotFoundError, create_note as _create_note,
+        NoteValidationError,
+        SourceNodeNotFoundError,
+        create_note as _create_note,
     )
+
     kind = storage if storage in ("inline", "vault") else "vault"
     try:
         note, path = _create_note(
-            title=title, body=body, labels=labels,
-            source_node_id=source_node_id, selected_text=selected_text,
-            source_path=source_path, storage=kind,
+            title=title,
+            body=body,
+            labels=labels,
+            source_node_id=source_node_id,
+            selected_text=selected_text,
+            source_path=source_path,
+            storage=kind,
         )
         mcp_mod._recent_imports.append(str(path.resolve()))
         if len(mcp_mod._recent_imports) > 50:
@@ -42,6 +50,7 @@ def create_note(
 
 def list_notes(source_node_id: str) -> dict:
     from ..services.note_service import list_notes_for_source
+
     try:
         notes = list_notes_for_source(source_node_id)
         return {"notes": notes, "total": len(notes)}
@@ -51,6 +60,7 @@ def list_notes(source_node_id: str) -> dict:
 
 def get_note(note_id: str) -> dict:
     from ..services.note_service import NoteNotFoundError, get_note as _get_note
+
     try:
         return _get_note(note_id)
     except NoteNotFoundError as e:
@@ -67,8 +77,11 @@ def update_note(
 ) -> dict:
     import backend.mcp as mcp_mod
     from ..services.note_service import (
-        NoteNotFoundError, NoteValidationError, update_note as _update_note,
+        NoteNotFoundError,
+        NoteValidationError,
+        update_note as _update_note,
     )
+
     try:
         kwargs: dict = {}
         if title:
@@ -96,9 +109,13 @@ def search_notes(
     limit: int = 20,
 ) -> dict:
     from ..services.note_service import search_notes as _search_notes
+
     try:
         notes = _search_notes(
-            query=query, label=label, source_node_id=source_node_id, limit=limit,
+            query=query,
+            label=label,
+            source_node_id=source_node_id,
+            limit=limit,
         )
         return {"notes": notes, "total": len(notes)}
     except Exception as e:
@@ -108,6 +125,7 @@ def search_notes(
 def delete_note(note_id: str) -> dict:
     import backend.mcp as mcp_mod
     from ..services.note_service import NoteNotFoundError, delete_note as _delete_note
+
     try:
         path = _delete_note(note_id)
         mcp_mod._recent_imports.append(str(path.resolve()))

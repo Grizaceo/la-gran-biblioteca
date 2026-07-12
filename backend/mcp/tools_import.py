@@ -13,6 +13,7 @@ from . import WORKSPACE_ROOT, get_workspace_root
 
 def import_github(repo_url: str) -> dict:
     import backend.mcp as mcp_mod
+
     try:
         dest = download_and_extract_github(repo_url, WORKSPACE_ROOT)
         mcp_mod._recent_imports.append(str(dest))
@@ -32,8 +33,11 @@ def search_arxiv(
 ) -> dict:
     try:
         return _search_arxiv(
-            query=query, author=author, category=category,
-            max_results=max_results, sort=sort,
+            query=query,
+            author=author,
+            category=category,
+            max_results=max_results,
+            sort=sort,
         )
     except Exception as e:
         return {"error": str(e)}
@@ -41,6 +45,7 @@ def search_arxiv(
 
 def import_arxiv(arxiv_id: str) -> dict:
     import backend.mcp as mcp_mod
+
     try:
         file_path = _import_arxiv(arxiv_id, WORKSPACE_ROOT)
         mcp_mod._recent_imports.append(str(file_path))
@@ -53,6 +58,7 @@ def import_arxiv(arxiv_id: str) -> dict:
 
 def import_pubmed(pmid: str) -> dict:
     import backend.mcp as mcp_mod
+
     try:
         file_path = _import_pubmed(pmid, WORKSPACE_ROOT)
         mcp_mod._recent_imports.append(str(file_path))

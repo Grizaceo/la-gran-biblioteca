@@ -324,6 +324,7 @@ def test_mcp_get_update_search_notes(isolated_mcp, monkeypatch):
     )
     monkeypatch.setattr(srv, "_rescan_and_reload", lambda: srv._graph)
     import backend.mcp as mcp_mod
+
     monkeypatch.setattr(mcp_mod, "_rescan_and_reload", lambda: srv._graph)
 
     created = srv.create_note(

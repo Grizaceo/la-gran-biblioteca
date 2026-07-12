@@ -18,24 +18,30 @@ def _use_engine(db: Path) -> GraphEngine:
     return ge
 
 
-def _make_node(graph_engine: GraphEngine, tmp_path: Path, filename: str, content: str = "# test") -> str:
+def _make_node(
+    graph_engine: GraphEngine, tmp_path: Path, filename: str, content: str = "# test"
+) -> str:
     """Create a real file and register it in the graph engine."""
     f = tmp_path / filename
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(content, encoding="utf-8")
     rel = str(f.relative_to(tmp_path))
     node_id = f"file_{rel}"
-    graph_engine.rebuild_graph({
-        "nodes": [{
-            "id": node_id,
-            "type": "document",
-            "label": filename,
-            "path": str(f),
-            "metadata": {},
-            "position": {"x": 0, "y": 0},
-        }],
-        "edges": [],
-    })
+    graph_engine.rebuild_graph(
+        {
+            "nodes": [
+                {
+                    "id": node_id,
+                    "type": "document",
+                    "label": filename,
+                    "path": str(f),
+                    "metadata": {},
+                    "position": {"x": 0, "y": 0},
+                }
+            ],
+            "edges": [],
+        }
+    )
     return node_id
 
 
@@ -73,17 +79,21 @@ def test_update_content_rejects_non_text_file():
         f = tmp / "image.png"
         f.write_bytes(b"\x89PNG\r\n\x1a\n")
         node_id = "file_image.png"
-        ge.rebuild_graph({
-            "nodes": [{
-                "id": node_id,
-                "type": "file",
-                "label": "image.png",
-                "path": str(f),
-                "metadata": {},
-                "position": {"x": 0, "y": 0},
-            }],
-            "edges": [],
-        })
+        ge.rebuild_graph(
+            {
+                "nodes": [
+                    {
+                        "id": node_id,
+                        "type": "file",
+                        "label": "image.png",
+                        "path": str(f),
+                        "metadata": {},
+                        "position": {"x": 0, "y": 0},
+                    }
+                ],
+                "edges": [],
+            }
+        )
 
         with (
             patch("backend.constants.get_workspace_root", return_value=tmp),
@@ -123,6 +133,7 @@ def test_update_content_rejects_oversized():
 
             # Create content larger than CONTENT_MAX_BYTES (2MB)
             from backend.constants import CONTENT_MAX_BYTES
+
             big_content = "x" * (CONTENT_MAX_BYTES + 1)
             resp = client.put(f"/api/node/{node_id}/content", json={"content": big_content})
             assert resp.status_code == 413
