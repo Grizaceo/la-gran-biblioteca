@@ -2,7 +2,7 @@ import tempfile
 import io
 import zipfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -369,6 +369,10 @@ def test_api_create_endpoints(mock_urlopen):
             patch("backend.constants.get_workspace_root", return_value=workspace_root),
             patch("backend.api.create.get_workspace_root", return_value=workspace_root),
             patch("backend.api.imports_api.get_workspace_root", return_value=workspace_root),
+            patch("backend.library_bridge._background_initial_load", new_callable=AsyncMock),
+            patch("backend.library_bridge._try_load_cached_graph", return_value=None),
+            patch("backend.library_bridge.start_workspace_watcher"),
+            patch("backend.bridge_tasks.force_graph_update", new_callable=AsyncMock),
         ):
             client = TestClient(bridge.app)
 
@@ -486,6 +490,10 @@ def test_api_create_doi_pmc_preprint(mock_fetch_json):
         with (
             patch("backend.constants.get_workspace_root", return_value=workspace_root),
             patch("backend.api.imports_api.get_workspace_root", return_value=workspace_root),
+            patch("backend.library_bridge._background_initial_load", new_callable=AsyncMock),
+            patch("backend.library_bridge._try_load_cached_graph", return_value=None),
+            patch("backend.library_bridge.start_workspace_watcher"),
+            patch("backend.bridge_tasks.force_graph_update", new_callable=AsyncMock),
         ):
             client = TestClient(bridge.app)
 

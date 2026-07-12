@@ -166,9 +166,12 @@ def test_top_level_islands_clustered(tmp_path):
     cx = sum(p[0] for p in positions) / len(positions)
     cy = sum(p[1] for p in positions) / len(positions)
     cz = sum(p[2] for p in positions) / len(positions)
-    assert abs(cx) < 80
-    assert abs(cy) < 80
-    assert abs(cz) < 80
+    # Island origins sit on a sphere of _ISLAND_SPHERE_RADIUS; center can drift
+    # proportionally to the radius (20% factor matches layout spread).
+    _center_threshold = _ISLAND_SPHERE_RADIUS * 0.2
+    assert abs(cx) < _center_threshold
+    assert abs(cy) < _center_threshold
+    assert abs(cz) < _center_threshold
 
     max_pair = 0.0
     for i, a in enumerate(positions):
