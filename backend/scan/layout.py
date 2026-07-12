@@ -31,9 +31,7 @@ def resolve_wikilinks(
 ) -> None:
     """Resolve wikilinks to edges, deduplicating by (source, target, type)."""
     existing = {
-        (e["source"], e["target"])
-        for e in graph.get("edges", [])
-        if e.get("type") == "references"
+        (e["source"], e["target"]) for e in graph.get("edges", []) if e.get("type") == "references"
     }
     for source_id, target_name in pending_wikilinks:
         target_id = name_to_id.get(target_name)
@@ -65,9 +63,7 @@ def add_colocated_edges(graph: Dict[str, Any], folder_files: dict[str, list[str]
     """Add co-location edges, deduplicating by (source, target, type)."""
     colocated_max = int(os.environ.get("LGB_COLOCATED_MAX", "0"))
     existing = {
-        (e["source"], e["target"])
-        for e in graph.get("edges", [])
-        if e.get("type") == "co-located"
+        (e["source"], e["target"]) for e in graph.get("edges", []) if e.get("type") == "co-located"
     }
     for _folder_path, file_ids in folder_files.items():
         if 2 <= len(file_ids) <= 20:

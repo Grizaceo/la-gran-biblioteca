@@ -18,6 +18,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
+
 # FastMCP stub for when MCP package is not available
 class _FastMCPStub:  # type: ignore[no-redef]
     def __init__(self, *_args, **_kwargs):
@@ -31,6 +32,7 @@ class _FastMCPStub:  # type: ignore[no-redef]
 
     def run(self):
         pass
+
 
 try:
     from mcp.server.fastmcp import FastMCP
