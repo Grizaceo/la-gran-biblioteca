@@ -20,7 +20,7 @@
     "highlight.js": "^11.11.1",
     "marked": "^18.0.5",
     "minisearch": "^7.2.0",
-    "three": "^0.183.0"
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/three": "^0.183.0",
