@@ -62,12 +62,15 @@ def isolated_mcp(tmp_path, monkeypatch):
     # Re-import mcp_server with patched env
     import backend.constants as constants
     import backend.mcp_server as srv
+    import backend.mcp as mcp_mod
 
     constants.WORKSPACE_ROOT = ws
     monkeypatch.setattr(constants, "get_workspace_root", lambda: ws)
-    # Re-point to a fresh engine (so _load() doesn't double-count edges)
+    # Re-point to a fresh engine in both mcp_server (re-export) and backend.mcp (source)
     srv._engine = GraphEngine(db_path=db)
+    mcp_mod._engine = srv._engine
     srv.WORKSPACE_ROOT = ws
+    mcp_mod.WORKSPACE_ROOT = ws
     srv._load()
 
     yield srv, ws
@@ -320,6 +323,8 @@ def test_mcp_get_update_search_notes(isolated_mcp, monkeypatch):
         gs, "get_current_graph", lambda: {"nodes": list(srv._node_index.values()), "edges": []}
     )
     monkeypatch.setattr(srv, "_rescan_and_reload", lambda: srv._graph)
+    import backend.mcp as mcp_mod
+    monkeypatch.setattr(mcp_mod, "_rescan_and_reload", lambda: srv._graph)
 
     created = srv.create_note(
         source_id,
