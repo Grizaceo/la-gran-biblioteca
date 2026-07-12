@@ -1,7 +1,8 @@
-"""Node lookup, content, study, open."""
+"""Node lookup, content, study, open, edit."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -10,10 +11,11 @@ from pydantic import BaseModel
 
 from .. import graph_state
 from .. import app_deps
-from ..constants import get_workspace_root
+from ..bridge_tasks import force_graph_update
+from ..constants import CONTENT_MAX_BYTES, TEXT_EXTENSIONS, get_workspace_root
 from ..os_open import open_in_os
 from ..path_utils import is_windows_path, resolve_node_path
-from ..preview import read_preview
+from ..preview import read_preview, read_node_content
 from ..security import safe_error_detail
 
 logger = logging.getLogger(__name__)
@@ -105,3 +107,47 @@ async def open_node(req: OpenRequest):
         logger.warning("open_node failed: %s", e)
         raise HTTPException(status_code=500, detail=safe_error_detail(e))
     return {"ok": True}
+
+
+class UpdateContentRequest(BaseModel):
+    content: str
+
+
+@router.put("/node/{node_id:path}/content")
+async def update_node_content(node_id: str, req: UpdateContentRequest):
+    """Edit file content in-place. Only text files under workspace root."""
+    node = graph_state.get_node_by_id(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+    path_str = node.get("path", "")
+    if not path_str:
+        raise HTTPException(status_code=422, detail="Node has no path")
+
+    p = _validate_path(node_id, path_str)
+    if not p.is_file():
+        raise HTTPException(status_code=422, detail="Path is not a file")
+
+    # Only allow text files
+    ext = p.suffix.lstrip(".").lower()
+    if p.name.lower() == "dockerfile":
+        ext = "dockerfile"
+    if ext not in TEXT_EXTENSIONS:
+        raise HTTPException(status_code=415, detail="File type not editable")
+
+    # Size guard
+    if len(req.content) > CONTENT_MAX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Content exceeds {CONTENT_MAX_BYTES // 1024} KB limit",
+        )
+
+    try:
+        p.write_text(req.content, encoding="utf-8")
+    except Exception as e:
+        logger.error("Error writing file %s: %s", p, e)
+        raise HTTPException(status_code=500, detail=safe_error_detail(e))
+
+    # Trigger graph rescan so changes propagate
+    asyncio.create_task(force_graph_update())
+
+    return {"status": "ok", "path": str(p), "size": p.stat().st_size}

@@ -38,6 +38,16 @@ export async function openNode(id: string, reveal: boolean): Promise<void> {
   if (!res.ok) await handleResponseError(res, `Error al abrir nodo (${res.status})`)
 }
 
+export async function updateNodeContent(id: string, content: string): Promise<{ status: string; path: string; size: number }> {
+  const res = await apiFetch(`/node/${encodeURIComponent(id)}/content`, {
+    method: 'PUT',
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ content }),
+  })
+  if (!res.ok) await handleResponseError(res, `Error al guardar (${res.status})`)
+  return res.json()
+}
+
 export async function triggerRescan(): Promise<{ status: string; nodes: number; edges: number }> {
   const res = await apiFetch('/rescan', {
     method: 'POST',

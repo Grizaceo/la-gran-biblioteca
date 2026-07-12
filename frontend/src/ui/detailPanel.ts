@@ -20,6 +20,7 @@ import DOMPurify from 'dompurify'
 import { escapeHtml } from '../lib/utils'
 import { setupNoteCreator } from './noteCreator'
 import { setupNoteEditor, type NoteDraft, removeSavedNote } from './noteEditor'
+import { setupFileEditor, isFileEditable, type FileEditorAPI } from './fileEditor'
 
 let hljsPromise: Promise<typeof import('highlight.js').default> | null = null
 
@@ -112,6 +113,7 @@ export function setupDetailPanel(
   let previewTargetNodeId: string | null = null
   let notesListGeneration = 0
   let selectNodeInFlight: string | null = null
+  const fileEditor: FileEditorAPI = setupFileEditor(showToast)
 
   async function renderSavedNotesList(sourceId: string, mount: HTMLElement): Promise<void> {
     const gen = ++notesListGeneration
@@ -595,9 +597,11 @@ export function setupDetailPanel(
 
     if (NON_FILE_TYPES.has(node.type)) { detailActions.innerHTML = ''; return }
 
+    const canEdit = isFileEditable(node)
     detailActions.innerHTML = `
       <button class="detail-btn" id="btn-open-file">Abrir</button>
-      <button class="detail-btn" id="btn-reveal-file">Revelar</button>`
+      <button class="detail-btn" id="btn-reveal-file">Revelar</button>
+      ${canEdit ? '<button class="detail-btn" id="btn-edit-file">Editar</button>' : ''}`
 
     document.getElementById('btn-open-file')!.addEventListener('click', async () => {
       try {
@@ -614,6 +618,11 @@ export function setupDetailPanel(
         showToast(`No se pudo revelar: ${(err as Error).message}`, true)
       }
     })
+
+    const editBtn = document.getElementById('btn-edit-file')
+    if (editBtn) {
+      editBtn.addEventListener('click', () => fileEditor.open(node))
+    }
   }
 
   async function renderDetailPanel(node: Node): Promise<void> {
