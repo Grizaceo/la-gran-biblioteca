@@ -42,7 +42,8 @@ export function setupFileEditor(
 
   function close(): void {
     if (modalEl) {
-      modalEl.remove()
+      modalEl.classList.remove('active')
+      setTimeout(() => modalEl?.remove(), 300)
       modalEl = null
     }
     textarea = null
@@ -84,6 +85,10 @@ export function setupFileEditor(
     `
 
     document.body.appendChild(overlay)
+
+    // Make visible: CSS uses .modal-overlay { display: none } → .active { display: flex }
+    void overlay.offsetWidth // trigger reflow for transition
+    overlay.classList.add('active')
 
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) close()
