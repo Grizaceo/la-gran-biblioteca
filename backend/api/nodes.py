@@ -15,7 +15,7 @@ from ..bridge_tasks import force_graph_update
 from ..constants import CONTENT_MAX_BYTES, TEXT_EXTENSIONS, get_workspace_root
 from ..os_open import open_in_os
 from ..path_utils import is_windows_path, resolve_node_path
-from ..preview import read_preview, read_node_content
+from ..preview import read_preview
 from ..security import safe_error_detail
 
 logger = logging.getLogger(__name__)
