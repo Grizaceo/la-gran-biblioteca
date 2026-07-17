@@ -1,4 +1,4 @@
-fastapi>=0.136.1
+fastapi>=0.139.2
 uvicorn[standard]>=0.47.0
 sse-starlette>=3.4.4
 watchdog>=6.0.0
